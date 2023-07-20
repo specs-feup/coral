@@ -1,3 +1,6 @@
+.vscode
+
 clava/
 out/
 !out/.gitkeep
+

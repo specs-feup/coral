@@ -193,7 +193,10 @@
     <entry>
       <string>include</string>
       <FileList>
-        <fileList/>
+        <fileList>
+          <file>..\clava\ClavaLaraApi\src-lara-clava\clava\clava</file>
+          <file>..\lara-framework\LaraApi\src-lara\lara</file>
+        </fileList>
       </FileList>
     </entry>
     <entry>
