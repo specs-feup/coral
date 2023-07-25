@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#pragma coral copy
 typedef struct {
     int a;
     int b;
