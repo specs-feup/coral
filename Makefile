@@ -1,6 +1,6 @@
 .PHONY: gui all
 
-CLAVA_PATH = clava/
+CLAVA_PATH = clava-tool/
 CLAVA_JAR = Clava.jar
 
 

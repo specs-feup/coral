@@ -5,7 +5,7 @@
       <string>workspace</string>
       <FileList>
         <fileList>
-          <file>tests\factorial.c</file>
+          <file>tests/accepted/elision.c</file>
         </fileList>
       </FileList>
     </entry>
@@ -174,7 +174,7 @@
     </entry>
     <entry>
       <string>aspect</string>
-      <file>src\main.js</file>
+      <file>src/main.js</file>
     </entry>
     <entry>
       <string>ignoreHeaderIncludes</string>
@@ -194,8 +194,8 @@
       <string>include</string>
       <FileList>
         <fileList>
-          <file>..\clava\ClavaLaraApi\src-lara-clava\clava\clava</file>
-          <file>..\lara-framework\LaraApi\src-lara\lara</file>
+          <file>../clava/ClavaLaraApi/src-lara-clava/clava/clava</file>
+          <file>../lara-framework/LaraApi/src-lara/lara</file>
         </fileList>
       </FileList>
     </entry>

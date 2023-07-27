@@ -1,10 +1,10 @@
 laraImport("weaver.Query");
-laraImport("clava.graphs.ControlFlowGraph");
-laraImport("clava.graphs.StaticCallGraph");
-laraImport("lara.graphs.Graphs");
+
+laraImport("coral.CoralNormalizer");
 
 
-const root = Query.search("function", {name: "main"}).first();
+// Analysis
+normalizer = new CoralNormalizer();
+normalizer.apply();
 
-const scg = StaticCallGraph.build(root);
-println(scg.toDot());
+
