@@ -50,6 +50,7 @@ class LifetimeElision extends SimplePass {
   #isDefinitionIllegal(fnLifetimes) {
     if (fnLifetimes.references == 0) {
       // TODO: logic
+      fnLifetimes
     }
   }
 
