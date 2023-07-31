@@ -1,14 +1,49 @@
+
+/**
+ * Utility class for Coral
+ */
 class CoralUtils {
-  static isSharedBorrow() {
 
+  /**
+   * Returns true if the joinpoint is a borrow
+   * @param {Type} type
+   * @returns {boolean} True if the joinpoint is a borrow
+   */
+  static isBorrow(type) {
+    return type.instanceOf("pointerType") ||
+      (
+        type.instanceOf("qualType") &&
+        type.unqualifiedType.instanceOf("pointerType") &&
+        type.unqualifiedType.pointee.instanceOf("qualType") &&
+        type.unqualifiedType.pointee.qualifiers.includes("const")
+      );
   }
 
-  static isMutBorrow() {
-  
+  /**
+   * Returns true if the joinpoint is a mutable borrow
+   * @param {Type} type
+   * @returns {boolean} True if the joinpoint is a mutable borrow
+   */
+  static isMutBorrow(type) {
+    return type.instanceOf("pointerType") ||
+      (
+        type.instanceOf("qualType") &&
+        type.unqualifiedType.instanceOf("pointerType") &&
+        type.qualifiers.includes("restrict")
+      );
   }
 
-  static isBorrow() {
-    return CoralUtils.isSharedBorrow() || CoralUtils.isMutBorrow();
+  /**
+   * Returns true if the joinpoint is a borrow or a mutable borrow
+   * @param {Type} type 
+   * @returns {boolean} True if the joinpoint is a borrow or a mutable borrow  
+   */
+  static isReference(type) {
+    return type.instanceOf("pointerType") ||
+      (
+        type.instanceOf("qualType") &&
+        type.unqualifiedType.instanceOf("pointerType")
+      );
   }
 
 }

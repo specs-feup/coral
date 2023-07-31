@@ -30,9 +30,9 @@ class LifetimeElision extends SimplePass {
   }
 
   transformJoinpoint($jp) {
-    let fnLifetimes;
+    let lf;
     try {
-      fnLifetimes = new FnLifetimes($jp);
+      lf = new FnLifetimes($jp);
     } catch (e) {
       if (e instanceof CoralError) {
         throw new PassTransformationError(this, $jp, e.message);
@@ -42,20 +42,60 @@ class LifetimeElision extends SimplePass {
     }
 
 
-    this.#elision(fnLifetimes);
+    if (this.#isValid(lf))
+    this.#elision(lf);
     
     return new PassResult(this, $jp);
   }
 
-  #isDefinitionIllegal(fnLifetimes) {
-    if (fnLifetimes.references == 0) {
-      // TODO: logic
-      fnLifetimes
-    }
+  /**
+   * 
+   * @param {FnLifetimes} lf
+   * @returns {boolean} True if the lifetime definition is illegal 
+   */
+  #isDefinitionIllegal(lf) {
+    // TODO: Convert to multiple exceptions with meaningful messages
+    
+    return lf.hasOutputReference && (
+      // No parameters to infer from.
+      lf.inputs === 0 ||
+
+      // Borrows from a non-input lifetime
+      !lf.inLifetimes.some(e => e.at(1) === lf.outLifetime) ||
+
+      // Cannot infer, ambiguous which parameter it borrowed from
+      ( !lf.hasOutput && lf.inputs > 1 )
+    )
   }
 
-  #elision(lifetimes) {
+  /**
+   * 
+   * @param {FnLifetimes} lf 
+   * @returns {boolean} True if the lifetime is valid 
+   */
+  #isValid(lf) {
 
+  }
+
+  /**
+   * Infers the required lifetimes or returns false if the lifetime definition is illegal
+   * @param {*} lf 
+   * @returns {boolean} True if the lifetime definition is valid
+   */
+  #elision(lf) {
+    if (this.#isValid(lf))
+      return true;
+    if (this.#isDefinitionIllegal(lf))
+      return false;
+
+    // Auto-fill the required lifetimes
+    for (let lifetime of lf.lifetimes) {
+      if (life) {
+
+      }
+    }
+
+    return true;
   }
 
 }
