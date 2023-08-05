@@ -25,9 +25,9 @@ class LifetimeElision extends SimplePass {
 
   
   matchJoinpoint($jp) {
-    if (! $jp.instanceOf("function") )
-      return false;
+    return $jp.instanceOf("function");
   }
+
 
   transformJoinpoint($jp) {
     let lf;
@@ -42,30 +42,35 @@ class LifetimeElision extends SimplePass {
     }
 
 
-    if (this.#isValid(lf))
+    if (this.#isAlreadyValid(lf)) {
+      return new PassResult(this, $jp, { appliedPass: false });
+    }
+
+    this.#checkIllegalDefinition(lf);
+
     this.#elision(lf);
     
     return new PassResult(this, $jp);
   }
+
 
   /**
    * 
    * @param {FnLifetimes} lf
    * @returns {boolean} True if the lifetime definition is illegal 
    */
-  #isDefinitionIllegal(lf) {
-    // TODO: Convert to multiple exceptions with meaningful messages
+  #checkIllegalDefinition(lf) {    
+    if (!lf.hasOutputReference)
+      return;
     
-    return lf.hasOutputReference && (
-      // No parameters to infer from.
-      lf.inputs === 0 ||
+    if (lf.inputLfs === 0)
+      throw new PassTransformationError(this, $jp, "No parameters to infer the return from");
 
-      // Borrows from a non-input lifetime
-      !lf.inLifetimes.some(e => e.at(1) === lf.outLifetime) ||
+    if (!lf.inLifetimes.some(e => e.at(1) === lf.outLifetime))
+      throw new PassTransformationError(this, $jp, "Return borrows from a non-input lifetime");
 
-      // Cannot infer, ambiguous which parameter it borrowed from
-      ( !lf.hasOutput && lf.inputs > 1 )
-    )
+    if (!lf.hasOutputLf && lf.inputLfs > 1)
+      throw new PassTransformationError(this, $jp, "Cannot infer lifetimes, it is ambiguous which parameter the return is borrowed from");
   }
 
   /**
@@ -73,8 +78,9 @@ class LifetimeElision extends SimplePass {
    * @param {FnLifetimes} lf 
    * @returns {boolean} True if the lifetime is valid 
    */
-  #isValid(lf) {
-
+  #isAlreadyValid(lf) {
+    if (lf.hasOutputLf)
+      return true;
   }
 
   /**
@@ -83,15 +89,13 @@ class LifetimeElision extends SimplePass {
    * @returns {boolean} True if the lifetime definition is valid
    */
   #elision(lf) {
-    if (this.#isValid(lf))
-      return true;
-    if (this.#isDefinitionIllegal(lf))
+    if (this.#checkIllegalDefinition(lf))
       return false;
 
     // Auto-fill the required lifetimes
     for (let lifetime of lf.lifetimes) {
       if (life) {
-
+        
       }
     }
 

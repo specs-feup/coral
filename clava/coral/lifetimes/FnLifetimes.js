@@ -57,14 +57,14 @@ class FnLifetimes {
   /**
    * @return {number} Number of input lifetimes
    */
-  get inputs() {
+  get inputLfs() {
     return this.#inLifetimes.lenght();
   }
 
   /**
    * @return {bool} True if the function has an output lifetime 
    */
-  get hasOutput() {
+  get hasOutputLf() {
     return this.#outLifetime !== undefined;
   }
 
