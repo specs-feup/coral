@@ -4,9 +4,7 @@
     <entry>
       <string>workspace</string>
       <FileList>
-        <fileList>
-          <file>tests/accepted/elision.c</file>
-        </fileList>
+        <fileList/>
       </FileList>
     </entry>
     <entry>
@@ -174,7 +172,7 @@
     </entry>
     <entry>
       <string>aspect</string>
-      <file>src/main.js</file>
+      <file>src\test.js</file>
     </entry>
     <entry>
       <string>ignoreHeaderIncludes</string>
