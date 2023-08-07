@@ -1,4 +1,4 @@
-laraImport("lara.Query");
+laraImport("weaver.Query");
 
 laraImport("clava.coral.CoralNormalizer");
 laraImport("clava.coral.CoralAnalyser");
