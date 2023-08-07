@@ -1,7 +1,7 @@
 laraImport("weaver.Query");
 laraImport("lara.pass.Pass");
-
 laraImport("lara.pass.composition.Passes");
+laraImport("lara.pass.results.AggregatePassResult");
 laraImport("clava.code.StatementDecomposer");
 
 laraImport("clava.pass.DecomposeDeclStmt");
@@ -35,7 +35,6 @@ class CoralNormalizer extends Pass {
         Passes.apply($jp, [
             new DecomposeDeclStmt(),
             new SimplifySelectionStmts(this.#statementDecomposer),
-            new LifetimeElision(),
         ]);
 
         
@@ -46,6 +45,12 @@ class CoralNormalizer extends Pass {
         for (const $assign of binaryOpIter) {
             SimplifyAssignment($assign);
         }
+
+        // TODO: Verify and report errors
+        const elision = new LifetimeElision();
+        elision.apply();
+
+        return new PassResult(this, $jp);
     }
 
 }

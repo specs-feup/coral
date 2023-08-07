@@ -49,10 +49,24 @@ class FnLifetimes {
   }
 
   /**
+   * @param {Array} lfs Array of pairs of parameter names and their lifetimes
+   */
+  set inLifetimes(lfs) {
+    this.#inLifetimes = [...lfs];
+  }
+
+  /**
    * @return {string} Output lifetime
    */
   get outLifetime() {
     return this.#outLifetime;
+  }
+
+  /**
+   * @param {string} lf Output lifetime
+   */
+  set outLifetime(lf) {
+    this.#outLifetime = lf;
   }
 
   /**
@@ -130,9 +144,14 @@ class FnLifetimes {
       p.detach();
     }
 
-    let content = "#pragma coral ";
-    content += this.#inLifetimes.join(' ');
-    content += ' ' + this.#outLifetime;
+    let content = "#pragma coral lft";
+
+    for (const [name, lf] of this.#inLifetimes) {
+      content += ` ${name} ${lf}`;
+    }
+
+    if (this.#outLifetime !== undefined)
+      content += ' ' + this.#outLifetime;
 
     this.$jp.insertBefore(content);
   }
