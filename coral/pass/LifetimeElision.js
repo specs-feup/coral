@@ -2,8 +2,8 @@ laraImport("lara.pass.SimplePass");
 laraImport("lara.pass.results.PassResult");
 laraImport("lara.pass.PassTransformationError");
 
-laraImport("clava.coral.lifetimes.FnLifetimes");
-laraImport("clava.coral.errors.CoralError");
+laraImport("coral.lifetimes.FnLifetimes");
+laraImport("coral.errors.CoralError");
 
 /**
  * Performs lifetime elision on every function declaration

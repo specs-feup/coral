@@ -8,7 +8,7 @@ laraImport("clava.pass.DecomposeDeclStmt");
 laraImport("clava.pass.SimplifySelectionStmts");
 laraImport("clava.code.SimplifyAssignment");
 
-laraImport("clava.coral.pass.LifetimeElision");
+laraImport("coral.pass.LifetimeElision");
 
 /**
  * Applies the normalization steps required for the Coral analysis

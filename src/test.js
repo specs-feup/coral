@@ -2,8 +2,8 @@ laraImport("clava.Clava");
 laraImport("clava.ClavaJoinPoints");
 laraImport("lara.Query");
 
-laraImport("clava.coral.CoralPipeline");
-laraImport("clava.coral.errors.CoralError");
+laraImport("coral.CoralPipeline");
+laraImport("coral.errors.CoralError");
 
 class CoralTester {
 

@@ -1,5 +1,5 @@
-laraImport("clava.coral.errors.CoralError");
-laraImport("clava.coral.CoralUtils");
+laraImport("coral.errors.CoralError");
+laraImport("coral.CoralUtils");
 
 class FnLifetimes {
 

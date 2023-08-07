@@ -1,7 +1,7 @@
 laraImport("weaver.Query");
 
-laraImport("clava.coral.CoralNormalizer");
-laraImport("clava.coral.CoralAnalyser");
+laraImport("coral.CoralNormalizer");
+laraImport("coral.CoralAnalyser");
 
 
 class CoralPipeline {
