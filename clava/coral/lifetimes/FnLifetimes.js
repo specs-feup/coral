@@ -1,4 +1,5 @@
 laraImport("clava.coral.errors.CoralError");
+laraImport("clava.coral.CoralUtils");
 
 class FnLifetimes {
 
@@ -13,7 +14,7 @@ class FnLifetimes {
     this.$jp = $function;
     this.#parsePragmas();
 
-    this.#hasOutput = CoralUtils.isReference($function.returnType);
+    this.#hasOutputReference = CoralUtils.isReference($function.returnType);
   }
 
   /**
@@ -37,7 +38,7 @@ class FnLifetimes {
    * @return {Array} Array of pairs lifetimes and their names, or undefined in the case of the output lifetime
    */
   get lifetimes() {
-    return [...this.#inLifetimes, (this.#outLifetime, undefined)];
+    return [...this.#inLifetimes, (undefined, this.#outLifetime)];
   }
 
   /**
@@ -58,7 +59,7 @@ class FnLifetimes {
    * @return {number} Number of input lifetimes
    */
   get inputLfs() {
-    return this.#inLifetimes.lenght();
+    return this.#inLifetimes.length;
   }
 
   /**
@@ -96,23 +97,23 @@ class FnLifetimes {
    */
   #parsePragmas() {
     this.#inLifetimes = [];
-    this.outLifetime = undefined;
+    this.#outLifetime = undefined;
 
     for (const p of this.pragmas) {
       const iter = p.content.split(' ').slice(1);
 
-      for (let i = 0; i < iter.lenght(); i++) {
+      for (let i = 0; i < iter.length; i++) {
         const arg = iter.at(i);
         if (arg.startsWith('%')) {
           // Output lifetime
           if (this.#outLifetime !== undefined)
               throw new CoralError("Multiple output lifetimes defined");
-          this.outLifetime = arg;
+          this.#outLifetime = arg;
         } else {
           // Named lifetime
-          if (this.lifetimePairs.some(e => e.at(0) === arg))
+          if (this.#inLifetimes.some(e => e.at(0) === arg))
               throw new CoralError(`Multiple lifetime definitions for parameter ${arg}`);
-          this.lifetimePairs.push([arg, iter.at(++i)]);
+          this.#inLifetimes.push([arg, iter.at(++i)]);
         }
       }
 
@@ -123,7 +124,7 @@ class FnLifetimes {
   /**
    * Overwrites the pragmas of the function with the new lifetimes
    */
-  overwriteFnLifetimePragmas() {
+  overwritePragmas() {
     const toDetatch = this.pragmas;
     for (let p of toDetatch) {
       p.detach();

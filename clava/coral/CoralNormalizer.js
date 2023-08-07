@@ -8,6 +8,8 @@ laraImport("clava.pass.DecomposeDeclStmt");
 laraImport("clava.pass.SimplifySelectionStmts");
 laraImport("clava.code.SimplifyAssignment");
 
+laraImport("clava.coral.pass.LifetimeElision");
+
 /**
  * Applies the normalization steps required for the Coral analysis
  */
@@ -33,6 +35,7 @@ class CoralNormalizer extends Pass {
         Passes.apply($jp, [
             new DecomposeDeclStmt(),
             new SimplifySelectionStmts(this.#statementDecomposer),
+            new LifetimeElision(),
         ]);
 
         
