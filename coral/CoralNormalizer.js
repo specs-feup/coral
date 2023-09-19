@@ -20,7 +20,7 @@ class CoralNormalizer extends Pass {
     constructor() {
         super();
 
-        this.#statementDecomposer = new StatementDecomposer();
+        this.#statementDecomposer = new StatementDecomposer("__coral_");
     }
 
 
@@ -36,6 +36,7 @@ class CoralNormalizer extends Pass {
             new DecomposeDeclStmt(),
             new SimplifySelectionStmts(this.#statementDecomposer),
         ]);
+
 
         
         const binaryOpIter = Query.searchFrom($jp, "binaryOp", {

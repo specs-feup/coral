@@ -1,14 +1,18 @@
+void use(const int *a) {
+
+}
+
 int main() {
-    int foo = 0;
-    int bar = 0;
-    int *restrict p;
+    int foo = 2;
+    int bar = 4;
+    const int *p;
 
     p = &foo;
     if (2 > 1) {
-        *p = 2;
-        *p = *p;
+        use(p);
         p = &bar;
     }
 
-    *p = 4;
+    use(p);
+    return 0;
 }

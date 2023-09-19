@@ -1,8 +1,9 @@
 laraImport("lara.pass.SimplePass");
 laraImport("lara.pass.results.PassResult");
-
 laraImport("clava.graphs.ControlFlowGraph");
 laraImport("clava.liveness.LivenessAnalysis");
+
+laraImport("coral.borrowck.Regionck");
 
 class CoralAnalyser extends SimplePass {
 
@@ -15,25 +16,14 @@ class CoralAnalyser extends SimplePass {
     }
 
     matchJoinpoint($jp) {
-        return $jp.instanceOf("function") &&
+        return $jp.instanceOf("function") && $jp.name === "main" &&
             $jp.isImplementation;
     }
 
     transformJoinpoint($jp) {
-        const cfg = ControlFlowGraph.build($jp, true, true);
-        console.log(cfg.toDot() + "\n\n");
-
-        const liveness = LivenessAnalysis.analyse(cfg);
-        const constraints = this.#defineConstraints($jp, cfg, liveness);
- 
+        const regionck = new Regionck($jp);
+        regionck.buildConstraints();
         return new PassResult(this, $jp, {applied: false});
-    }
-
-
-    #defineConstraints($jp, cfg, liveness) {
-        let constraints = [];
-
-        
     }
 
 }
