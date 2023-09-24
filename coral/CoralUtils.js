@@ -50,7 +50,10 @@ class CoralUtils {
 
 
 
-
+  //-------------------------------------
+  static retrieveTy($varref) {
+    return $varref.declaration.getUserField("ty");
+  }
 
 
 }

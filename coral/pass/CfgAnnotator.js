@@ -3,6 +3,8 @@ laraImport("lara.pass.Pass");
 laraImport("coral.borrowck.RegionVariable");
 laraImport("coral.ty.Ty");
 laraImport("coral.ty.RefTy");
+laraImport("coral.ty.BuiltinTy");
+laraImport("coral.ty.ElaboratedTy");
 laraImport("coral.ty.BorrowKind");
 
 laraImport("coral.borrowck.Regionck");
@@ -89,7 +91,6 @@ class CfgAnnotator extends Pass {
 
         if ($vardecl.hasInit) {
             this.#annotateExprStmt(node, $vardecl.init);
-            // TODO: Subtyping constraint
         }
     }
 
@@ -108,7 +109,7 @@ class CfgAnnotator extends Pass {
 
         switch ($type.joinPointType) {
             case "builtinType":
-                return new Ty($type.builtinKind, true, isConst);
+                return new BuiltinTy($type.builtinKind, isConst);
             case "pointerType": {
                 const inner = this.#deconstructType($type.pointee, $jp, create_region_var);
                 if (inner.isConst && isRestrict)
@@ -139,7 +140,7 @@ class CfgAnnotator extends Pass {
 
                 // println($type.namedType.decl.joinPointType);
                 // println($type.namedType.decl.kind);
-                throw new Error("TODO: Elaborated type annotation");
+                throw new Error("Unimplemented Elaborated type annotation");
             default:
                 throw new Error("Unhandled deconstruct declstmt type: " + $type.joinPointType);
 
@@ -165,16 +166,17 @@ class CfgAnnotator extends Pass {
                 break;
             case "varRef": {
                 const path = this.#parseLvalue(node, $exprStmt);
-                // TODO: Set correct AccessMutability and AccessDepth depending on if type is copiable or not
+                const ty = $exprStmt.declaration.getUserField("ty");
+                // TODO: DEEP WRITE only if moving value, should be implemented, but needs testing due to edge cases
                 node.scratch("_coral").accesses.push(new Access(
                     path,
-                    AccessMutability.READ,
+                    ty.isCopyable ? AccessMutability.READ : AccessMutability.WRITE,
                     AccessDepth.DEEP
                 ));
                 break;
             }
             case "parenExpr":
-                throw new Error("TODO: Paren expr annotation");
+                throw new Error("Unimplemented: Paren expr annotation");
             case "returnStmt":
                 this.#annotateExprStmt(node, $exprStmt.returnExpr);
                 break;
@@ -183,17 +185,10 @@ class CfgAnnotator extends Pass {
         }
     }
 
-
-    // #annotateRhs(node, $expr) {
-    //     if ($expr.instanceOf("unaryOp") && $expr.operator === "&") {
-    //         println("TODO: BORROW: " + $expr.code);
-    //     } else {
-    //         println("TODO: Unhandled annotate rhs for jp: " + $expr.joinPointType);
-    //     }
-    // }
-
+    
     #annotateBinaryOp(node, $binaryOp) {
         if ($binaryOp.isAssignment) {
+            // TODO: Need to handle a move 
             const path = this.#parseLvalue(node, $binaryOp.left);
             println(node.id(), Object.keys(node.scratch("_coral")).join(' '));
             node.scratch("_coral").accesses.push(new Access(path, AccessMutability.WRITE, AccessDepth.SHALLOW));
@@ -205,9 +200,6 @@ class CfgAnnotator extends Pass {
         
         this.#parseLvalue(node, $binaryOp.left);
         this.#parseLvalue(node, $binaryOp.right);
-
-        // node.scratch("_coral").lhs = $binaryOp.left;
-        // const ty = this.#annotateRhs(node, $binaryOp.right);
     }
 
 

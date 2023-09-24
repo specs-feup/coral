@@ -1,28 +1,32 @@
+/**
+ * @abstract
+ */
 class Ty {
 
     name;
     lifetimes;
     isConst;
+    isCopyable;
 
-    constructor(name, copyable, isConst=false, lifetimes=[]) {
+    constructor(name, copyable, isConst, lifetimes) {
         this.name = name;
-        this.copyable = copyable;
+        this.isCopyable = copyable;
         this.isConst = isConst;
         this.lifetimes = lifetimes;
     }
 
-    equals(other) {
-        return this.name === other.name && this.isConst === other.isConst && this.lifetimes.equals(other.lifetimes);
-    }
+    /**
+     * 
+     * @param {Ty} other 
+     */
+    equals(other) {}
 
     /**
      * @returns string
      */
-    toString() {
-        return this.lifetimes.size > 0 ? this.name + "<" + this.lifetimes.join(", ") + ">" : this.name;
-    }
+    toString() {}
 
     get requiresLifetimes() {
         return this.lifetimes.size > 0;
-    } 
+    }
 }
