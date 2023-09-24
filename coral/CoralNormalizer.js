@@ -20,7 +20,7 @@ class CoralNormalizer extends Pass {
     constructor() {
         super();
 
-        this.#statementDecomposer = new StatementDecomposer("__coral_");
+        this.#statementDecomposer = new StatementDecomposer("TMP_");
     }
 
 

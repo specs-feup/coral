@@ -7,6 +7,14 @@ laraImport("coral.ty.BorrowKind");
 
 laraImport("coral.borrowck.Regionck");
 
+laraImport("coral.mir.path.PathVarRef");
+laraImport("coral.mir.path.PathMemberAccess");
+laraImport("coral.mir.path.PathDeref");
+laraImport("coral.mir.path.PathKind");
+
+laraImport("coral.mir.Loan");
+laraImport("coral.mir.Access");
+
 class CfgAnnotator extends Pass {
 
     regionck;
@@ -40,9 +48,13 @@ class CfgAnnotator extends Pass {
     _apply_impl($jp) {
         // Init scratch pad and annotate nodes with liveness
         for (const node of this.cfg.graph.nodes()) {
-            node.scratch("_coral", {});
-            node.scratch("_coral").liveIn = this.liveness.liveIn.get(node.id());
-            node.scratch("_coral").liveOut = this.liveness.liveOut.get(node.id());
+            const scratch = {};
+            scratch.liveIn = this.liveness.liveIn.get(node.id()) ?? new Set();
+            scratch.liveOut = this.liveness.liveOut.get(node.id()) ?? new Set();
+            scratch.accesses = [];
+            scratch.inScopeLoans = [];
+
+            node.scratch("_coral", scratch);
         }
 
         this.#annotateLifetimeTypes();
@@ -76,30 +88,32 @@ class CfgAnnotator extends Pass {
         node.scratch("_coral").lhs_ty = ty;
 
         if ($vardecl.hasInit) {
-            this.#annotateRhs(node, $vardecl.init);
+            this.#annotateExprStmt(node, $vardecl.init);
             // TODO: Subtyping constraint
         }
     }
 
-    #deconstructType(type, $jp, create_region_var=false) {        
+    #deconstructType($type, $jp, create_region_var=false) {        
         let isConst = false;
         let isRestrict = false;
 
-        if (type.instanceOf("qualType")) {
-            if (type.qualifiers.includes("const"))
+        if ($type.instanceOf("qualType")) {
+            if ($type.qualifiers.includes("const"))
                 isConst = true;
-            if (type.qualifiers.includes("restrict"))
+            if ($type.qualifiers.includes("restrict"))
                 isRestrict = true;
-            type = type.unqualifiedType;
+            $type = $type.unqualifiedType;
         }
 
-        switch (type.joinPointType) {
+
+        switch ($type.joinPointType) {
             case "builtinType":
-                return new Ty(type.builtinKind, isConst);
+                return new Ty($type.builtinKind, true, isConst);
             case "pointerType": {
-                const inner = this.#deconstructType(type.pointee, $jp, create_region_var);
+                const inner = this.#deconstructType($type.pointee, $jp, create_region_var);
                 if (inner.isConst && isRestrict)
                     throw new Error("Cannot have a restrict pointer to a const type");
+
                 return new RefTy(
                     inner.isConst ? BorrowKind.SHARED : BorrowKind.MUTABLE,
                     inner,
@@ -109,51 +123,163 @@ class CfgAnnotator extends Pass {
             }
             case "qualType":
                 throw new Error("Unreachable: QualType cannot have a QualType as unqualified type");
+            case "typedefType":
+                return this.#deconstructType($type.underlyingType, $jp, create_region_var);
+            case "elaboratedType":
+                // Inner should be instance of TagType, inner is 
+                // println($type.joinPointType);
+                // println($type.qualifier);
+                // println($type.keyword);
+                // println("------------------");  
+
+                // println($type.namedType.joinPointType);
+                // println($type.namedType.kind);
+                // println($type.namedType.name);
+                // println("------------------");
+
+                // println($type.namedType.decl.joinPointType);
+                // println($type.namedType.decl.kind);
+                throw new Error("TODO: Elaborated type annotation");
             default:
-                println("Unhandled deconstruct declstmt type: " + type.joinPointType);
+                throw new Error("Unhandled deconstruct declstmt type: " + $type.joinPointType);
 
         }
     }
 
 
     #annotateExprStmt(node, $exprStmt) {
-        if ($exprStmt.instanceOf("call")) {
-            this.#annotateFunctionCall(node, $exprStmt);
-        } else if ($exprStmt.instanceOf("binaryOp")) {
-           
-            if (!$exprStmt.isAssignment) {
-                return this.#annotateRhs(node, $exprStmt);
+        switch ($exprStmt.joinPointType) {
+            case "literal":
+            case "intLiteral":
+            case "floatLiteral":
+            case "boolLiteral":
+                break;
+            case "binaryOp":
+                this.#annotateBinaryOp(node, $exprStmt);
+                break;
+            case "unaryOp":
+                this.#annotateUnaryOp(node, $exprStmt);
+                break;
+            case "call":
+                this.#annotateFunctionCall(node, $exprStmt);
+                break;
+            case "varRef": {
+                const path = this.#parseLvalue(node, $exprStmt);
+                // TODO: Set correct AccessMutability and AccessDepth depending on if type is copiable or not
+                node.scratch("_coral").accesses.push(new Access(
+                    path,
+                    AccessMutability.READ,
+                    AccessDepth.DEEP
+                ));
+                break;
             }
-
-            const $lhs = $exprStmt.children[0];
-            node.scratch("_coral").lhs = $lhs;
-
-            const ty = this.#annotateRhs(node, $rhs);
-            // TODO: Create loan if needed? Check typings?
-
-        } else if ($exprStmt.instanceOf("returnStmt")) {
-            println("TODO: Return stmt annotation");
-        } else {
-            println("Unhandled expression annotation for jp: " + $exprStmt.joinPointType);
+            case "parenExpr":
+                throw new Error("TODO: Paren expr annotation");
+            case "returnStmt":
+                this.#annotateExprStmt(node, $exprStmt.returnExpr);
+                break;
+            default:
+                println("Unhandled expression annotation for jp: " + $exprStmt.joinPointType);
         }
     }
 
 
-    #annotateRhs(node, $expr) {
-        if ($expr.instanceOf("unaryOp") && $expr.operator === "&") {
-            println("TODO: BORROW: " + $expr.code);
+    // #annotateRhs(node, $expr) {
+    //     if ($expr.instanceOf("unaryOp") && $expr.operator === "&") {
+    //         println("TODO: BORROW: " + $expr.code);
+    //     } else {
+    //         println("TODO: Unhandled annotate rhs for jp: " + $expr.joinPointType);
+    //     }
+    // }
+
+    #annotateBinaryOp(node, $binaryOp) {
+        if ($binaryOp.isAssignment) {
+            const path = this.#parseLvalue(node, $binaryOp.left);
+            println(node.id(), Object.keys(node.scratch("_coral")).join(' '));
+            node.scratch("_coral").accesses.push(new Access(path, AccessMutability.WRITE, AccessDepth.SHALLOW));
+            this.#annotateExprStmt(node, $binaryOp.right);
+            return;
+        }
+
+        // TODO: Something missing here...
+        
+        this.#parseLvalue(node, $binaryOp.left);
+        this.#parseLvalue(node, $binaryOp.right);
+
+        // node.scratch("_coral").lhs = $binaryOp.left;
+        // const ty = this.#annotateRhs(node, $binaryOp.right);
+    }
+
+
+    #annotateUnaryOp(node, $unaryOp) {
+        if ($unaryOp.operator === "&") {
+            // Create loan, and start of an lvalue
+            const path = this.#parseLvalue(node, $unaryOp.operand);
+
+            const regionVar = this.#new_region_var($unaryOp);
+            // TODO: Retrieve type + borrow kind
+            const ty = new Ty("INCOMPLETE", true);
+            const borrowKind = BorrowKind.SHARED;
+            
+            const loan = new Loan(regionVar, borrowKind, ty, path, $unaryOp);
+            node.scratch("_coral").loan = loan;
+            node.scratch("_coral").accesses.push(new Access(
+                path,
+                borrowKind === BorrowKind.MUTABLE ? AccessMutability.WRITE : AccessMutability.READ,
+                AccessDepth.DEEP
+            ));
+            this.regionck.loans.push(loan);
+
+            // TODO: I think I'm missing something here
+        } else if ($unaryOp.operator === "*") {
+            // Start of an lvaue
+            const path = this.#parseLvalue(node, $unaryOp);
+            // TODO: Set correct AccessMutability and AccessDepth
+            node.scratch("_coral").accesses.push(new Access(
+                path,
+                AccessMutability.READ,
+                AccessDepth.DEEP
+            ));
         } else {
-            println("TODO: Unhandled annotate rhs for jp: " + $expr.joinPointType);
+            // Not relevant, keep going
+            this.#annotateExprStmt(node, $unaryOp.operand);
         }
     }
 
 
     #annotateFunctionCall(node, $call) {
-        
+        println("TODO: Function call annotation");
     }
 
 
     #annotateWrapperStmt(node, $wrapperStmt) {
-    
+        println("TODO: Wrapper stmt annotation");
+    }
+
+
+
+
+
+    //--------------------------------
+    #parseLvalue(node, $jp) {
+        switch ($jp.joinPointType) {
+            case "literal":
+            case "intLiteral":
+            case "floatLiteral":
+            case "boolLiteral":
+                return undefined;
+            case "varref":
+                return new PathVarRef($jp, undefined);
+            case "unaryOp":
+                if ($jp.operator === "*")
+                    return new PathDeref($jp, this.#parseLvalue(node, $jp.operand));
+                else
+                    throw new Error("Unhandled parseLvalue unary op: " + $jp.operator);
+            case "memberAccess":
+            case "parenExpr":
+                return this.#parseLvalue(node, $jp.subExpr);
+            default:
+                throw new Error("Unhandled parseLvalue: " + $jp.joinPointType);
+        }   
     }
 }

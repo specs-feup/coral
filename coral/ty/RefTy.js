@@ -20,7 +20,11 @@ class RefTy extends Ty {
 
 
     constructor(borrowKind, referent, regionVar, isConst=false) {
-        super(borrowKind === BorrowKind.MUTABLE ? `&'${regionVar.name} mut ` : `&'${regionVar.name} `, isConst);
+        super(borrowKind === BorrowKind.MUTABLE ? `&'${regionVar.name} mut ` : `&'${regionVar.name} `,
+            borrowKind === BorrowKind.SHARED,
+            isConst
+        );
+        
         this.borrowKind = borrowKind;
         this.referent = referent;
         this.regionVar = regionVar;

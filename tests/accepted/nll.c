@@ -3,9 +3,9 @@ void use(const int *a) {
 }
 
 int main() {
-    int foo = 2;
-    int bar = 4;
-    const int *p;
+    int foo = 0;
+    int bar = 0;
+    int *p;
 
     p = &foo;
     if (2 > 1) {

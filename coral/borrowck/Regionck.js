@@ -1,6 +1,8 @@
 laraImport("coral.borrowck.LifetimeConstraints");
 laraImport("coral.borrowck.OutlivesConstraint");
 laraImport("coral.dotFormatters.LivenessDotFormatter");
+laraImport("coral.dotFormatters.MirDotFormatter");
+
 
 laraImport("coral.borrowck.RegionVariable");
 laraImport("coral.pass.CfgAnnotator");
@@ -35,6 +37,9 @@ class Regionck {
         cfgAnnotator.apply($jp);
 
         // console.log(this.cfg.startNode.data().nodeStmt + "\n\n");
+
+        println();
+        println(this.cfg.toDot(new MirDotFormatter()) + "\n\n");
     }
 
 

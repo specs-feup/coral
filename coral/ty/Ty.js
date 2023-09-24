@@ -4,8 +4,9 @@ class Ty {
     lifetimes;
     isConst;
 
-    constructor(name, isConst=false, lifetimes=[]) {
+    constructor(name, copyable, isConst=false, lifetimes=[]) {
         this.name = name;
+        this.copyable = copyable;
         this.isConst = isConst;
         this.lifetimes = lifetimes;
     }
