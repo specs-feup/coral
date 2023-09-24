@@ -86,10 +86,18 @@ class CfgAnnotator extends Pass {
     #annotateDeclStmt(node, $vardecl) {
         const ty = this.#deconstructType($vardecl.type, $vardecl, true);        
         $vardecl.setUserField("ty", ty);
-        node.scratch("_coral").lhs = $vardecl;
-        node.scratch("_coral").lhs_ty = ty;
+        const scratch = node.scratch("_coral");
+        scratch.lhs = $vardecl;
+        scratch.lhs_ty = ty;
+
 
         if ($vardecl.hasInit) {
+            scratch.accesses.push(new Access(
+                new PathVarRef($vardecl, undefined),
+                AccessMutability.WRITE,
+                AccessDepth.SHALLOW
+            ));
+
             this.#annotateExprStmt(node, $vardecl.init);
         }
     }
@@ -190,16 +198,13 @@ class CfgAnnotator extends Pass {
         if ($binaryOp.isAssignment) {
             // TODO: Need to handle a move 
             const path = this.#parseLvalue(node, $binaryOp.left);
-            println(node.id(), Object.keys(node.scratch("_coral")).join(' '));
             node.scratch("_coral").accesses.push(new Access(path, AccessMutability.WRITE, AccessDepth.SHALLOW));
             this.#annotateExprStmt(node, $binaryOp.right);
             return;
         }
 
-        // TODO: Something missing here...
-        
-        this.#parseLvalue(node, $binaryOp.left);
-        this.#parseLvalue(node, $binaryOp.right);
+        this.#annotateExprStmt(node, $binaryOp.left);
+        this.#annotateExprStmt(node, $binaryOp.right);
     }
 
 
@@ -240,7 +245,15 @@ class CfgAnnotator extends Pass {
 
 
     #annotateFunctionCall(node, $call) {
-        println("TODO: Function call annotation");
+        for (const $expr of $call.args) {
+            const path = this.#parseLvalue(node, $expr);
+            // TODO: Set correct AccessMutability and AccessDepth
+            node.scratch("_coral").accesses.push(new Access(
+                path,
+                AccessMutability.READ,
+                AccessDepth.DEEP
+            ));
+        }
     }
 
 

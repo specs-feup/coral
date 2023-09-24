@@ -1,5 +1,6 @@
 laraImport("lara.graphs.DotFormatter");
 laraImport("clava.graphs.ControlFlowGraph");
+laraImport("clava.graphs.cfg.CfgNodeType");
 
 class MirDotFormatter extends DotFormatter {
 
@@ -16,6 +17,10 @@ class MirDotFormatter extends DotFormatter {
             const from = edge.source();
             const scratch = from.scratch("_coral");
             
+            if (scratch.lhs_ty?.requiresLifetimes) {
+                sections.set("Ty Lifetimes", scratch.lhs_ty.toString() + "\n");
+            }
+
             if (scratch.loan !== undefined) {
                 sections.set("Loan", scratch.loan.toString() + "\n");
             }

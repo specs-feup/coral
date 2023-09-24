@@ -27,6 +27,6 @@ class Ty {
     toString() {}
 
     get requiresLifetimes() {
-        return this.lifetimes.size > 0;
+        return this.lifetimes.size > 0 || this.inner?.requiresLifetimes;
     }
 }

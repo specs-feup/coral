@@ -14,4 +14,7 @@ class BuiltinTy extends Ty {
         return this.name;
     }
 
+    get requiresLifetimes() {
+        return false;
+    }
 }
