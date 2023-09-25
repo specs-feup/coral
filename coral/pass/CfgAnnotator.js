@@ -1,6 +1,8 @@
 laraImport("lara.pass.Pass");
 
 laraImport("coral.borrowck.RegionVariable");
+laraImport("coral.borrowck.RegionKind");
+
 laraImport("coral.ty.Ty");
 laraImport("coral.ty.RefTy");
 laraImport("coral.ty.BuiltinTy");
@@ -19,18 +21,23 @@ laraImport("coral.mir.Access");
 
 class CfgAnnotator extends Pass {
 
+    /**
+     * @type {Regionck}
+     */
     regionck;
-    liveness;
-    cfg;
 
+    /**
+     * @type {number}
+     */
     regionVarCounter;
+    /**
+     * @type {FnLifetimes}
+     */
     fnLifetimes;
 
     constructor(regionck) {
         super();
         this.regionck = regionck;
-        this.liveness = regionck.liveness;
-        this.cfg = regionck.cfg;
     }
 
     #new_region_var($expr, name="", kind=RegionKind.EXISTENTIAL) {
@@ -52,10 +59,10 @@ class CfgAnnotator extends Pass {
      */
     _apply_impl($jp) {
         // Init scratch pad and annotate nodes with liveness
-        for (const node of this.cfg.graph.nodes()) {
+        for (const node of this.regionck.cfg.graph.nodes()) {
             const scratch = {};
-            scratch.liveIn = this.liveness.liveIn.get(node.id()) ?? new Set();
-            scratch.liveOut = this.liveness.liveOut.get(node.id()) ?? new Set();
+            scratch.liveIn = this.regionck.liveness.liveIn.get(node.id()) ?? new Set();
+            scratch.liveOut = this.regionck.liveness.liveOut.get(node.id()) ?? new Set();
             scratch.accesses = [];
             scratch.inScopeLoans = [];
 
@@ -78,6 +85,8 @@ class CfgAnnotator extends Pass {
         for (const $param of $jp.params) {
             const ty = this.#deconstructType($param.type, $param, false);
             $param.setUserField("ty", ty);
+            this.borrowck.declarations.set($param.name, ty);
+
             
             const regionVar = this.#new_region_var($param);
             this.regionck.loans.push(loan);
@@ -85,7 +94,7 @@ class CfgAnnotator extends Pass {
     }
 
     #annotateLifetimeTypes() {
-        for (const node of this.cfg.graph.nodes()) {
+        for (const node of this.regionck.cfg.graph.nodes()) {
             const data = node.data();
 
             switch (data.type) {
@@ -122,7 +131,7 @@ class CfgAnnotator extends Pass {
         const scratch = node.scratch("_coral");
         scratch.lhs = $vardecl;
         scratch.lhs_ty = ty;
-
+        this.regionck.declarations.set($vardecl.name, ty);
 
         if ($vardecl.hasInit) {
             scratch.accesses.push(new Access(
@@ -207,7 +216,7 @@ class CfgAnnotator extends Pass {
                 break;
             case "varref": {
                 const path = this.#parseLvalue(node, $exprStmt);
-                const ty = $exprStmt.declaration.getUserField("ty");
+                const ty = $exprStmt.declaration.userField("ty");
                 // TODO: DEEP WRITE only if moving value, should be implemented, but needs testing due to edge cases
                 node.scratch("_coral").accesses.push(new Access(
                     path,

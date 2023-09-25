@@ -8,7 +8,7 @@ class MirDotFormatter extends DotFormatter {
         super();
 
         this.setNodeLabelFormatter((node) => {
-            return node.data().toString();
+            return `[${node.id()}] ${node.data().toString()}`;
         });
 
         this.setEdgeLabelFormatter((edge) => {

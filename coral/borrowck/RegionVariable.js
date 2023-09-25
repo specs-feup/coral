@@ -1,7 +1,4 @@
-class RegionKind {
-    static EXISTENTIAL = "existential";
-    static UNIVERSAL = "universal";
-}
+laraImport("coral.borrowck.RegionKind");
 
 class RegionVariable {
     /**
@@ -9,12 +6,20 @@ class RegionVariable {
      */
     kind;
 
+    /**
+     * @type {string}
+     */
     name;
 
+    /**
+     * @type {string}
+     */
     id;
 
+    /**
+     * @type {Set<string>}
+     */
     points;
-
     
     constructor(id, kind, name, $expr) {
         this.kind = kind;
