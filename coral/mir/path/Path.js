@@ -1,4 +1,6 @@
 laraImport("coral.mir.path.PathKind");
+laraImport("coral.ty.Ty");
+laraImport("coral.borrowck.Regionck");
 
 /**
  * @abstract
@@ -23,4 +25,10 @@ class Path {
     get kind() {}
 
     toString() {}
+
+    /**
+     * @param {Regionck} regionck
+     * @returns {Ty}
+     */
+    retrieveTy(regionck) {}
 }

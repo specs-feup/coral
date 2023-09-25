@@ -27,9 +27,12 @@ class MirDotFormatter extends DotFormatter {
 
             const accesses = scratch.accesses;
             if (accesses.length > 0) {
-                sections.set("Accesses", accesses.map(a => a.toString()).join("\n"));
+                sections.set("Accesses", accesses.map(a => a.toString()).join("\n") + "\n");
             }
 
+            if (scratch.moves.length > 0 || scratch.copies.length > 0) {
+                sections.set("StatementActions", scratch.moves.concat(scratch.copies).join("\n") + "\n");
+            }
 
             let ret = "";
             for (const [key, value] of sections) {

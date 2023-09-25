@@ -1,9 +1,18 @@
 /**
- * A constraint that the lifetime of `sup` outlives the lifetime of `sub` at point `point`.
+ * A constraint that lifetime 'sup' outlives lifetime 'sub' at point 'point'.
  */
 class OutlivesConstraint {
+    /**
+     * @type {RegionVariable}
+     */
     sup;
+    /**
+     * @type {RegionVariable}
+     */
     sub;
+    /**
+     * @type {string}
+     */
     point;
 
     constructor(sup, sub, point) {

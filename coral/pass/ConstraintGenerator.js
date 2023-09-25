@@ -55,15 +55,24 @@ class ConstraintGenerator extends Pass {
                     ty.regionVar.points.add(node.id());
                 }
             }
+
+            // Other constraints
+            this.#subtypingConstraints(node);
+            this.#reborrowConstraints(node);
         }
 
-        this.#subtypingConstraints();
-        this.#reborrowConstraints();
     }
 
-    #subtypingConstraints() {
+
+    #subtypingConstraints(node) {
+        const scratch = node.scratch("_coral");
+        if (scratch.loan) {
+            const loan = scratch.loan;
+            
+        }
     }
 
-    #reborrowConstraints() {
+    #reborrowConstraints(node) {
+        // TODO: REBORROW CONSTRAINTS
     }
 }

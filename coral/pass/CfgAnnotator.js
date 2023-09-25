@@ -19,6 +19,9 @@ laraImport("coral.mir.path.PathKind");
 laraImport("coral.mir.Loan");
 laraImport("coral.mir.Access");
 
+laraImport("coral.mir.StatementAction");
+laraImport("coral.mir.StatementActionKind");
+
 class CfgAnnotator extends Pass {
 
     /**
@@ -65,13 +68,14 @@ class CfgAnnotator extends Pass {
             scratch.liveOut = this.regionck.liveness.liveOut.get(node.id()) ?? new Set();
             scratch.accesses = [];
             scratch.inScopeLoans = [];
+            scratch.copies = [];
+            scratch.moves = [];
 
             node.scratch("_coral", scratch);
         }
 
         this.regionVarCounter = 1;
         this.#createUniversalRegions($jp);
-        this.#annotateParams($jp);
         this.#annotateLifetimeTypes();
         delete this.fnLifetimes;
     }
@@ -79,17 +83,18 @@ class CfgAnnotator extends Pass {
     #createUniversalRegions($jp) {
         this.fnLifetimes = new FnLifetimes($jp);
         this.regionck.regions.push(new RegionVariable(0, RegionKind.UNIVERSAL, "static", undefined));
-    }
-
-    #annotateParams($jp) {
+        
+        // Annotate param universal regions
         for (const $param of $jp.params) {
             const ty = this.#deconstructType($param.type, $param, false);
             $param.setUserField("ty", ty);
             this.borrowck.declarations.set($param.name, ty);
 
-            
+            // TODO: Retrieve lifetimes from fnLifetimes
+            // & Create multiple regionVars if needed
+
             const regionVar = this.#new_region_var($param);
-            this.regionck.loans.push(loan);
+            this.regionck.regions.push(regionVar);
         }
     }
 
@@ -238,10 +243,39 @@ class CfgAnnotator extends Pass {
     
     #annotateBinaryOp(node, $binaryOp) {
         if ($binaryOp.isAssignment) {
-            // TODO: Need to handle a move 
             const path = this.#parseLvalue(node, $binaryOp.left);
-            node.scratch("_coral").accesses.push(new Access(path, AccessMutability.WRITE, AccessDepth.SHALLOW));
+            const scratch = node.scratch("_coral");
+            scratch.accesses.push(new Access(path, AccessMutability.WRITE, AccessDepth.SHALLOW));
+            
             this.#annotateExprStmt(node, $binaryOp.right);
+            
+            // Identify & mark moves, only if the right side is path
+            // TODO: Not detecting "a = (b);"
+            if ($binaryOp.right.instanceOf("varref") ||
+                    ( $binaryOp.right.instanceOf("unaryOp") &&
+                    $binaryOp.right.operator === "*" ) ) {
+                // May be a move
+                const leftPath = this.#parseLvalue(node, $binaryOp.left);
+                const leftTy = this.regionck.declarations.get($binaryOp.left.name);
+                const rightPath = this.#parseLvalue(node, $binaryOp.right);
+                const rightTy = rightPath.retrieveTy(this.regionck);
+                if (leftTy.isCopyable !== rightTy.isCopyable) {
+                    throw new Error("AnnotateBinaryOp: Incompatible types");
+                }
+                const statementAction = new StatementAction(
+                    leftTy.isCopyable ? StatementActionKind.COPY : StatementActionKind.MOVE,
+                    leftPath,
+                    rightPath,
+                    leftTy,
+                    rightTy
+                );
+                if (leftTy.isCopyable)
+                    scratch.copies.push(statementAction);
+                else
+                    scratch.moves.push(statementAction);
+            }
+
+            
             return;
         }
 
@@ -253,21 +287,30 @@ class CfgAnnotator extends Pass {
     #annotateUnaryOp(node, $unaryOp) {
         if ($unaryOp.operator === "&") {
             // Create loan, and start of an lvalue
-            const path = this.#parseLvalue(node, $unaryOp.operand);
-
+            const loanedPath = this.#parseLvalue(node, $unaryOp.operand);
             const regionVar = this.#new_region_var($unaryOp);
-            // TODO: Retrieve type + borrow kind
-            const ty = new Ty("INCOMPLETE", true);
-            const borrowKind = BorrowKind.SHARED;
-            
-            const loan = new Loan(regionVar, borrowKind, ty, path, $unaryOp);
+            const loanedTy = loanedPath.retrieveTy(this.regionck);
+
+            // Borrowkind depends on the assignment left value
+            let assignment = $unaryOp.parent;
+            while (assignment.joinPointType !== "binaryOp" || !assignment.isAssignment) {
+                assignment = assignment.parent;
+            }
+
+            const leftTy = this.#parseLvalue(node, assignment.left).retrieveTy(this.regionck);
+            if (!(leftTy instanceof RefTy)) {
+                throw new Error("annotateUnaryOp: Cannot borrow from non-reference type " + leftTy.toString());
+            }
+
+            const loan = new Loan(regionVar, leftTy, loanedTy, loanedPath, $unaryOp);
             node.scratch("_coral").loan = loan;
+            this.regionck.loans.push(loan);
+
             node.scratch("_coral").accesses.push(new Access(
-                path,
-                borrowKind === BorrowKind.MUTABLE ? AccessMutability.WRITE : AccessMutability.READ,
+                loanedPath,
+                loan.borrowKind === BorrowKind.MUTABLE ? AccessMutability.WRITE : AccessMutability.READ,
                 AccessDepth.DEEP
             ));
-            this.regionck.loans.push(loan);
 
             // TODO: I think I'm missing something here
         } else if ($unaryOp.operator === "*") {
@@ -295,6 +338,7 @@ class CfgAnnotator extends Pass {
                 AccessMutability.READ,
                 AccessDepth.DEEP
             ));
+            // TODO: Identify & mark moves
         }
     }
 
@@ -308,6 +352,12 @@ class CfgAnnotator extends Pass {
 
 
     //--------------------------------
+    /**
+     * 
+     * @param {*} node 
+     * @param {JoinPoint} $jp 
+     * @returns {Path}
+     */
     #parseLvalue(node, $jp) {
         switch ($jp.joinPointType) {
             case "literal":

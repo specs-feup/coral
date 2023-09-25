@@ -18,12 +18,12 @@ class Loan {
     /**
      * @type {Ty}
      */
-    ty;
+    loanedTy;
 
     /**
      * @type {Path}
      */
-    path;
+    loanedPath;
 
     /**
      * JoinPoint where the loan was created
@@ -32,16 +32,16 @@ class Loan {
     $jp;
 
 
-    constructor(regionVar, borrowKind, ty, path, $jp) {
+    constructor(regionVar, borrowKind, loanedTy, loanedPath, $jp) {
         this.regionVar = regionVar;
         this.borrowKind = borrowKind;
-        this.ty = ty;
-        this.path = path;
+        this.loanedTy = loanedTy;
+        this.loanedPath = loanedPath;
         this.$jp = $jp;
     }
 
     toString() {
-        return `${this.borrowKind} borrow of ${this.path.toString()} with lifetime '${this.regionVar.name}`;
+        return `${this.borrowKind} borrow of ${this.loanedPath.toString()} with lifetime '${this.regionVar.name}`;
     }
 
 }

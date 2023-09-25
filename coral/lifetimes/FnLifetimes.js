@@ -159,7 +159,7 @@ class FnLifetimes {
     }
 
     if (this.returnLifetimes.length > 0) {
-      this.$function.insertBefore(`#pragma coral_lf % ${this.returnLifetimes.map(e => "%" + e).join(" ")}`);
+      this.$function.insertBefore(`#pragma coral_lf ${this.returnLifetimes.map(e => "%" + e).join(" ")}`);
     }
   }
 }

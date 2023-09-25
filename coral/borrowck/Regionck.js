@@ -9,6 +9,8 @@ laraImport("coral.pass.ConstraintGenerator");
 
 laraImport("clava.graphs.ControlFlowGraph");
 
+laraImport("lara.Io");
+
 class Regionck {
 
     /**
@@ -40,8 +42,6 @@ class Regionck {
     declarations;
 
     constructor($jp) {
-
-        // println($jp.dump);
         this.constraints = [];
         this.regions = [];
         this.loans = [];
@@ -49,14 +49,14 @@ class Regionck {
 
         this.$jp = $jp;
         this.cfg = ControlFlowGraph.build($jp, true, { splitInstList: true });
-        // console.log(this.cfg.toDot() + "\n\n");
 
         this.liveness = LivenessAnalysis.analyse(this.cfg);
         // console.log(this.cfg.toDot(new LivenessDotFormatter(this.liveness)) + "\n\n");
         
         const cfgAnnotator = new CfgAnnotator(this);
         cfgAnnotator.apply($jp);
-        // println("\n" + this.cfg.toDot(new MirDotFormatter()) + "\n\n");
+
+        Io.writeFile("../out/dot/mir.gv", this.cfg.toDot(new MirDotFormatter()));
     }
 
 
