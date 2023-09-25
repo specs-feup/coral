@@ -63,17 +63,15 @@ class CfgAnnotator extends Pass {
         }
 
         this.regionVarCounter = 1;
-        this.#createUniversalRegions();
+        this.#createUniversalRegions($jp);
         this.#annotateParams($jp);
         this.#annotateLifetimeTypes();
         delete this.fnLifetimes;
     }
 
-    #createUniversalRegions() {
+    #createUniversalRegions($jp) {
         this.fnLifetimes = new FnLifetimes($jp);
         this.regionck.regions.push(new RegionVariable(0, RegionKind.UNIVERSAL, "static", undefined));
-        
-
     }
 
     #annotateParams($jp) {

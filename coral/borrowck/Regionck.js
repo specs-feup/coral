@@ -33,13 +33,10 @@ class Regionck {
 
         this.liveness = LivenessAnalysis.analyse(this.cfg);
         // console.log(this.cfg.toDot(new LivenessDotFormatter(this.liveness)) + "\n\n");
-        const cfgAnnotator = new CfgAnnotator(this);
-        cfgAnnotator.apply($jp);
-
-        // console.log(this.cfg.startNode.data().nodeStmt + "\n\n");
-
-        println();
-        println(this.cfg.toDot(new MirDotFormatter()) + "\n\n");
+        
+        // const cfgAnnotator = new CfgAnnotator(this);
+        // cfgAnnotator.apply($jp);
+        // println("\n" + this.cfg.toDot(new MirDotFormatter()) + "\n\n");
     }
 
 

@@ -3,136 +3,146 @@ laraImport("coral.CoralUtils");
 
 class FnLifetimes {
 
-  $jp;
-  #inLifetimes;
-  #outLifetime;
+  /**
+   * @type {JoinPoint}
+   */
+  $function;
+  /**
+   * @type {String[]}
+   */
+  returnLifetimes;
+  /**
+   * @type {Map<String, String[]>}
+   */
+  paramLifetimes;
 
-  #inReferences;
-  #hasOutputReference;
+  #declaredLifetimes;
+  #declaredParamLifetimes;
 
   constructor($function) {
-    this.$jp = $function;
+    this.$function = $function;
+    this.returnLifetimes = [];
+    this.paramLifetimes = new Map();
     this.#parsePragmas();
-
-    this.#hasOutputReference = CoralUtils.isReference($function.returnType);
-  }
-
-  /**
-   * @returns {JoinPoint} Joinpoint of the function
-   */
-  get $function() {
-    return $jp;
   }
 
   /**
    * @returns {Array} Array of $pragmas joinpoints related to the function's lifetimes
    */
   get pragmas() {
-    return this.$jp.pragmas.filter( p =>
-      p.name === "coral" &&
-      p.content.startsWith("lft ")
+    return this.$function.pragmas.filter( p =>
+      p.name === "coral_lf"
     );
   }
 
-  /**
-   * @return {Array} Array of pairs lifetimes and their names, or undefined in the case of the output lifetime
-   */
-  get lifetimes() {
-    return [...this.#inLifetimes, (undefined, this.#outLifetime)];
-  }
+  get declaredParamLifetimes() {
+    if (this.#declaredParamLifetimes === undefined) {
+      const _declaredParamLifetimes = new Set();
 
-  /**
-   * @return {Array} Array of pairs of parameter names and their lifetimes
-   */
-  get inLifetimes() {
-    return [...this.#inLifetimes];
-  }
+      for (const lfs of this.paramLifetimes.values())
+        for (const lf of lfs)
+        _declaredParamLifetimes.add(lf);
 
-  /**
-   * @param {Array} lfs Array of pairs of parameter names and their lifetimes
-   */
-  set inLifetimes(lfs) {
-    this.#inLifetimes = [...lfs];
-  }
-
-  /**
-   * @return {string} Output lifetime
-   */
-  get outLifetime() {
-    return this.#outLifetime;
-  }
-
-  /**
-   * @param {string} lf Output lifetime
-   */
-  set outLifetime(lf) {
-    this.#outLifetime = lf;
-  }
-
-  /**
-   * @return {number} Number of input lifetimes
-   */
-  get inputLfs() {
-    return this.#inLifetimes.length;
-  }
-
-  /**
-   * @return {bool} True if the function has an output lifetime 
-   */
-  get hasOutputLf() {
-    return this.#outLifetime !== undefined;
-  }
-
-  /**
-   * @return {bool} True if the function has an output reference 
-   */
-  get hasOutputReference() {
-    return this.#hasOutputReference;
-  }
-
-  /**
-   * @return {number} Number of references to pointers in the function
-   */
-  get inReferences() {
-    if (this.#inReferences === undefined) {    
-      this.#inReferences = 0;
-      for (const $param of this.$jp.params) {
-        if (CoralUtils.isReference($param.type))
-          this.#inReferences++;
-      }
+      this.#declaredParamLifetimes = Array.from(_declaredParamLifetimes).sort();
     }
 
-    return this.#inReferences;
+    return this.#declaredParamLifetimes;
   }
 
+  get declaredLifetimes() {
+    if (this.#declaredLifetimes === undefined) {
+      const _declaredLifetimes = new Set();
+
+      for (const lfs of this.paramLifetimes.values())
+        for (const lf of lfs)
+          _declaredLifetimes.add(lf);
+      
+      for (const lf of this.returnLifetimes)
+        _declaredLifetimes.add(lf);
+
+      this.#declaredLifetimes = Array.from(_declaredLifetimes).sort();
+    }
+
+    return this.#declaredLifetimes;
+  }
+
+  get requiresReturnLifetimes() {
+    // TODO: Elaborated types
+    return this.$function.returnType.isPointer;
+  }
+
+  /**
+   * 
+   * @param {string[]} lfs 
+   */
+  setReturnLifetimes(lfs) {
+    this.returnLifetimes = lfs;
+    this.#declaredLifetimes = undefined;
+  }
+
+  /**
+   * @param {string} name
+   * @param {string[]} lfs 
+   */
+  setParamLifetimes(name, lfs) {
+    this.paramLifetimes.set(name, lfs);
+    this.#declaredLifetimes = undefined;
+    this.#declaredParamLifetimes = undefined;
+  }
 
   /**
    * Parses pragmas and sets the lifetimes
    */
   #parsePragmas() {
-    this.#inLifetimes = [];
-    this.#outLifetime = undefined;
-
     for (const p of this.pragmas) {
-      const iter = p.content.split(' ').slice(1);
-
-      for (let i = 0; i < iter.length; i++) {
-        const arg = iter.at(i);
-        if (arg.startsWith('%')) {
-          // Output lifetime
-          if (this.#outLifetime !== undefined)
-              throw new CoralError("Multiple output lifetimes defined");
-          this.#outLifetime = arg;
-        } else {
-          // Named lifetime
-          if (this.#inLifetimes.some(e => e.at(0) === arg))
-              throw new CoralError(`Multiple lifetime definitions for parameter ${arg}`);
-          this.#inLifetimes.push([arg, iter.at(++i)]);
+      let content = p.content.split(' ');
+      let target;
+      if (content[0].startsWith('%')) {
+        // Return lifetime
+        if (this.$function.returnType.isVoid) {
+          throw new CoralError("Cannot have return lifetimes on void function");
         }
+        if (this.returnLifetimes.length !== 0) {
+          throw new CoralError("Multiple lifetime definitions for return value");
+        }
+      } else {
+        // Parameter lifetime
+        target = content[0];
+        if (!this.$function.params.some(e => e.name === target)) {
+          throw new CoralError(`Unknown parameter ${target}`);
+        }
+        // TODO: Check if param requires lifetimes
+        if (this.paramLifetimes.has(target)) {
+          throw new CoralError(`Multiple lifetime definitions for parameter ${target}`);
+        }
+        content = content.slice(1);
       }
 
+      // Lifetimes
+      const lfs = [];
+      for (const lf of content) {
+        // Remove the leading %
+        lfs.push(lf.slice(1));
+      }
+
+      if (target === undefined) {
+        this.returnLifetimes = lfs;
+      } else {
+        this.paramLifetimes.set(target, lfs);
+      }
     }
 
+    if (!this.#isReturnLifetimeFromParams()) {
+      throw new CoralError("Every return type lifetime must come from a parameter");
+    }
+  }
+
+  /**
+   * 
+   * @returns {boolean} True if every return lifetime is defined in a parameter
+   */
+  #isReturnLifetimeFromParams() {
+    return this.returnLifetimes.every((e) => this.declaredParamLifetimes.includes(e));
   }
 
   /**
@@ -144,16 +154,12 @@ class FnLifetimes {
       p.detach();
     }
 
-    let content = "#pragma coral lft";
-
-    for (const [name, lf] of this.#inLifetimes) {
-      content += ` ${name} ${lf}`;
+    for (const [name, lf] of this.paramLifetimes.entries()) {
+      this.$function.insertBefore(`#pragma coral_lf ${name} ${lf.map(e => "%" + e).join(" ")}`);
     }
 
-    if (this.#outLifetime !== undefined)
-      content += ' ' + this.#outLifetime;
-
-    this.$jp.insertBefore(content);
+    if (this.returnLifetimes.length > 0) {
+      this.$function.insertBefore(`#pragma coral_lf % ${this.returnLifetimes.map(e => "%" + e).join(" ")}`);
+    }
   }
-
 }
