@@ -23,6 +23,9 @@ class CfgAnnotator extends Pass {
     liveness;
     cfg;
 
+    regionVarCounter;
+    fnLifetimes;
+
     constructor(regionck) {
         super();
         this.regionck = regionck;
@@ -31,7 +34,7 @@ class CfgAnnotator extends Pass {
     }
 
     #new_region_var($expr, name="", kind=RegionKind.EXISTENTIAL) {
-        const id = this.regionck.regions.length + 1;
+        const id = this.regionVarCounter++;
         const rvar = new RegionVariable(
             id,
             kind,
@@ -59,7 +62,28 @@ class CfgAnnotator extends Pass {
             node.scratch("_coral", scratch);
         }
 
+        this.regionVarCounter = 1;
+        this.#createUniversalRegions();
+        this.#annotateParams($jp);
         this.#annotateLifetimeTypes();
+        delete this.fnLifetimes;
+    }
+
+    #createUniversalRegions() {
+        this.fnLifetimes = new FnLifetimes($jp);
+        this.regionck.regions.push(new RegionVariable(0, RegionKind.UNIVERSAL, "static", undefined));
+        
+
+    }
+
+    #annotateParams($jp) {
+        for (const $param of $jp.params) {
+            const ty = this.#deconstructType($param.type, $param, false);
+            $param.setUserField("ty", ty);
+            
+            const regionVar = this.#new_region_var($param);
+            this.regionck.loans.push(loan);
+        }
     }
 
     #annotateLifetimeTypes() {
