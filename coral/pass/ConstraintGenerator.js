@@ -7,6 +7,13 @@ laraImport("coral.borrowck.RegionKind");
 laraImport("coral.borrowck.RegionVariable");
 laraImport("coral.borrowck.Regionck");
 
+laraImport("coral.ty.Ty");
+laraImport("coral.ty.RefTy");
+laraImport("coral.ty.BuiltinTy");
+laraImport("coral.ty.ElaboratedTy");
+laraImport("coral.ty.Variance");
+
+
 class ConstraintGenerator extends Pass {
     
     /**
@@ -65,12 +72,31 @@ class ConstraintGenerator extends Pass {
 
 
     #subtypingConstraints(node) {
+        // TODO: Missing constraints from parameters (maybe can be covered though assignment w/ proper annotations?)
         const scratch = node.scratch("_coral");
         if (scratch.loan) {
-            const loan = scratch.loan;
-            
+            this.#relateTy(scratch.loan.leftTy, scratch.loan.loanedRefTy, Variance.CO);
+        } else if (scratch.assignments.len > 0) {
+            for (const assignment of scratch.assignments) {
+                this.#relateTy(assignment.leftTy, assignment.rightTy, Variance.CO);
+            }
         }
     }
+
+
+    /**
+     * 
+     * @param {Ty} ty1 
+     * @param {Ty} ty2 
+     * @param {Variance} variance 
+     */
+    #relateTy(ty1, ty2, variance) {
+        if (ty1.constructor !== ty2.constructor)
+            throw new Error(`Cannot relate types ${ty1.toString()} and ${ty2.toString()}`);
+
+        // TODO:
+    }
+    
 
     #reborrowConstraints(node) {
         // TODO: REBORROW CONSTRAINTS

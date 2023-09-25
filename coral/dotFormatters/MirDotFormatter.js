@@ -25,13 +25,12 @@ class MirDotFormatter extends DotFormatter {
                 sections.set("Loan", scratch.loan.toString() + "\n");
             }
 
-            const accesses = scratch.accesses;
-            if (accesses.length > 0) {
-                sections.set("Accesses", accesses.map(a => a.toString()).join("\n") + "\n");
+            if (scratch.accesses.length > 0) {
+                sections.set("Accesses", scratch.accesses.map(a => a.toString()).join("\n") + "\n");
             }
 
-            if (scratch.moves.length > 0 || scratch.copies.length > 0) {
-                sections.set("StatementActions", scratch.moves.concat(scratch.copies).join("\n") + "\n");
+            if (scratch.assignments.length > 0) {
+                sections.set("Assignments", scratch.assignments.join("\n") + "\n");
             }
 
             let ret = "";

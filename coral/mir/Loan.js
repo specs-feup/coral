@@ -2,6 +2,7 @@ laraImport("coral.borrowck.RegionVariable");
 
 laraImport("coral.mir.path.Path");
 laraImport("coral.ty.Ty");
+laraImport("coral.ty.RefTy");
 
 class Loan {
 
@@ -49,6 +50,14 @@ class Loan {
      */
     get borrowKind() {
         return this.leftTy.borrowKind;
+    }
+
+    /**
+     * @returns {RefTy}
+     */
+    get loanedRefTy() {
+        // TODO: What about isConst?
+        return new RefTy(this.borrowKind, this.loanedTy, this.regionVar);
     }
 
 }

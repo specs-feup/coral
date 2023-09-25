@@ -68,8 +68,7 @@ class CfgAnnotator extends Pass {
             scratch.liveOut = this.regionck.liveness.liveOut.get(node.id()) ?? new Set();
             scratch.accesses = [];
             scratch.inScopeLoans = [];
-            scratch.copies = [];
-            scratch.moves = [];
+            scratch.assignments = [];
 
             node.scratch("_coral", scratch);
         }
@@ -262,17 +261,13 @@ class CfgAnnotator extends Pass {
                 if (leftTy.isCopyable !== rightTy.isCopyable) {
                     throw new Error("AnnotateBinaryOp: Incompatible types");
                 }
-                const statementAction = new StatementAction(
+                scratch.assignments.push(new StatementAction(
                     leftTy.isCopyable ? StatementActionKind.COPY : StatementActionKind.MOVE,
                     leftPath,
                     rightPath,
                     leftTy,
                     rightTy
-                );
-                if (leftTy.isCopyable)
-                    scratch.copies.push(statementAction);
-                else
-                    scratch.moves.push(statementAction);
+                ));
             }
 
             
