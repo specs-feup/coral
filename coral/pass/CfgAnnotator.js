@@ -87,19 +87,30 @@ class CfgAnnotator extends Pass {
     #annotateLifetimeTypes() {
         for (const node of this.cfg.graph.nodes()) {
             const data = node.data();
-            if (data.type !== CfgNodeType.INST_LIST)
-                continue;
 
-            const $stmt = data.stmts[0];
-            switch ($stmt.joinPointType) {
-                case "declStmt":
-                    this.#annotateDeclStmt(node, $stmt.children[0]);
+            switch (data.type) {
+                case CfgNodeType.INST_LIST: {
+                    const $stmt = data.stmts[0];
+                    switch ($stmt.joinPointType) {
+                        case "declStmt":
+                            this.#annotateDeclStmt(node, $stmt.children[0]);
+                            break;
+                        case "exprStmt":
+                            this.#annotateExprStmt(node, $stmt.children[0]);
+                            break;
+                        case "wrapperStmt":
+                            this.#annotateWrapperStmt(node, $stmt.children[0]);
+                    }
                     break;
-                case "exprStmt":
-                    this.#annotateExprStmt(node, $stmt.children[0]);
+                }
+                case CfgNodeType.IF:
+                    this.#annotateExprStmt(node, data.nodeStmt.cond);
                     break;
-                case "wrapperStmt":
-                    this.#annotateWrapperStmt(node, $stmt.children[0]);
+                case CfgNodeType.RETURN:
+                    this.#annotateExprStmt(node, data.nodeStmt);
+                    break;
+                case CfgNodeType.SWITCH:
+                    throw new Error("Unimplemented: Switch annotation");
             }
         }
     }
@@ -194,7 +205,7 @@ class CfgAnnotator extends Pass {
             case "call":
                 this.#annotateFunctionCall(node, $exprStmt);
                 break;
-            case "varRef": {
+            case "varref": {
                 const path = this.#parseLvalue(node, $exprStmt);
                 const ty = $exprStmt.declaration.getUserField("ty");
                 // TODO: DEEP WRITE only if moving value, should be implemented, but needs testing due to edge cases
