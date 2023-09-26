@@ -64,13 +64,22 @@ class Regionck {
         const constraintGenerator = new ConstraintGenerator(this);
         constraintGenerator.apply(this.$jp);
 
-        println(this.aggregateRegionckInfo());
+        // println(this.aggregateRegionckInfo());
 
         return this;
     }
 
     infer() {
-        
+        let changed = true;
+        while (changed) {
+            changed = false;
+
+            for (const constraint of this.constraints) {
+                changed |= constraint.apply(this);
+                constraint.apply(this);
+            }
+        }
+
         return this;
     }
 
