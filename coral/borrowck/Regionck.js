@@ -6,8 +6,7 @@ laraImport("coral.dotFormatters.MirDotFormatter");
 laraImport("coral.borrowck.RegionVariable");
 laraImport("coral.pass.CfgAnnotator");
 laraImport("coral.pass.ConstraintGenerator");
-
-laraImport("coral.graph.DataflowAnalysis");
+laraImport("coral.pass.InScopeLoansComputation");
 
 laraImport("clava.graphs.ControlFlowGraph");
 
@@ -87,80 +86,10 @@ class Regionck {
     }
 
     borrowCheck() {
-        this.#calculateInScopeLoans();
+        let inScopeComputation = new InScopeLoansComputation(this.cfg.startNode);
+        inScopeComputation.apply(this.$jp);
 
-        return this;
-    }
-
-
-    static _inScopeLoansTransferFn = (node) => {
-        const scratch = node.scratch("_coral");
-        const toAdd = new Set();
-        const toKill = new Set();
-
-        // Union of all incoming edges
-        const inScopeLoans = new Set();
-        for (const inNode of node.incomers().nodes()) {
-            for (const loan of inNode.scratch("_coral").inScopeLoans) {
-                inScopeLoans.add(loan);
-            }
-        }
-
-        // Loans going out of scope
-        for (const loan of inScopeLoans) {
-            if (!loan.regionVar.points.has(node.id())) {
-                toKill.add(loan);
-            }
-        }
-
-        // New loan
-        if (scratch.loan) {
-            toAdd.add(scratch.loan);
-        }
-
-        // Check assignment paths
-        if (scratch.assignment) {
-            const prefixes = scratch.assignment.toPath.prefixes();
-            for (const loan of inScopeLoans) {
-                if (prefixes.some(prefix => loan.loanedPath.equals(prefix))) {
-                    toKill.add(loan);
-                }
-            }
-        }
-
-        // Modify in-scope loans and check for changes
-        for (const loan of toKill) {
-            inScopeLoans.delete(loan);
-        }
-        for (const loan of toAdd) {
-            inScopeLoans.add(loan);
-        }
-
-        let changed = false;
-        if (inScopeLoans.size !== scratch.inScopeLoans.size) {
-            changed = true;
-        } else {
-            for (const loan of scratch.inScopeLoans) {
-                if (!inScopeLoans.has(loan)) {
-                    changed = true;
-                    break;
-                }
-            }
-        }
-
-        scratch.inScopeLoans = inScopeLoans;
-
-
-        return changed;
-    }
-
-
-    #calculateInScopeLoans() {
-        let changed = true;
-
-        while (changed) {
-            changed = DataflowAnalysis.transfer(this.cfg.startNode, Regionck._inScopeLoansTransferFn);
-        }
+        // TODO: Validate accesses
 
         return this;
     }
