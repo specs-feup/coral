@@ -22,9 +22,26 @@ class Path {
         this.inner = inner;
     }
 
+    /**
+     * @returns {PathKind}
+     */
     get kind() {}
 
+    /**
+     * @returns {string}
+     */
     toString() {}
+
+    /**
+     * @param {Path} other
+     * @returns {boolean}
+     */
+    equals(other) {}
+
+    /**
+     * @return {Path[]}
+     */
+    prefixes() {}
 
     /**
      * @param {Regionck} regionck

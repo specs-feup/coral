@@ -18,11 +18,23 @@ class MirDotFormatter extends DotFormatter {
             const scratch = from.scratch("_coral");
             
             if (scratch.lhs_ty?.requiresLifetimes) {
-                sections.set("Ty Lifetimes", scratch.lhs_ty.toString() + "\n");
+                sections.set("Ty w/ lifetimes", scratch.lhs_ty.toString() + "\n");
+            }
+
+            if (scratch.assignment) {
+                sections.set("Assignment", scratch.assignment.toString() + "\n");
             }
 
             if (scratch.loan !== undefined) {
                 sections.set("Loan", scratch.loan.toString() + "\n");
+            }
+
+            if (scratch.inScopeLoans.size > 0) {
+                let str = "";
+                for (const loan of scratch.inScopeLoans.keys()) {
+                    str += loan.toString() + "\n";
+                }
+                sections.set("In-scope loans", str) + "\n";
             }
 
             if (scratch.accesses.length > 0) {

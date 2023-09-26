@@ -19,8 +19,30 @@ class PathVarRef extends Path {
     /**
      * @returns {string}
      */
+    get name() {
+        return this.$jp.name;
+    }
+
+    /**
+     * @returns {string}
+     */
     toString() {
         return this.$jp.name;
+    }
+
+    /**
+     * @param {PathVarRef} other
+     * @returns {boolean}
+     */
+    equals(other) {
+        return this.kind === other.kind && this.name === other.name;
+    }
+    
+    /**
+     * @return {Path[]}
+     */
+    prefixes() {
+        return [this];
     }
 
     /**

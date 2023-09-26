@@ -75,7 +75,7 @@ class ConstraintGenerator extends Pass {
     #subtypingConstraints(node) {
         // TODO: Missing constraints from parameters (maybe can be covered though assignment w/ proper annotations?)
         const scratch = node.scratch("_coral");
-        const successor = node.connectedEdges().filter(e => e.source().id() === node.id()).map(e => e.target().id());
+        const successor = node.outgoers().nodes().map(e => e.id());
         // println(`node ${node.id()} has [${successor.join(', ')}] successors`);
         if ((successor.length != 1) && (scratch.loan || scratch.assignments?.length > 0)) {
             throw new Error(`subtypingConstraints: node ${node.id()} has ${successor.length} successors and a loan/assignment`);
@@ -83,9 +83,9 @@ class ConstraintGenerator extends Pass {
 
         if (scratch.loan) {
             this.#relateTy(scratch.loan.leftTy, scratch.loan.loanedRefTy, Variance.CO, successor[0]);
-        } else if (scratch.assignments.length > 0) {
+        } else {
             for (const assignment of scratch.assignments) {
-                this.#relateTy(assignment.leftTy, assignment.rightTy, Variance.CO, successor[0]);
+                this.#relateTy(assignment.leftTy, assignment.rightTy, Variance.CONTRA, successor[0]);
             }
         }
     }

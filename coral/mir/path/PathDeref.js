@@ -24,6 +24,21 @@ class PathDeref extends Path {
     }
 
     /**
+     * @param {PathDeref} other
+     * @returns {boolean}
+     */
+    equals(other) {
+        return this.kind === other.kind && this.inner.equals(other.inner);
+    }
+    
+    /**
+     * @return {Path[]}
+     */
+    prefixes() {
+        return [this, ...this.inner.prefixes()];
+    }
+
+    /**
      * @param {Regionck} regionck
      * @returns {Ty}
      */

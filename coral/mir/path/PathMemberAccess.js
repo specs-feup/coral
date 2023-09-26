@@ -24,6 +24,22 @@ class PathMemberAccess extends Path {
     }
 
     /**
+     * @param {Path} other
+     * @returns {boolean}
+     */
+    equals(other) {
+        throw new Error("PathMemberAccess equals() not implemented");
+    }
+
+    
+    /**
+     * @return {Path[]}
+     */
+    prefixes() {
+        return [this, ...this.inner.prefixes()];
+    }
+
+    /**
      * @param {Regionck} regionck
      * @returns {Ty}
      */

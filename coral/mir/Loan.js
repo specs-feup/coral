@@ -42,7 +42,7 @@ class Loan {
     }
 
     toString() {
-        return `${this.borrowKind} borrow of ${this.loanedPath.toString()} with lifetime '${this.regionVar.name}`;
+        return `${this.borrowKind == BorrowKind.MUTABLE ? "&mut" : "&"}'${this.regionVar.name} ${this.loanedPath.toString()}`;
     }
 
     /**

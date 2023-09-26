@@ -22,8 +22,9 @@ class CoralAnalyser extends SimplePass {
 
     transformJoinpoint($jp) {
         const regionck = new Regionck($jp);
-        regionck.buildConstraints().infer();
+        regionck.buildConstraints().infer().borrowCheck();
 
+        regionck.mirToDotFile();
         println(regionck.aggregateRegionckInfo());
 
         return new PassResult(this, $jp);

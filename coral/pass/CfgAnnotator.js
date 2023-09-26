@@ -19,8 +19,8 @@ laraImport("coral.mir.path.PathKind");
 laraImport("coral.mir.Loan");
 laraImport("coral.mir.Access");
 
-laraImport("coral.mir.StatementAction");
-laraImport("coral.mir.StatementActionKind");
+laraImport("coral.mir.Assignment");
+laraImport("coral.mir.AssignmentKind");
 
 class CfgAnnotator extends Pass {
 
@@ -67,7 +67,7 @@ class CfgAnnotator extends Pass {
             scratch.liveIn = this.regionck.liveness.liveIn.get(node.id()) ?? new Set();
             scratch.liveOut = this.regionck.liveness.liveOut.get(node.id()) ?? new Set();
             scratch.accesses = [];
-            scratch.inScopeLoans = [];
+            scratch.inScopeLoans = new Set();
             scratch.assignments = [];
 
             node.scratch("_coral", scratch);
@@ -145,7 +145,24 @@ class CfgAnnotator extends Pass {
             ));
 
             this.#annotateExprStmt(node, $vardecl.init);
+            this.#markAssignment(node, new PathVarRef($vardecl, undefined), ty, $vardecl.init);
         }
+    }
+
+    /**
+     * 
+     * @param {*} node 
+     * @param {Path} path 
+     * @param {Ty} ty 
+     * @param {$expression} $expr The $expr being assigned to the path
+     */
+    #markAssignment(node, path, ty, $expr) {
+        // TODO: Detect & Mark full copy/move (only if $expr represents a path?) 
+        let assignmentKind = ty.isCopyable ? AssignmentKind.COPY : AssignmentKind.MOVE;
+        if ($expr.instanceOf("literal")) {
+            assignmentKind = AssignmentKind.LITERAL;
+        }
+        node.scratch('_coral').assignment = new Assignment(assignmentKind, path, ty);
     }
 
     #deconstructType($type, $jp, create_region_var=false) {        
@@ -243,34 +260,13 @@ class CfgAnnotator extends Pass {
     #annotateBinaryOp(node, $binaryOp) {
         if ($binaryOp.isAssignment) {
             const path = this.#parseLvalue(node, $binaryOp.left);
+            const ty = path.retrieveTy(this.regionck);
             const scratch = node.scratch("_coral");
             scratch.accesses.push(new Access(path, AccessMutability.WRITE, AccessDepth.SHALLOW));
             
             this.#annotateExprStmt(node, $binaryOp.right);
-            
-            // Identify & mark moves, only if the right side is path
-            // TODO: Not detecting "a = (b);"
-            if ($binaryOp.right.instanceOf("varref") ||
-                    ( $binaryOp.right.instanceOf("unaryOp") &&
-                    $binaryOp.right.operator === "*" ) ) {
-                // May be a move
-                const leftPath = this.#parseLvalue(node, $binaryOp.left);
-                const leftTy = this.regionck.declarations.get($binaryOp.left.name);
-                const rightPath = this.#parseLvalue(node, $binaryOp.right);
-                const rightTy = rightPath.retrieveTy(this.regionck);
-                if (leftTy.isCopyable !== rightTy.isCopyable) {
-                    throw new Error("AnnotateBinaryOp: Incompatible types");
-                }
-                scratch.assignments.push(new StatementAction(
-                    leftTy.isCopyable ? StatementActionKind.COPY : StatementActionKind.MOVE,
-                    leftPath,
-                    rightPath,
-                    leftTy,
-                    rightTy
-                ));
-            }
+            this.#markAssignment(node, path, ty, $binaryOp.right);
 
-            
             return;
         }
 
@@ -339,7 +335,6 @@ class CfgAnnotator extends Pass {
 
 
     #annotateWrapperStmt(node, $wrapperStmt) {
-        println("TODO: Wrapper stmt annotation");
     }
 
 
