@@ -20,4 +20,20 @@ class OutlivesConstraint {
         this.sub = sub;
         this.point = point;
     }
+
+    /**
+     * @returns {string}
+     */
+    toString() {
+        if (this.sup === undefined) {
+            println("Sup is undefined");
+        }
+        if (this.sub === undefined) {
+            println("Sub is undefined");
+        }
+        if (this.sup === undefined || this.sub === undefined) {
+            println(this.point);
+        }
+        return `${this.sup.name} : ${this.sub.name} @ ${this.point}`;
+    }
 }

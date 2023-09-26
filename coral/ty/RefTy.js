@@ -52,6 +52,7 @@ class RefTy extends Ty {
      */
     setRegionVar(regionVar) {
         this.regionVar = regionVar;
+        this.lifetimes = [regionVar];
     }
 
     /**

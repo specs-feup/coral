@@ -81,10 +81,10 @@ class Regionck {
             ret += `\t'${region.name}: {${points.join(', ')}}\n`;
         }
 
-        // ret += "\nConstraints:\n";
-        // for (const constraint of this.constraints) {
-        //     ret += `\t${constraint}\n`;
-        // }
+        ret += "\nConstraints:\n";
+        for (const constraint of this.constraints) {
+            ret += `\t${constraint.toString()}\n`;
+        }
 
         return ret;
     }
