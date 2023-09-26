@@ -7,17 +7,29 @@ class ElaboratedTy extends Ty {
      */
     kind;
 
-    // Do I really want it like this?
     /**
      * @type {Map<string, Ty>}
      */
     fields;
 
+
+    /**
+     * 
+     * @param {string} name 
+     * @param {boolean} copyable 
+     * @param {boolean} isConst 
+     * @param {RegionVariable[]} lifetimes 
+     */
     constructor(name, copyable, isConst = false, lifetimes = []) {
         super(name, copyable, isConst, lifetimes);
 
     }
 
+    /**
+     * 
+     * @param {ElaboratedTy} other 
+     * @returns {boolean}
+     */
     equals(other) {
         return other instanceof ElaboratedTy &&
             this.name === other.name &&
@@ -25,6 +37,10 @@ class ElaboratedTy extends Ty {
             this.lifetimes.equals(other.lifetimes);
     }
 
+    /**
+     * 
+     * @returns {string}
+     */
     toString() {
         return this.name + this.requiresLifetimes ? "<" + this.lifetimes.join(", ") + ">" : "";
     }

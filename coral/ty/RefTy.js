@@ -1,5 +1,6 @@
 laraImport("coral.ty.Ty");
 laraImport("coral.ty.BorrowKind");
+laraImport("coral.borrowck.RegionVariable");
 
 class RefTy extends Ty {
 
@@ -22,7 +23,8 @@ class RefTy extends Ty {
     constructor(borrowKind, referent, regionVar, isConst=false) {
         super(borrowKind === BorrowKind.MUTABLE ? `&'${regionVar.name} mut ` : `&'${regionVar.name} `,
             borrowKind === BorrowKind.SHARED,
-            isConst
+            isConst,
+            [regionVar]
         );
         
         this.borrowKind = borrowKind;
@@ -31,23 +33,32 @@ class RefTy extends Ty {
     }
 
     /**
-     * @returns boolean
+     * @returns {boolean}
      */
     get isShared() {
         return this.borrowKind === BorrowKind.SHARED;
     }
 
     /**
-     * @returns boolean
+     * @returns {boolean}
      */
     get isMutable() {
         return this.borrowKind === BorrowKind.MUTABLE;
     }
 
+    /**
+     * 
+     * @param {RegionVariable} regionVar 
+     */
     setRegionVar(regionVar) {
         this.regionVar = regionVar;
     }
 
+    /**
+     * 
+     * @param {RefTy} other 
+     * @returns {boolean}
+     */
     equals(other) {
         return other instanceof RefTy &&
             this.borrowKind === other.borrowKind &&
@@ -55,12 +66,26 @@ class RefTy extends Ty {
             this.regionVar === other.regionVar;
     }
 
+    /**
+     * 
+     * @returns {string}
+     */
     toString() {
         return this.name + this.referent.toString();
     }
 
+    /**
+     * @returns {RegionVariable[]}
+     */
+    nestedLifetimes() {
+        return this.lifetimes.concat(this.referent.lifetimes);
+    }
+
+    /**
+     * @returns {boolean}
+     */
     get requiresLifetimes() {
         return true;
-    } 
+    }
 
 }

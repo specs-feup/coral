@@ -58,8 +58,8 @@ class ConstraintGenerator extends Pass {
             // Lifetime constraints
             for (const variable of scratch.liveIn.keys()) {
                 const ty = this.borrowck.declarations.get(variable);
-                if (ty instanceof RefTy && ty.regionVar.kind === RegionKind.EXISTENTIAL) {
-                    ty.regionVar.points.add(node.id());
+                for (const region of ty.nestedLifetimes()) {
+                    region.points.add(node.id());
                 }
             }
 
