@@ -1,3 +1,5 @@
+laraImport("coral.mir.path.Path");
+
 class AccessMutability {
     static READ = "read";
     static WRITE = "write";
@@ -21,7 +23,7 @@ class Access {
     depth;
 
     /**
-     * 
+     * @type {Path}
      */
     path;
 

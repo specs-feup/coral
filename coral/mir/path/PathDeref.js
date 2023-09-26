@@ -1,12 +1,27 @@
 laraImport("coral.mir.path.Path");
 laraImport("coral.mir.path.PathKind");
 laraImport("coral.ty.Ty");
+laraImport("coral.ty.RefTy");
+laraImport("coral.ty.BorrowKind");
 laraImport("coral.borrowck.Regionck");
 
 class PathDeref extends Path {
    
-    constructor($jp, inner) {
+    /**
+     * @type {BorrowKind}
+     */
+    borrowKind;
+
+    /**
+     * 
+     * @param {JoinPoint} $jp 
+     * @param {Path} inner 
+     * @param {BorrowKind} borrowKind 
+     */
+    constructor($jp, inner, borrowKind) {
         super($jp, inner);
+
+        this.borrowKind = borrowKind;
     }
 
     /**
@@ -36,6 +51,20 @@ class PathDeref extends Path {
      */
     prefixes() {
         return [this, ...this.inner.prefixes()];
+    }
+
+    /**
+     * @returns {Path[]}
+     */
+    shallowPrefixes() {
+        return [this];
+    }
+
+    /**
+     * @returns {Path[]}
+     */
+    supportingPrefixes() {
+        return this.borrowKind === BorrowKind.MUTABLE ? [this, ...this.inner.supportingPrefixes() ] : [this];
     }
 
     /**

@@ -33,12 +33,19 @@ class Loan {
     $jp;
 
 
-    constructor(regionVar, leftTy, loanedTy, loanedPath, $jp) {
+    /**
+     * @type {cytoscape node}
+     */
+    node;
+
+
+    constructor(regionVar, leftTy, loanedTy, loanedPath, $jp, node) {
         this.regionVar = regionVar;
         this.leftTy = leftTy;
         this.loanedTy = loanedTy;
         this.loanedPath = loanedPath;
         this.$jp = $jp;
+        this.node = node;
     }
 
     toString() {

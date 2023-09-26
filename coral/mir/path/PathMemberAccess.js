@@ -40,6 +40,20 @@ class PathMemberAccess extends Path {
     }
 
     /**
+     * @returns {Path[]}
+     */
+    shallowPrefixes() {
+        return [this, ...this.inner.shallowPrefixes()];
+    }
+
+    /**
+     * @returns {Path[]}
+     */
+    supportingPrefixes() {
+        [this, ...this.inner.supportingPrefixes()]
+    }
+
+    /**
      * @param {Regionck} regionck
      * @returns {Ty}
      */

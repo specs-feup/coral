@@ -15,13 +15,84 @@ class InScopeLoansComputation extends Pass {
     }
 
     _apply_impl($jp) {
-        let changed = true;
-
-        while (changed) {
-            changed = DataflowAnalysis.transfer(this.startNode, InScopeLoansComputation._inScopeLoansTransferFn);
-        }
+        this.#worklistDataflow(this.startNode);
         
         return new PassResult(this, $jp);
+    }
+
+
+    #worklistDataflow(root) {
+        // Worklist is FIFO Queue
+        const worklist = Array.from(root.cy().nodes());
+        const worklistSet = new Set(worklist);
+
+        while (worklist.length > 0) {
+            const node = worklist.shift();
+            worklistSet.delete(node);
+
+            const inSet = new Set();
+
+            // Union of all incoming edges
+            for (const inNode of node.incomers().nodes()) {
+                const inScratch = inNode.scratch("_coral");
+                const inner = new Set(inScratch.inScopeLoans);
+                
+                // Kills from assignment paths
+                if (inScratch.assignment) {
+                    const prefixes = inScratch.assignment.toPath.prefixes();
+                    for (const loan of inScratch.inScopeLoans) {
+                        if (prefixes.some(prefix => loan.loanedPath.equals(prefix))) {
+                            inner.delete(loan);
+                        }
+                    }
+                }
+
+                // Gen from new loan
+                if (inScratch.loan) {
+                    inner.add(inScratch.loan);
+                }
+
+                // Union of all incoming edges
+                for (const loan of inner) {
+                    inSet.add(loan);
+                }
+            }
+
+            // Kills from loans going out of scope in current node (?)
+            const toKill = new Set();
+            for (const loan of inSet) {
+                if (!loan.regionVar.points.has(node.id())) {
+                    toKill.add(loan);
+                }
+            }
+            for (const loan of toKill) {
+                inSet.delete(loan);
+            }
+
+            // Compare for changes
+            let changed = false;
+            if (node.scratch("_coral").inScopeLoans.size !== inSet.size) {
+                changed = true;
+            } else {
+                for (const loan of node.scratch("_coral").inScopeLoans) {
+                    if (!inSet.has(loan)) {
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+
+            // Update real values and add successors to worklist
+            if (changed) {
+                node.scratch("_coral").inScopeLoans = inSet;
+                for (const out of node.outgoers().nodes()) {
+                    if (!worklistSet.has(out)) {
+                        worklist.push(out);
+                        worklistSet.add(out);
+                    }
+                }
+            }
+        }
     }
 
 
@@ -44,6 +115,8 @@ class InScopeLoansComputation extends Pass {
                 toKill.add(loan);
             }
         }
+
+
 
         // New loan
         if (scratch.loan) {

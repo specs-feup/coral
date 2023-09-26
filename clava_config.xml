@@ -5,7 +5,7 @@
       <string>workspace</string>
       <FileList>
         <fileList>
-          <file>tests/accepted/nll.c</file>
+          <file>tests/error/prototype/nll_used_while_borrowed.c</file>
         </fileList>
       </FileList>
     </entry>

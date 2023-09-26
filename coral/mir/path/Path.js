@@ -44,6 +44,16 @@ class Path {
     prefixes() {}
 
     /**
+     * @returns {Path[]}
+     */
+    shallowPrefixes() {}
+
+    /**
+     * @returns {Path[]}
+     */
+    supportingPrefixes() {}
+
+    /**
      * @param {Regionck} regionck
      * @returns {Ty}
      */

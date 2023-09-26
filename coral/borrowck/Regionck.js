@@ -7,6 +7,7 @@ laraImport("coral.borrowck.RegionVariable");
 laraImport("coral.pass.CfgAnnotator");
 laraImport("coral.pass.ConstraintGenerator");
 laraImport("coral.pass.InScopeLoansComputation");
+laraImport("coral.pass.BcErrorReporting");
 
 laraImport("clava.graphs.ControlFlowGraph");
 
@@ -89,7 +90,8 @@ class Regionck {
         let inScopeComputation = new InScopeLoansComputation(this.cfg.startNode);
         inScopeComputation.apply(this.$jp);
 
-        // TODO: Validate accesses
+        let errorReporting = new BcErrorReporting(this.cfg.startNode);
+        errorReporting.apply(this.$jp);
 
         return this;
     }

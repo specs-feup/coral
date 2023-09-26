@@ -46,6 +46,20 @@ class PathVarRef extends Path {
     }
 
     /**
+     * @returns {Path[]}
+     */
+    shallowPrefixes() {
+        return [this];
+    }
+
+    /**
+     * @returns {Path[]}
+     */
+    supportingPrefixes() {
+        return [this];
+    }
+
+    /**
      * @param {Regionck} regionck
      * @returns {Ty}
      */

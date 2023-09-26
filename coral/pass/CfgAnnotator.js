@@ -293,7 +293,7 @@ class CfgAnnotator extends Pass {
                 throw new Error("annotateUnaryOp: Cannot borrow from non-reference type " + leftTy.toString());
             }
 
-            const loan = new Loan(regionVar, leftTy, loanedTy, loanedPath, $unaryOp);
+            const loan = new Loan(regionVar, leftTy, loanedTy, loanedPath, $unaryOp, node);
             node.scratch("_coral").loan = loan;
             this.regionck.loans.push(loan);
 
@@ -358,10 +358,16 @@ class CfgAnnotator extends Pass {
             case "varref":
                 return new PathVarRef($jp, undefined);
             case "unaryOp":
-                if ($jp.operator === "*")
-                    return new PathDeref($jp, this.#parseLvalue(node, $jp.operand));
-                else
+                if ($jp.operator === "*") {
+                    let innerPath = this.#parseLvalue(node, $jp.operand);
+                    let ty = innerPath.retrieveTy(this.regionck);
+                    if (!(ty instanceof RefTy))
+                        throw new Error("Cannot dereference non-reference type " + ty.toString());
+                    return new PathDeref($jp, innerPath, ty.borrowKind);
+                }
+                else {
                     throw new Error("Unhandled parseLvalue unary op: " + $jp.operator);
+                }
             case "memberAccess":
             case "parenExpr":
                 return this.#parseLvalue(node, $jp.subExpr);

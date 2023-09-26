@@ -3,6 +3,8 @@ laraImport("weaver.Query");
 laraImport("coral.CoralNormalizer");
 laraImport("coral.CoralAnalyser");
 
+laraImport("coral.errors.CoralError");
+
 
 class CoralPipeline {
     #normalizer;
@@ -14,8 +16,16 @@ class CoralPipeline {
     }
 
     apply() {
-        const $jp = Query.root();
-        this.#normalizer.apply($jp);
-        this.#analyser.apply($jp);
+        try {
+            const $jp = Query.root();
+            this.#normalizer.apply($jp);
+            this.#analyser.apply($jp);
+        } catch (e) {
+            if (e instanceof CoralError) {
+                println(e.message);
+            } else {
+                throw e;
+            }
+        }
     }
 }

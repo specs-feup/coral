@@ -4,7 +4,16 @@ class DataflowAnalysis {
      * @param {cytoscapenode} root
      * @param {function(cytoscapenode) -> boolean} propagateFn
      */
-    static transfer(root, transferFn) {
+    static dfs(root, transferFn) {
+        let changed;
+        do {
+            changed = DataflowAnalysis.#dfsInner(root, transferFn);
+        } while (changed);
+    }
+
+
+    static #dfsInner() {
+        // TODO: Review this implementation, I think its wrong
         const toVisit = [];
         const visited = new Set();
         let changed = false;
@@ -27,4 +36,5 @@ class DataflowAnalysis {
 
         return changed;
     }
+
 }
