@@ -62,23 +62,55 @@ class BcErrorReporting extends Pass {
     static _prepareWriteWhileBorrowedError = (node, access, loan) => {
         // throw new CoralError(`Access to ${access.path} @ ${node.id()} conflicts with borrow of ${loan.loanedPath} @ ${loan.node.id()}`);
         const $jp = node.data().stmts[0];
-        const nextUse = undefined; // TODO: Calculate next use
+        
+        // Calculate a possible next use
+        const dfsResult = node.cy().elements().dfs(
+            node,
+            (v, e, u, i, depth) => {
+                if (depth == 0)
+                    return;
+                
+                if (loan.regionVar.points.has(u.id()) && !loan.regionVar.points.has(v.id())) {
+                    return true;
+                }
+            },
+            true
+        );
+        if (dfsResult.found === undefined) {
+            throw new Error("_prepareWriteWhileBorrowedError: Could not find next use");
+        }
+
+        let nextUse = dfsResult.path[dfsResult.path.length-2].source();
+        let $nextUse;
+
+        switch (nextUse.data().type) {
+            case CfgNodeType.INST_LIST:
+                $nextUse = nextUse.data().stmts[0];
+                break;
+            case CfgNodeType.IF:
+            case CfgNodeType.RETURN:
+            case CfgNodeType.LOOP:
+                $nextUse = nextUse.data().nodeStmt;
+                break;
+            default:
+                throw new Error(`_prepareWriteWhileBorrowedError: Unknown node type ${nextUse.data().type}`);
+        }
     
         // Line no
         const linePaddingSize = Math.max($jp.line, loan.$jp.line).toString().length + 1;
         const loanLineNum = loan.$jp.line.toString().padEnd(linePaddingSize, " ");
         const assignmLine = $jp.line.toString().padEnd(linePaddingSize, " ");
-        const nextUseLine = "".padEnd(linePaddingSize, " ");
+        const nextUseLine = $nextUse.line.toString().padEnd(linePaddingSize, " ");
         const linePadding = " ".repeat(linePaddingSize);
         
         let error = `error[E0506]: Cannot write to '${access.path}' while borrowed\n`;
         error += ` ${"-".repeat(linePaddingSize)}> ${$jp.filename}:${$jp.line}\n`;
-        error += ` ${nextUseLine}|\t\n`;
+        error += ` ${linePadding}|\t\n`;
         error += ` ${loanLineNum}|\t${loan.node.data().stmts[0].code}\n`;
         error += ` ${linePadding}|\t\t(${loan.borrowKind}) borrow of '${loan.loanedPath}' occurs here\n`;
         error += ` ${assignmLine}|\t${$jp.code}\n`;
         error += ` ${linePadding}|\t\twrite to '${access.path}' occurs here, while borrow is still active\n`;
-        error += ` ${nextUseLine}|\t\n`;
+        error += ` ${nextUseLine}|\t${$nextUse.code}\n`;
         error += ` ${linePadding}|\t\tborrow is later used here\n`;
         error += ` ${linePadding}|\t\n`;
 

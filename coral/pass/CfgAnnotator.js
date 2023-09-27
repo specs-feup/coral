@@ -335,6 +335,7 @@ class CfgAnnotator extends Pass {
 
 
     #annotateWrapperStmt(node, $wrapperStmt) {
+        // TODO: Take care of Drops and StorageDeads
     }
 
 
