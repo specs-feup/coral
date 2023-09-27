@@ -97,14 +97,16 @@ class BcErrorReporting extends Pass {
         }
     
         // Line no
-        const linePaddingSize = Math.max($jp.line, loan.$jp.line).toString().length + 1;
-        const loanLineNum = loan.$jp.line.toString().padEnd(linePaddingSize, " ");
-        const assignmLine = $jp.line.toString().padEnd(linePaddingSize, " ");
-        const nextUseLine = $nextUse.line.toString().padEnd(linePaddingSize, " ");
+        const maxPaddingSize = Math.max($jp.line, loan.$jp.line, $nextUse.line);
+        // Weird NaN checking trick
+        const linePaddingSize = maxPaddingSize === maxPaddingSize ? maxPaddingSize.toString().length + 1 : 3;
+        const loanLineNum = loan.$jp.line?.toString().padEnd(linePaddingSize, " ") ?? "?";
+        const assignmLine = $jp.line?.toString().padEnd(linePaddingSize, " ") ?? "?";
+        const nextUseLine = $nextUse.line?.toString().padEnd(linePaddingSize, " ") ?? "?";
         const linePadding = " ".repeat(linePaddingSize);
         
         let error = `error[E0506]: Cannot write to '${access.path}' while borrowed\n`;
-        error += ` ${"-".repeat(linePaddingSize)}> ${$jp.filename}:${$jp.line}\n`;
+        error += ` ${"-".repeat(linePaddingSize)}> ${$jp.filename ?? "unknown"}:${$jp.line ?? "??"}\n`;
         error += ` ${linePadding}|\t\n`;
         error += ` ${loanLineNum}|\t${loan.node.data().stmts[0].code}\n`;
         error += ` ${linePadding}|\t\t(${loan.borrowKind}) borrow of '${loan.loanedPath}' occurs here\n`;
