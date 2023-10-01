@@ -59,20 +59,33 @@ class Regionck {
         cfgAnnotator.apply($jp);
     }
 
+    /**
+     * @param {boolean} [printConstraintSet=false] If true, prints the constraint set
+     */
+    prepare(printConstraintSet = false) {
+        this.#buildConstraints();
+        if (printConstraintSet) {
+            println("Initial Constraint Set:");
+            println(this.aggregateRegionckInfo() + "\n\n");
+        }
+        this.#infer();
+        this.#calculateInScopeLoans();
+        return this;
+    }
 
     mirToDotFile() {
         Io.writeFile("../out/dot/mir.gv", this.cfg.toDot(new MirDotFormatter()));
     }
 
 
-    buildConstraints() {
+    #buildConstraints() {
         const constraintGenerator = new ConstraintGenerator(this);
         constraintGenerator.apply(this.$jp);
 
         return this;
     }
 
-    infer() {
+    #infer() {
         let changed = true;
         while (changed) {
             changed = false;
@@ -86,10 +99,12 @@ class Regionck {
         return this;
     }
 
-    borrowCheck() {
+    #calculateInScopeLoans() {
         let inScopeComputation = new InScopeLoansComputation(this.cfg.startNode);
         inScopeComputation.apply(this.$jp);
+    }
 
+    borrowCheck() {
         let errorReporting = new BcErrorReporting(this.cfg.startNode);
         errorReporting.apply(this.$jp);
 

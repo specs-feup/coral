@@ -5,7 +5,7 @@ class DfsVisitor {
      * @param {function(cytoscapenode) -> boolean} applyFn
      * @param {function(cytoscapenode) -> boolean} propagateFn
      */
-    static visit(root, applyFn, propagateFn = e => true) {
+    static visit(root, applyFn, propagateFn = _ => true) {
         const toVisit = [];
         const visited = new Set();
         let changed = false;

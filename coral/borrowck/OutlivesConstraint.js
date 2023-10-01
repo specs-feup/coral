@@ -38,13 +38,15 @@ class OutlivesConstraint {
      * @returns {boolean} True if changed
      */
     apply(regionck) {
-        const root = regionck.cfg.graph.$(`#${this.point}`);
-        let changed = false; 
-
-        DfsVisitor.visit(root, 
-            (node) => this.sup.points.add(node.id()),
+        return DfsVisitor.visit(regionck.cfg.graph.$(`#${this.point}`), 
+            (node) => {
+                const alreadyContains = this.sup.points.has(node.id());
+                if (alreadyContains) {
+                    return false;
+                }
+                this.sup.points.add(node.id());
+                return true;
+            },
             (node) => this.sub.points.has(node.id()));
-
-        return changed;
     }
 }
