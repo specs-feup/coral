@@ -92,7 +92,6 @@ class Regionck {
 
             for (const constraint of this.constraints) {
                 changed |= constraint.apply(this);
-                constraint.apply(this);
             }
         }
 
