@@ -61,7 +61,7 @@
     </entry>
     <entry>
       <string>api_autoload</string>
-      <boolean>true</boolean>
+      <boolean>false</boolean>
     </entry>
     <entry>
       <string>continueOnParsingErrors</string>
