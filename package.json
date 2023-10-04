@@ -9,7 +9,8 @@
   },
   "scripts": {
     "build": "make",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "run": "npx clava-js src/main.mjs -- clang tests/error/prototype/nll_used_while_borrowed.c"
   },
   "repository": {
     "type": "git",
