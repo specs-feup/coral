@@ -12,3 +12,9 @@ test:
 
 gui:
 	java -jar ${CLAVA_PATH}${CLAVA_JAR}
+
+js:
+	DEBUG="*" npx clava-js src/main.mjs -- clang tests/error/prototype/nll_used_while_borrowed.c
+
+jsw:
+	DEBUG="*" npx clava-js src/main.mjs -w coral -- clang tests/error/prototype/nll_used_while_borrowed.c
