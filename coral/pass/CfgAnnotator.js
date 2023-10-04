@@ -196,18 +196,18 @@ export default class CfgAnnotator extends Pass {
                 return this.#deconstructType($type.underlyingType, $jp, create_region_var);
             case "elaboratedType":
                 // Inner should be instance of TagType, inner is 
-                // println($type.joinPointType);
-                // println($type.qualifier);
-                // println($type.keyword);
-                // println("------------------");  
+                // console.log($type.joinPointType);
+                // console.log($type.qualifier);
+                // console.log($type.keyword);
+                // console.log("------------------");  
 
-                // println($type.namedType.joinPointType);
-                // println($type.namedType.kind);
-                // println($type.namedType.name);
-                // println("------------------");
+                // console.log($type.namedType.joinPointType);
+                // console.log($type.namedType.kind);
+                // console.log($type.namedType.name);
+                // console.log("------------------");
 
-                // println($type.namedType.decl.joinPointType);
-                // println($type.namedType.decl.kind);
+                // console.log($type.namedType.decl.joinPointType);
+                // console.log($type.namedType.decl.kind);
                 throw new Error("Unimplemented Elaborated type annotation");
             default:
                 throw new Error("Unhandled deconstruct declstmt type: " + $type.joinPointType);
@@ -249,7 +249,7 @@ export default class CfgAnnotator extends Pass {
                 this.#annotateExprStmt(node, $exprStmt.returnExpr);
                 break;
             default:
-                println("Unhandled expression annotation for jp: " + $exprStmt.joinPointType);
+                console.log("Unhandled expression annotation for jp: " + $exprStmt.joinPointType);
         }
     }
 

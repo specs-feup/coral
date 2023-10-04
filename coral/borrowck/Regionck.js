@@ -63,8 +63,8 @@ export default class Regionck {
     prepare(printConstraintSet = false) {
         this.#buildConstraints();
         if (printConstraintSet) {
-            println("Initial Constraint Set:");
-            println(this.aggregateRegionckInfo() + "\n\n");
+            console.log("Initial Constraint Set:");
+            console.log(this.aggregateRegionckInfo() + "\n\n");
         }
         this.#infer();
         this.#calculateInScopeLoans();

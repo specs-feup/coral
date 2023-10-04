@@ -22,8 +22,8 @@ export default class CoralAnalyser extends SimplePass {
         const regionck = new Regionck($jp).prepare(true);
 
         regionck.mirToDotFile();
-        println("After Inference:");
-        println(regionck.aggregateRegionckInfo() + "\n\n");
+        console.log("After Inference:");
+        console.log(regionck.aggregateRegionckInfo() + "\n\n");
 
         regionck.borrowCheck();
 

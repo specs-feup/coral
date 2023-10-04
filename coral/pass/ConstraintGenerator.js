@@ -76,7 +76,7 @@ export default class ConstraintGenerator extends Pass {
         // TODO: Missing constraints from parameters (maybe can be covered though assignment w/ proper annotations?)
         const scratch = node.scratch("_coral");
         const successor = node.outgoers().nodes().map(e => e.id());
-        // println(`node ${node.id()} has [${successor.join(', ')}] successors`);
+        // console.log(`node ${node.id()} has [${successor.join(', ')}] successors`);
         if ((successor.length != 1) && (scratch.loan || scratch.assignments?.length > 0)) {
             throw new Error(`subtypingConstraints: node ${node.id()} has ${successor.length} successors and a loan/assignment`);
         }

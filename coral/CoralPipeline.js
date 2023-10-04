@@ -21,7 +21,7 @@ export default class CoralPipeline {
             this.#analyser.apply($jp);
         } catch (e) {
             if (e instanceof CoralError) {
-                println(e.message);
+                console.log(e.message);
             } else {
                 throw e;
             }
