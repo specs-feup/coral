@@ -1,5 +1,5 @@
 import CoralPipeline from "../coral/CoralPipeline.js";
 
-pipeline = new CoralPipeline();
+const pipeline = new CoralPipeline();
 pipeline.apply();
 

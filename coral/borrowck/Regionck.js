@@ -48,7 +48,7 @@ export default class Regionck {
         this.declarations = new Map();
 
         this.$jp = $jp;
-        this.cfg = ControlFlowGraph.build($jp, true, { splitInstList: true });
+        this.cfg = ControlFlowGraph.build($jp, true, true);
 
         this.liveness = LivenessAnalysis.analyse(this.cfg);
         // console.log(this.cfg.toDot(new LivenessDotFormatter(this.liveness)) + "\n\n");

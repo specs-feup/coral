@@ -13,6 +13,8 @@ import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
 
 export default class BcErrorReporting extends Pass {
 
+    _name = "BcErrorReporting";
+
     /**
      * @type {cytoscape node}
      */

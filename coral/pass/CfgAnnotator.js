@@ -239,9 +239,9 @@ export default class CfgAnnotator extends Pass {
                 const ty = $exprStmt.declaration.getUserField("ty");
                 // TODO: DEEP WRITE only if moving value, should be implemented, but needs testing due to edge cases
                 node.scratch("_coral").accesses.push(new Access(
-                    path,
-                    ty.isCopyable ? AccessMutability.READ : AccessMutability.WRITE,
-                    AccessDepth.DEEP
+                path,
+                ty?.isCopyable ? AccessMutability.READ : AccessMutability.WRITE,
+                AccessDepth.DEEP
                 ));
                 break;
             }
