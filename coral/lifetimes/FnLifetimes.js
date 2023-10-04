@@ -1,4 +1,4 @@
-import CoralError from "./errors/CoralError.js";
+import CoralError from "../errors/CoralError.js";
 
 export default class FnLifetimes {
 

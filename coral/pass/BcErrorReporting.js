@@ -7,6 +7,9 @@ import CoralError from "../errors/CoralError.js";
 import Loan from "../mir/Loan.js";
 import Access from "../mir/Access.js";
 import BorrowKind from "../ty/BorrowKind.js";
+import CfgNodeType from "clava-js/api/clava/graphs/cfg/CfgNodeType.js";
+import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
+
 
 export default class BcErrorReporting extends Pass {
 

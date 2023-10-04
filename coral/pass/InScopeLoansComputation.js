@@ -1,4 +1,5 @@
 import Pass from "lara-js/api/lara/pass/Pass.js";
+import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
 
 import Loan from "../mir/Loan.js";
 

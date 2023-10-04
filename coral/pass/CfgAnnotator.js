@@ -18,6 +18,8 @@ import AccessDepth from "../mir/AccessDepth.js";
 import AccessMutability from "../mir/AccessMutability.js";
 import Assignment from "../mir/Assignment.js";
 import AssignmentKind from "../mir/AssignmentKind.js";
+import FnLifetimes from "../lifetimes/FnLifetimes.js";
+import CfgNodeType from "clava-js/api/clava/graphs/cfg/CfgNodeType.js";
 
 export default class CfgAnnotator extends Pass {
 

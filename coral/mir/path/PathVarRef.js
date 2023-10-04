@@ -1,7 +1,7 @@
 import Path from "./Path.js";
 import PathKind from "./PathKind.js";
-import Ty from "../ty/Ty.js";
-import Regionck from "../borrowck/Regionck.js";
+import Ty from "../../ty/Ty.js";
+import Regionck from "../../borrowck/Regionck.js";
 
 export default class PathVarRef extends Path {
 

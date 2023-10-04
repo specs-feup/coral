@@ -1,6 +1,7 @@
 import SimplePass from "lara-js/api/lara/pass/SimplePass.js";
 import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
 
+import CoralUtils from "../CoralUtils.js";
 import FnLifetimes from "../lifetimes/FnLifetimes.js";
 
 

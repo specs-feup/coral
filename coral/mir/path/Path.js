@@ -1,6 +1,7 @@
-import PathKind from "./PathKind";
-import Ty from "../ty/Ty";
-import Regionck from "../borrowck/Regionck";
+import PathKind from "./PathKind.js";
+import Ty from "../../ty/Ty.js";
+import Regionck from "../../borrowck/Regionck.js";
+import { Joinpoint } from "clava-js/api/Joinpoints.js";
 
 /**
  * @abstract
@@ -13,7 +14,7 @@ export default class Path {
     inner;
 
     /**
-     * @param {JoinPoint} $jp
+     * @param {Joinpoint} $jp
      */
     $jp;
 

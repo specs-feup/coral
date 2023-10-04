@@ -1,9 +1,9 @@
 import Path from "./Path.js";
 import PathKind from "./PathKind.js";
-import Ty from "../ty/Ty.js";
-import RefTy from "../ty/RefTy.js";
-import BorrowKind from "../ty/BorrowKind.js";
-import Regionck from "../borrowck/Regionck.js";
+import Ty from "../../ty/Ty.js";
+import RefTy from "../../ty/RefTy.js";
+import BorrowKind from "../../ty/BorrowKind.js";
+import Regionck from "../../borrowck/Regionck.js";
 
 export default class PathDeref extends Path {
    

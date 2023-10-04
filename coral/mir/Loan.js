@@ -1,10 +1,10 @@
 import { Joinpoint } from "clava-js/api/Joinpoints.js"; 
 
-import RegionVariable from "./borrowck/RegionVariable.js";
-import Ty from "./ty/Ty.js";
-import BorrowKind from "./ty/BorrowKind.js";
-import RefTy from "./ty/RefTy.js";
-import Path from "./mir/path/Path.js";
+import RegionVariable from "../borrowck/RegionVariable.js";
+import Ty from "../ty/Ty.js";
+import BorrowKind from "../ty/BorrowKind.js";
+import RefTy from "../ty/RefTy.js";
+import Path from "../mir/path/Path.js";
 
 export default class Loan {
 

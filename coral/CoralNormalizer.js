@@ -1,11 +1,12 @@
 import Query from "lara-js/api/weaver/Query.js";
 import Pass from "lara-js/api/lara/pass/Pass.js";
-import PassResult from "lara-js/api/lara/pass/PassResult.js";
+import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
 import Passes from "lara-js/api/lara/pass/composition/Passes.js";
 import AggregatePassResult from "lara-js/api/lara/pass/results/AggregatePassResult.js";
 import StatementDecomposer from "clava-js/api/clava/code/StatementDecomposer.js";
 import SimplifySelectionStmts from "clava-js/api/clava/pass/SimplifySelectionStmts.js";
 import SimplifyAssignment from "clava-js/api/clava/code/SimplifyAssignment.js";
+import DecomposeDeclStmt from "clava-js/api/clava/pass/DecomposeDeclStmt.js";
 
 import LifetimeElision from "./pass/LifetimeElision.js";
 
