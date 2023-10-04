@@ -1,8 +1,8 @@
-laraImport("lara.graphs.DotFormatter");
-laraImport("clava.graphs.ControlFlowGraph");
-laraImport("clava.graphs.cfg.CfgNodeType");
+import DotFormatter from "lara-js/api/lara/graphs/DotFormatter.js";
+import ControlFlowGraph from "clava-js/api/clava/graphs/ControlFlowGraph.js";
+import CfgNodeType from "clava-js/api/clava/graphs/cfg/CfgNodeType.js";
 
-class MirDotFormatter extends DotFormatter {
+export default class MirDotFormatter extends DotFormatter {
 
     constructor() {
         super();

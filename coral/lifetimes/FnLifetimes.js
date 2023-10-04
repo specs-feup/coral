@@ -1,7 +1,6 @@
-laraImport("coral.errors.CoralError");
-laraImport("coral.CoralUtils");
+import CoralError from "./errors/CoralError.js";
 
-class FnLifetimes {
+export default class FnLifetimes {
 
   /**
    * @type {JoinPoint}

@@ -1,15 +1,14 @@
-laraImport("lara.pass.SimplePass");
-laraImport("lara.pass.results.PassResult");
-laraImport("lara.pass.PassTransformationError");
+import SimplePass from "lara-js/api/lara/pass/SimplePass.js";
+import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
 
-laraImport("coral.lifetimes.FnLifetimes");
-laraImport("coral.errors.CoralError");
+import FnLifetimes from "../lifetimes/FnLifetimes.js";
+
 
 /**
  * Performs lifetime elision on every function declaration
  * Detects illegal definitions and throws CoralError when found
  */
-class LifetimeElision extends SimplePass {
+export default class LifetimeElision extends SimplePass {
 // TODO:  Expand for elaborated types
   
 

@@ -1,21 +1,21 @@
-laraImport("lara.pass.Pass");
-laraImport("weaver.Query");
-
-laraImport("coral.borrowck.OutlivesConstraint");
-laraImport("coral.ty.RefTy");
-laraImport("coral.borrowck.RegionKind");
-laraImport("coral.borrowck.RegionVariable");
-laraImport("coral.borrowck.Regionck");
-
-laraImport("coral.ty.Ty");
-laraImport("coral.ty.RefTy");
-laraImport("coral.ty.BuiltinTy");
-laraImport("coral.ty.ElaboratedTy");
-laraImport("coral.ty.Variance");
-laraImport("coral.ty.BorrowKind");
+import Query from "lara-js/api/weaver/Query.js";
+import Pass from "lara-js/api/lara/pass/Pass.js";
 
 
-class ConstraintGenerator extends Pass {
+import OutlivesConstraint from "../borrowck/OutlivesConstraint.js";
+import RegionKind from "../borrowck/RegionKind.js";
+import RegionVariable from "../borrowck/RegionVariable.js";
+import Regionck from "../borrowck/Regionck.js";
+
+import Ty from "../ty/Ty.js";
+import RefTy from "../ty/RefTy.js";
+import BuiltinTy from "../ty/BuiltinTy.js";
+import ElaboratedTy from "../ty/ElaboratedTy.js";
+import Variance from "../ty/Variance.js";
+import BorrowKind from "../ty/BorrowKind.js";
+
+
+export default class ConstraintGenerator extends Pass {
     
     /**
      * @type {Regionck}

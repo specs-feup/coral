@@ -1,11 +1,9 @@
-laraImport("lara.pass.SimplePass");
-laraImport("lara.pass.results.PassResult");
-laraImport("clava.graphs.ControlFlowGraph");
-laraImport("clava.liveness.LivenessAnalysis");
+import SimplePass from "lara-js/api/lara/pass/SimplePass.js";
+import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
 
-laraImport("coral.borrowck.Regionck");
+import Regionck from "./borrowck/Regionck.js";
 
-class CoralAnalyser extends SimplePass {
+export default class CoralAnalyser extends SimplePass {
 
     get name() {
         return "CoralAnalyser";

@@ -1,4 +1,4 @@
-class Variance {
+export default class Variance {
 
     static CO = "co";
     static CONTRA = "contra";

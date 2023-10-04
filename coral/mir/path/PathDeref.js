@@ -1,11 +1,11 @@
-laraImport("coral.mir.path.Path");
-laraImport("coral.mir.path.PathKind");
-laraImport("coral.ty.Ty");
-laraImport("coral.ty.RefTy");
-laraImport("coral.ty.BorrowKind");
-laraImport("coral.borrowck.Regionck");
+import Path from "./Path.js";
+import PathKind from "./PathKind.js";
+import Ty from "../ty/Ty.js";
+import RefTy from "../ty/RefTy.js";
+import BorrowKind from "../ty/BorrowKind.js";
+import Regionck from "../borrowck/Regionck.js";
 
-class PathDeref extends Path {
+export default class PathDeref extends Path {
    
     /**
      * @type {BorrowKind}

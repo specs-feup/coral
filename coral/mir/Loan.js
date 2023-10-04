@@ -1,10 +1,12 @@
-laraImport("coral.borrowck.RegionVariable");
+import { Joinpoint } from "clava-js/api/Joinpoints.js"; 
 
-laraImport("coral.mir.path.Path");
-laraImport("coral.ty.Ty");
-laraImport("coral.ty.RefTy");
+import RegionVariable from "./borrowck/RegionVariable.js";
+import Ty from "./ty/Ty.js";
+import BorrowKind from "./ty/BorrowKind.js";
+import RefTy from "./ty/RefTy.js";
+import Path from "./mir/path/Path.js";
 
-class Loan {
+export default class Loan {
 
     /**
      * @type {RegionVariable}
@@ -27,8 +29,8 @@ class Loan {
     loanedPath;
 
     /**
-     * JoinPoint where the loan was created
-     * @type {JoinPoint}
+     * Joinpoint where the loan was created
+     * @type {Joinpoint}
      */
     $jp;
 

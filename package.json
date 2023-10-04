@@ -1,0 +1,32 @@
+{
+  "name": "coral",
+  "version": "1.0.0",
+  "description": "A Rust-like Borrow Checker for C",
+  "type": "module",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "make"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tiagodusilva/coral.git"
+  },
+  "keywords": [
+    "clava",
+    "rust",
+    "c",
+    "borrow checker",
+    "static analysis"
+  ],
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/tiagodusilva/coral/issues"
+  },
+  "homepage": "https://github.com/tiagodusilva/coral#readme",
+  "dependencies": {
+    "clava-js": "0.0.1"
+  }
+}

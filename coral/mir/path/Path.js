@@ -1,11 +1,11 @@
-laraImport("coral.mir.path.PathKind");
-laraImport("coral.ty.Ty");
-laraImport("coral.borrowck.Regionck");
+import PathKind from "./PathKind";
+import Ty from "../ty/Ty";
+import Regionck from "../borrowck/Regionck";
 
 /**
  * @abstract
  */
-class Path {
+export default class Path {
 
     /**
      * @param {Path | undefined} inner

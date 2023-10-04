@@ -1,28 +1,25 @@
-laraImport("lara.pass.Pass");
+import Pass from "lara-js/api/lara/pass/Pass.js";
 
-laraImport("coral.borrowck.RegionVariable");
-laraImport("coral.borrowck.RegionKind");
+import RegionVariable from "../borrowck/RegionVariable.js";
+import RegionKind from "../borrowck/RegionKind.js";
+import Ty from "../ty/Ty.js";
+import RefTy from "../ty/RefTy.js";
+import BuiltinTy from "../ty/BuiltinTy.js";
+import ElaboratedTy from "../ty/ElaboratedTy.js";
+import BorrowKind from "../ty/BorrowKind.js";
+import Regionck from "../borrowck/Regionck.js";
+import PathVarRef from "../mir/path/PathVarRef.js";
+import PathMemberAccess from "../mir/path/PathMemberAccess.js";
+import PathDeref from "../mir/path/PathDeref.js";
+import PathKind from "../mir/path/PathKind.js";
+import Loan from "../mir/Loan.js";
+import Access from "../mir/Access.js";
+import AccessDepth from "../mir/AccessDepth.js";
+import AccessMutability from "../mir/AccessMutability.js";
+import Assignment from "../mir/Assignment.js";
+import AssignmentKind from "../mir/AssignmentKind.js";
 
-laraImport("coral.ty.Ty");
-laraImport("coral.ty.RefTy");
-laraImport("coral.ty.BuiltinTy");
-laraImport("coral.ty.ElaboratedTy");
-laraImport("coral.ty.BorrowKind");
-
-laraImport("coral.borrowck.Regionck");
-
-laraImport("coral.mir.path.PathVarRef");
-laraImport("coral.mir.path.PathMemberAccess");
-laraImport("coral.mir.path.PathDeref");
-laraImport("coral.mir.path.PathKind");
-
-laraImport("coral.mir.Loan");
-laraImport("coral.mir.Access");
-
-laraImport("coral.mir.Assignment");
-laraImport("coral.mir.AssignmentKind");
-
-class CfgAnnotator extends Pass {
+export default class CfgAnnotator extends Pass {
 
     /**
      * @type {Regionck}
@@ -237,7 +234,7 @@ class CfgAnnotator extends Pass {
                 break;
             case "varref": {
                 const path = this.#parseLvalue(node, $exprStmt);
-                const ty = $exprStmt.declaration.userField("ty");
+                const ty = $exprStmt.declaration.getUserField("ty");
                 // TODO: DEEP WRITE only if moving value, should be implemented, but needs testing due to edge cases
                 node.scratch("_coral").accesses.push(new Access(
                     path,

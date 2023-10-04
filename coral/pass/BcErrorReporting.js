@@ -1,13 +1,14 @@
-laraImport("lara.pass.Pass");
+import Pass from "lara-js/api/lara/pass/Pass.js";
 
-laraImport("coral.graph.DfsVisitor");
-laraImport("coral.errors.CoralError");
+import AccessMutability from "../mir/AccessMutability.js";
+import AccessDepth from "../mir/AccessDepth.js";
+import DfsVisitor from "../graph/DfsVisitor.js";
+import CoralError from "../errors/CoralError.js";
+import Loan from "../mir/Loan.js";
+import Access from "../mir/Access.js";
+import BorrowKind from "../ty/BorrowKind.js";
 
-laraImport("coral.mir.Loan");
-laraImport("coral.mir.Access");
-laraImport("coral.ty.BorrowKind");
-
-class BcErrorReporting extends Pass {
+export default class BcErrorReporting extends Pass {
 
     /**
      * @type {cytoscape node}

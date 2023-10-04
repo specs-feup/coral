@@ -1,9 +1,9 @@
-laraImport("coral.mir.path.Path");
-laraImport("coral.mir.path.PathKind");
-laraImport("coral.ty.Ty");
-laraImport("coral.borrowck.Regionck");
+import Path from "./Path.js";
+import PathKind from "./PathKind.js";
+import Ty from "../ty/Ty.js";
+import Regionck from "../borrowck/Regionck.js";
 
-class PathVarRef extends Path {
+export default class PathVarRef extends Path {
 
     constructor($jp, inner) {
         super($jp, inner);

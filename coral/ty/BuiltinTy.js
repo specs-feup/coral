@@ -1,6 +1,6 @@
-laraImport("coral.ty.Ty");
+import Ty from "./Ty.js";
 
-class BuiltinTy extends Ty {
+export default class BuiltinTy extends Ty {
 
     constructor(name, isConst=false) {
         super(name, true, isConst, []);

@@ -174,7 +174,7 @@
     </entry>
     <entry>
       <string>aspect</string>
-      <file>src/main.js</file>
+      <file>src/main.mjs</file>
     </entry>
     <entry>
       <string>ignoreHeaderIncludes</string>

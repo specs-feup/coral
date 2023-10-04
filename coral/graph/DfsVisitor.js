@@ -1,4 +1,4 @@
-class DfsVisitor {
+export default class DfsVisitor {
 
     /**
      * @param {cytoscapenode} root

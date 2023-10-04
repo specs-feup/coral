@@ -1,12 +1,11 @@
-laraImport("weaver.Query");
+import Query from "lara-js/api/weaver/Query.js";
 
-laraImport("coral.CoralNormalizer");
-laraImport("coral.CoralAnalyser");
+import CoralNormalizer from "./CoralNormalizer.js";
+import CoralAnalyser from "./CoralAnalyser.js";
 
-laraImport("coral.errors.CoralError");
+import CoralError from "./errors/CoralError.js";
 
-
-class CoralPipeline {
+export default class CoralPipeline {
     #normalizer;
     #analyser;
 

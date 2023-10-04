@@ -1,16 +1,8 @@
-laraImport("coral.mir.path.Path");
+import Path from "./path/Path.js";
+import AccessMutability from "./AccessMutability.js";
+import AccessDepth from "./AccessDepth.js";
 
-class AccessMutability {
-    static READ = "read";
-    static WRITE = "write";
-}
-
-class AccessDepth {
-    static SHALLOW = "shallow";
-    static DEEP = "deep";
-}
-
-class Access {
+export default class Access {
     
     /**
      * @type {AccessMutability}

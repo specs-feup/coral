@@ -1,8 +1,8 @@
-laraImport("lara.graphs.DotFormatter");
-laraImport("clava.graphs.ControlFlowGraph");
-laraImport("clava.liveness.LivenessAnalysis");
+import DotFormatter from "lara-js/api/lara/graphs/DotFormatter.js";
+import ControlFlowGraph from "clava-js/api/clava/graphs/ControlFlowGraph.js";
+import LivenessAnalysis from "clava-js/api/clava/liveness/LivenessAnalysis.js";
 
-class LivenessDotFormatter extends DotFormatter {
+export default class LivenessDotFormatter extends DotFormatter {
 
     constructor(liveness) {
         super();

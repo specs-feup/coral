@@ -1,19 +1,17 @@
-laraImport("coral.borrowck.OutlivesConstraint");
-laraImport("coral.dotFormatters.LivenessDotFormatter");
-laraImport("coral.dotFormatters.MirDotFormatter");
+import Io from "lara-js/api/lara/Io.js";
+import ControlFlowGraph from "clava-js/api/clava/graphs/ControlFlowGraph.js";
+import LivenessAnalysis from "clava-js/api/clava/liveness/LivenessAnalysis.js";
 
+import OutlivesConstraint from "./OutlivesConstraint.js";
+import LivenessDotFormatter from "../dotFormatters/LivenessDotFormatter.js";
+import MirDotFormatter from "../dotFormatters/MirDotFormatter.js";
+import RegionVariable from "./RegionVariable.js";
+import CfgAnnotator from "../pass/CfgAnnotator.js";
+import ConstraintGenerator from "../pass/ConstraintGenerator.js";
+import InScopeLoansComputation from "../pass/InScopeLoansComputation.js";
+import BcErrorReporting from "../pass/BcErrorReporting.js";
 
-laraImport("coral.borrowck.RegionVariable");
-laraImport("coral.pass.CfgAnnotator");
-laraImport("coral.pass.ConstraintGenerator");
-laraImport("coral.pass.InScopeLoansComputation");
-laraImport("coral.pass.BcErrorReporting");
-
-laraImport("clava.graphs.ControlFlowGraph");
-
-laraImport("lara.Io");
-
-class Regionck {
+export default class Regionck {
 
     /**
      * @type {JoinPoint} Function JoinPoint
