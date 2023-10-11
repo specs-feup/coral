@@ -1,24 +1,14 @@
 .PHONY: all test gui
 
-CLAVA_PATH = clava-build/
-CLAVA_JAR = ClavaWeaver.jar
+CLAVA_JAR = clava-build/ClavaWeaver.jar
 
 
 all:
-	java -jar ${CLAVA_PATH}${CLAVA_JAR} -c clava_config.xml
-
-test:
-	java -jar ${CLAVA_PATH}${CLAVA_JAR} -c clava_test_config.xml
+	npx clava-js src/main.mjs -- clang tests/error/prototype/nll_used_while_borrowed.c
 
 gui:
-	java -jar ${CLAVA_PATH}${CLAVA_JAR}
+	java -jar ${CLAVA_JAR}
 
-jsWindows:
-	$env:DEBUG="*"
-	npx clava-js src/main.mjs -- clang tests/error/prototype/nll_used_while_borrowed.c
-
-js:
-	npx clava-js src/main.mjs -- clang tests/error/prototype/nll_used_while_borrowed.c
-
-jsw:
+# export DEBUG="*"
+debug:
 	npx clava-js src/main.mjs -w coral -- clang tests/error/prototype/nll_used_while_borrowed.c
