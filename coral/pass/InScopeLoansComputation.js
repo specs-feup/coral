@@ -5,6 +5,8 @@ import Loan from "../mir/Loan.js";
 
 export default class InScopeLoansComputation extends Pass {
 
+    _name = "InScopeLoansComputation";
+
     /**
      * @type {cytoscape node}
      */

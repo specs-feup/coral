@@ -10,27 +10,37 @@ import CfgAnnotator from "../pass/CfgAnnotator.js";
 import ConstraintGenerator from "../pass/ConstraintGenerator.js";
 import InScopeLoansComputation from "../pass/InScopeLoansComputation.js";
 import BcErrorReporting from "../pass/BcErrorReporting.js";
+import Ty from "../ty/Ty.js";
+import Loan from "../mir/Loan.js";
+import { Joinpoint } from "clava-js/api/Joinpoints.js";
 
 export default class Regionck {
 
     /**
-     * @type {JoinPoint} Function JoinPoint
+     * @type {Joinpoint} Function JoinPoint
      */
     jp;
+
     /**
      * @type {ControlFlowGraph}
      */
     cfg;
+
     /**
      * @type {LivenessAnalysis}
      */
     liveness;
+
     /**
      * @type {OutlivesConstraint[]}
      */
     constraints;
 
+    /**
+     * @type {RegionVariable[]}
+     */
     regions;
+    
     /**
      * @type {Loan[]}
      */
@@ -41,6 +51,10 @@ export default class Regionck {
      */
     declarations;
 
+    /**
+     * 
+     * @param {Joinpoint} $jp 
+     */
     constructor($jp) {
         this.constraints = [];
         this.regions = [];
@@ -72,7 +86,8 @@ export default class Regionck {
     }
 
     mirToDotFile() {
-        Io.writeFile("../out/dot/mir.gv", this.cfg.toDot(new MirDotFormatter()));
+        const f = Io.writeFile("./out/dot/mir.gv", this.cfg.toDot(new MirDotFormatter()));
+        console.log(`Output MIR to ${f.getAbsolutePath()}`);
     }
 
 
@@ -89,7 +104,7 @@ export default class Regionck {
             changed = false;
 
             for (const constraint of this.constraints) {
-                changed |= constraint.apply(this);
+                changed = changed || constraint.apply(this);
             }
         }
 

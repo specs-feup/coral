@@ -41,7 +41,8 @@ export default class Ty {
 
     /**
      * 
-     * @param {Ty} other 
+     * @param {Ty} other
+     * @returns {boolean} 
      */
     equals(other) {}
 

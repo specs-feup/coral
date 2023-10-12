@@ -11,7 +11,7 @@ import FnLifetimes from "../lifetimes/FnLifetimes.js";
  */
 export default class LifetimeElision extends SimplePass {
 // TODO:  Expand for elaborated types
-  
+  _name = "LifetimeElision";
 
   /**
    * @return {string} Name of the pass

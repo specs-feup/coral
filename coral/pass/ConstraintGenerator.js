@@ -13,10 +13,16 @@ import BuiltinTy from "../ty/BuiltinTy.js";
 import ElaboratedTy from "../ty/ElaboratedTy.js";
 import Variance from "../ty/Variance.js";
 import BorrowKind from "../ty/BorrowKind.js";
+import { Joinpoint } from "clava-js/api/Joinpoints.js";
+import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
+import PathVarRef from "../mir/path/PathVarRef.js";
+import PathDeref from "../mir/path/PathDeref.js";
 
 
 export default class ConstraintGenerator extends Pass {
     
+    _name = "ConstraintGenerator";
+
     /**
      * @type {Regionck}
      */
@@ -40,7 +46,8 @@ export default class ConstraintGenerator extends Pass {
 
     /**
      * 
-     * @param {JoinPoint} $jp 
+     * @param {Joinpoint} $jp 
+     * @returns {PassResult}
      */
     _apply_impl($jp) {
         const universal = this.borrowck.regions.filter(r => r.kind === RegionKind.UNIVERSAL);
@@ -65,28 +72,47 @@ export default class ConstraintGenerator extends Pass {
             }
 
             // Other constraints
-            this.#subtypingConstraints(node);
-            this.#reborrowConstraints(node);
+            const successors = node.outgoers().nodes().map(e => e.id());
+            if ((successors.length != 1) && (scratch.loan || scratch.assignments?.length > 0)) {
+                throw new Error(`ConstraintGenerator: node ${node.id()} has ${successors.length} successors and a loan/assignment`);
+            }
+
+            this.#subtypingConstraints(node, successors[0]);
+            this.#reborrowConstraints(node, successors[0]);
         }
 
+        return new PassResult(this, $jp);
     }
 
 
-    #subtypingConstraints(node) {
+    #subtypingConstraints(node, successor) {
         // TODO: Missing constraints from parameters (maybe can be covered though assignment w/ proper annotations?)
         const scratch = node.scratch("_coral");
-        const successor = node.outgoers().nodes().map(e => e.id());
-        // console.log(`node ${node.id()} has [${successor.join(', ')}] successors`);
-        if ((successor.length != 1) && (scratch.loan || scratch.assignments?.length > 0)) {
-            throw new Error(`subtypingConstraints: node ${node.id()} has ${successor.length} successors and a loan/assignment`);
-        }
 
         if (scratch.loan) {
-            this.#relateTy(scratch.loan.leftTy, scratch.loan.loanedRefTy, Variance.CO, successor[0]);
+            this.#relateTy(scratch.loan.leftTy, scratch.loan.loanedRefTy, Variance.CO, successor);
         } else {
             for (const assignment of scratch.assignments) {
-                this.#relateTy(assignment.leftTy, assignment.rightTy, Variance.CONTRA, successor[0]);
+                this.#relateTy(assignment.leftTy, assignment.rightTy, Variance.CONTRA, successor);
             }
+        }
+    }
+
+    #reborrowConstraints(node, successor) {
+        const scratch = node.scratch("_coral");
+        if (scratch.reborrow === undefined) {
+            return;
+        }
+
+        if (scratch.loan === undefined) {
+            throw new Error("reborrowConstraints: reborrow without loan");
+        }
+
+        for (const path of scratch.loan.loanedPath.supportingPrefixes()) {
+            if (!(path instanceof PathDeref))
+                continue;
+            
+            this.#relateRegions(path.regionVar, scratch.loan.regionVar, Variance.CONTRA, successor);                
         }
     }
 
@@ -101,9 +127,9 @@ export default class ConstraintGenerator extends Pass {
     #relateTy(ty1, ty2, variance, successor) {
         if (ty1 instanceof RefTy && ty2 instanceof RefTy) {
             this.#relateRegions(ty1.regionVar, ty2.regionVar, Variance.xform(variance, Variance.CO), successor);
-            this.#relateTy(ty1.referent, ty2.referent, Variance.xform(variance, ty1.borrowKind == BorrowKind.MUTABLE ? Variance.IN : Variance.CO));
+            this.#relateTy(ty1.referent, ty2.referent, Variance.xform(variance, ty1.borrowKind == BorrowKind.MUTABLE ? Variance.IN : Variance.CO), successor);
             return;
-        }
+        }   
 
         if (ty1 instanceof ElaboratedTy && ty2 instanceof ElaboratedTy) {
             if (ty1.kind != ty2.kind || ty1.name != ty2.name) { 
@@ -150,8 +176,4 @@ export default class ConstraintGenerator extends Pass {
         }
     }
     
-
-    #reborrowConstraints(node) {
-        // TODO: REBORROW CONSTRAINTS
-    }
 }

@@ -3,8 +3,7 @@
 CLAVA_JAR = clava-build/ClavaWeaver.jar
 
 
-all: reborrow
-	@echo "Running current default test"
+all: double-indirection-error
 
 classic:
 	java -jar ${CLAVA_JAR} -c clava_config.xml
