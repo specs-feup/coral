@@ -1,4 +1,4 @@
-laraImport("coral.borrowck.RegionVariable");
+laraImport("coral.regionck.RegionVariable");
 
 /**
  * @abstract

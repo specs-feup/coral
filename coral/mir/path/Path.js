@@ -1,6 +1,6 @@
 laraImport("coral.mir.path.PathKind");
 laraImport("coral.ty.Ty");
-laraImport("coral.borrowck.Regionck");
+laraImport("coral.regionck.Regionck");
 
 /**
  * @abstract

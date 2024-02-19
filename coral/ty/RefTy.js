@@ -1,6 +1,6 @@
 laraImport("coral.ty.Ty");
 laraImport("coral.ty.BorrowKind");
-laraImport("coral.borrowck.RegionVariable");
+laraImport("coral.regionck.RegionVariable");
 
 class RefTy extends Ty {
 

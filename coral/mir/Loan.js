@@ -1,4 +1,4 @@
-laraImport("coral.borrowck.RegionVariable");
+laraImport("coral.regionck.RegionVariable");
 
 laraImport("coral.mir.path.Path");
 laraImport("coral.ty.Ty");

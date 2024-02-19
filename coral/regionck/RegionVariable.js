@@ -1,4 +1,4 @@
-laraImport("coral.borrowck.RegionKind");
+laraImport("coral.regionck.RegionKind");
 
 class RegionVariable {
     /**

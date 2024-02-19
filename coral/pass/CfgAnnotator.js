@@ -1,7 +1,9 @@
 laraImport("lara.pass.Pass");
+laraImport("lara.pass.results.PassResult");
+laraImport("weaver.Query");
 
-laraImport("coral.borrowck.RegionVariable");
-laraImport("coral.borrowck.RegionKind");
+laraImport("coral.regionck.RegionVariable");
+laraImport("coral.regionck.RegionKind");
 
 laraImport("coral.ty.Ty");
 laraImport("coral.ty.RefTy");
@@ -9,7 +11,8 @@ laraImport("coral.ty.BuiltinTy");
 laraImport("coral.ty.ElaboratedTy");
 laraImport("coral.ty.BorrowKind");
 
-laraImport("coral.borrowck.Regionck");
+laraImport("coral.regionck.Regionck");
+laraImport("coral.lifetimes.FnLifetimes");
 
 laraImport("coral.mir.path.PathVarRef");
 laraImport("coral.mir.path.PathMemberAccess");
@@ -21,6 +24,9 @@ laraImport("coral.mir.Access");
 
 laraImport("coral.mir.Assignment");
 laraImport("coral.mir.AssignmentKind");
+
+laraImport("coral.mir.path.Path")
+
 
 class CfgAnnotator extends Pass {
 
@@ -77,6 +83,8 @@ class CfgAnnotator extends Pass {
         this.#createUniversalRegions($jp);
         this.#annotateLifetimeTypes();
         delete this.fnLifetimes;
+
+        return new PassResult(this, $jp);
     }
 
     #createUniversalRegions($jp) {
@@ -87,7 +95,7 @@ class CfgAnnotator extends Pass {
         for (const $param of $jp.params) {
             const ty = this.#deconstructType($param.type, $param, false);
             $param.setUserField("ty", ty);
-            this.borrowck.declarations.set($param.name, ty);
+            this.regionck.declarations.set($param.name, ty);
 
             // TODO: Retrieve lifetimes from fnLifetimes
             // & Create multiple regionVars if needed
@@ -283,12 +291,26 @@ class CfgAnnotator extends Pass {
             const loanedTy = loanedPath.retrieveTy(this.regionck);
 
             // Borrowkind depends on the assignment left value
-            let assignment = $unaryOp.parent;
-            while (assignment.joinPointType !== "binaryOp" || !assignment.isAssignment) {
-                assignment = assignment.parent;
+            let parent = $unaryOp.parent;
+            let leftTy;
+            while (true) {
+                if (parent.joinPointType === "binaryOp" && parent.isAssignment) {
+                    leftTy = this.#parseLvalue(node, parent.left).retrieveTy(this.regionck);
+                    break;
+                }
+
+                if (parent.joinPointType === "vardecl") {
+                    leftTy = this.regionck.declarations.get(parent.name);
+                    break;
+                }
+
+                if (parent.joinPointType !== "parenExpr") {
+                    throw new Error("annotateUnaryOp: Cannot determine assignment lvalue");                    
+                }
+
+                parent = parent.parent;
             }
 
-            const leftTy = this.#parseLvalue(node, assignment.left).retrieveTy(this.regionck);
             if (!(leftTy instanceof RefTy)) {
                 throw new Error("annotateUnaryOp: Cannot borrow from non-reference type " + leftTy.toString());
             }
@@ -303,7 +325,10 @@ class CfgAnnotator extends Pass {
                 AccessDepth.DEEP
             ));
 
-            // TODO: I think I'm missing something here
+            // Mark Reborrows
+            if (Query.searchFrom($unaryOp, "unaryOp", {operator: '*'}).get() !== undefined) {
+                node.scratch("_coral").reborrow = true;
+            }
         } else if ($unaryOp.operator === "*") {
             // Start of an lvaue
             const path = this.#parseLvalue(node, $unaryOp);
@@ -364,7 +389,7 @@ class CfgAnnotator extends Pass {
                     let ty = innerPath.retrieveTy(this.regionck);
                     if (!(ty instanceof RefTy))
                         throw new Error("Cannot dereference non-reference type " + ty.toString());
-                    return new PathDeref($jp, innerPath, ty.borrowKind);
+                    return new PathDeref($jp, innerPath, ty.borrowKind, ty.regionVar);
                 }
                 else {
                     throw new Error("Unhandled parseLvalue unary op: " + $jp.operator);

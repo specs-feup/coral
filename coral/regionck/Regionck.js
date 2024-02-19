@@ -1,9 +1,9 @@
-laraImport("coral.borrowck.OutlivesConstraint");
+laraImport("coral.regionck.OutlivesConstraint");
 laraImport("coral.dotFormatters.LivenessDotFormatter");
 laraImport("coral.dotFormatters.MirDotFormatter");
 
 
-laraImport("coral.borrowck.RegionVariable");
+laraImport("coral.regionck.RegionVariable");
 laraImport("coral.pass.CfgAnnotator");
 laraImport("coral.pass.ConstraintGenerator");
 laraImport("coral.pass.InScopeLoansComputation");

@@ -8,8 +8,6 @@ laraImport("clava.pass.DecomposeDeclStmt");
 laraImport("clava.pass.SimplifySelectionStmts");
 laraImport("clava.code.SimplifyAssignment");
 
-laraImport("coral.pass.LifetimeElision");
-
 /**
  * Applies the normalization steps required for the Coral analysis
  */
@@ -33,11 +31,11 @@ class CoralNormalizer extends Pass {
    */
     _apply_impl($jp) {
         Passes.apply($jp, [
+            // Decomposes `int a,b=5,c;` into `int a; int b = 5; int c;` 
             new DecomposeDeclStmt(),
+            // Takes the condition outside of if-else statements
             new SimplifySelectionStmts(this.#statementDecomposer),
         ]);
-
-
         
         const binaryOpIter = Query.searchFrom($jp, "binaryOp", {
             self: (self) => self.isAssignment && self.operator !== "=",
@@ -46,10 +44,6 @@ class CoralNormalizer extends Pass {
         for (const $assign of binaryOpIter) {
             SimplifyAssignment($assign);
         }
-
-        // TODO: Verify and report errors
-        const elision = new LifetimeElision();
-        elision.apply();
 
         return new PassResult(this, $jp);
     }

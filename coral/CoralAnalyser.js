@@ -3,7 +3,7 @@ laraImport("lara.pass.results.PassResult");
 laraImport("clava.graphs.ControlFlowGraph");
 laraImport("clava.liveness.LivenessAnalysis");
 
-laraImport("coral.borrowck.Regionck");
+laraImport("coral.regionck.Regionck");
 
 class CoralAnalyser extends SimplePass {
 

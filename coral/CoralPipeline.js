@@ -9,7 +9,7 @@ laraImport("coral.errors.CoralError");
 class CoralPipeline {
     constructor() {}
 
-apply($root = null) {
+    apply($root = null) {
         if ($root === null) {
             $root = Query.root();
         }

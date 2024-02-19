@@ -1,7 +1,7 @@
 laraImport("coral.mir.path.Path");
 laraImport("coral.mir.path.PathKind");
 laraImport("coral.ty.Ty");
-laraImport("coral.borrowck.Regionck");
+laraImport("coral.regionck.Regionck");
 
 class PathMemberAccess extends Path {
     

@@ -1,5 +1,4 @@
 laraImport("coral.errors.CoralError");
-laraImport("coral.CoralUtils");
 
 class FnLifetimes {
 

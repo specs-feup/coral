@@ -1,11 +1,15 @@
 laraImport("lara.pass.Pass");
+laraImport("lara.pass.results.PassResult");
 laraImport("weaver.Query");
 
-laraImport("coral.borrowck.OutlivesConstraint");
+laraImport("coral.regionck.OutlivesConstraint");
 laraImport("coral.ty.RefTy");
-laraImport("coral.borrowck.RegionKind");
-laraImport("coral.borrowck.RegionVariable");
-laraImport("coral.borrowck.Regionck");
+laraImport("coral.regionck.RegionKind");
+laraImport("coral.regionck.RegionVariable");
+laraImport("coral.regionck.Regionck");
+
+laraImport("coral.mir.path.PathVarRef");
+laraImport("coral.mir.path.PathDeref");
 
 laraImport("coral.ty.Ty");
 laraImport("coral.ty.RefTy");
@@ -20,7 +24,7 @@ class ConstraintGenerator extends Pass {
     /**
      * @type {Regionck}
      */
-    borrowck;
+    regionck;
     
     /**
      * @type {OutlivesConstraint[]}
@@ -29,13 +33,13 @@ class ConstraintGenerator extends Pass {
 
     /**
      * 
-     * @param {Regionck} borrowck 
+     * @param {Regionck} regionck 
      */
-    constructor(borrowck) {
+    constructor(regionck) {
         super();
-        this.borrowck = borrowck;
-        this.borrowck.constraints = [];
-        this.constraints = this.borrowck.constraints;
+        this.regionck = regionck;
+        this.regionck.constraints = [];
+        this.constraints = this.regionck.constraints;
     }
 
     /**
@@ -43,12 +47,12 @@ class ConstraintGenerator extends Pass {
      * @param {JoinPoint} $jp 
      */
     _apply_impl($jp) {
-        const universal = this.borrowck.regions.filter(r => r.kind === RegionKind.UNIVERSAL);
+        const universal = this.regionck.regions.filter(r => r.kind === RegionKind.UNIVERSAL);
         universal.forEach(region => {
             region.points.add(`end(${region.name})`);
         });
 
-        for (const node of this.borrowck.cfg.graph.nodes()) {
+        for (const node of this.regionck.cfg.graph.nodes()) {
             const scratch = node.scratch("_coral");
 
             // Insert CFG into universal regions
@@ -58,34 +62,54 @@ class ConstraintGenerator extends Pass {
 
             // Lifetime constraints
             for (const variable of scratch.liveIn.keys()) {
-                const ty = this.borrowck.declarations.get(variable);
+                const ty = this.regionck.declarations.get(variable);
                 for (const region of ty.nestedLifetimes()) {
                     region.points.add(node.id());
                 }
             }
 
             // Other constraints
-            this.#subtypingConstraints(node);
-            this.#reborrowConstraints(node);
+            const successors = node.outgoers().nodes().map(e => e.id());
+            if ((successors.length != 1) && (scratch.loan || scratch.assignments?.length > 0)) {
+                throw new Error(`ConstraintGenerator: node ${node.id()} has ${successors.length} successors and a loan/assignment`);
+            }
+
+            this.#subtypingConstraints(node, successors[0]);
+            this.#reborrowConstraints(node, successors[0]);
         }
 
+        return new PassResult(this, $jp);
     }
 
 
-    #subtypingConstraints(node) {
-        // TODO: Missing constraints from parameters (maybe can be covered though assignment w/ proper annotations?)
+    #reborrowConstraints(node, successor) {
         const scratch = node.scratch("_coral");
-        const successor = node.outgoers().nodes().map(e => e.id());
-        // println(`node ${node.id()} has [${successor.join(', ')}] successors`);
-        if ((successor.length != 1) && (scratch.loan || scratch.assignments?.length > 0)) {
-            throw new Error(`subtypingConstraints: node ${node.id()} has ${successor.length} successors and a loan/assignment`);
+        if (scratch.reborrow === undefined) {
+            return;
         }
 
+        if (scratch.loan === undefined) {
+            throw new Error("reborrowConstraints: reborrow without loan");
+        }
+
+        for (const path of scratch.loan.loanedPath.supportingPrefixes()) {
+            if (!(path instanceof PathDeref))
+                continue;
+
+            this.#relateRegions(path.regionVar, scratch.loan.regionVar, Variance.CONTRA, successor);                
+        }
+    }
+    
+
+    #subtypingConstraints(node, successor) {
+        // TODO: Missing constraints from parameters (maybe can be covered though assignment w/ proper annotations?)
+        const scratch = node.scratch("_coral");
+
         if (scratch.loan) {
-            this.#relateTy(scratch.loan.leftTy, scratch.loan.loanedRefTy, Variance.CO, successor[0]);
+            this.#relateTy(scratch.loan.leftTy, scratch.loan.loanedRefTy, Variance.CO, successor);
         } else {
             for (const assignment of scratch.assignments) {
-                this.#relateTy(assignment.leftTy, assignment.rightTy, Variance.CONTRA, successor[0]);
+                this.#relateTy(assignment.leftTy, assignment.rightTy, Variance.CONTRA, successor);
             }
         }
     }
@@ -101,7 +125,7 @@ class ConstraintGenerator extends Pass {
     #relateTy(ty1, ty2, variance, successor) {
         if (ty1 instanceof RefTy && ty2 instanceof RefTy) {
             this.#relateRegions(ty1.regionVar, ty2.regionVar, Variance.xform(variance, Variance.CO), successor);
-            this.#relateTy(ty1.referent, ty2.referent, Variance.xform(variance, ty1.borrowKind == BorrowKind.MUTABLE ? Variance.IN : Variance.CO));
+            this.#relateTy(ty1.referent, ty2.referent, Variance.xform(variance, ty1.borrowKind == BorrowKind.MUTABLE ? Variance.IN : Variance.CO), successor);
             return;
         }
 
@@ -148,10 +172,5 @@ class ConstraintGenerator extends Pass {
                 this.constraints.push(new OutlivesConstraint(region1, region2, successor));
                 break;
         }
-    }
-    
-
-    #reborrowConstraints(node) {
-        // TODO: REBORROW CONSTRAINTS
     }
 }

@@ -1,5 +1,5 @@
-laraImport("coral.borrowck.RegionVariable");
-laraImport("coral.borrowck.Regionck");
+laraImport("coral.regionck.RegionVariable");
+laraImport("coral.regionck.Regionck");
 laraImport("coral.graph.DfsVisitor");
 
 
