@@ -19,7 +19,7 @@
     </entry>
     <entry>
       <string>output</string>
-      <file>out</file>
+      <file>..\out</file>
     </entry>
     <entry>
       <string>parsingNumThreads</string>
@@ -172,7 +172,7 @@
     </entry>
     <entry>
       <string>aspect</string>
-      <file>src\test.js</file>
+      <file>..\src\test.js</file>
     </entry>
     <entry>
       <string>ignoreHeaderIncludes</string>
@@ -191,9 +191,7 @@
     <entry>
       <string>include</string>
       <FileList>
-        <fileList>
-          <file>../clava/ClavaLaraApi/src-lara-clava/clava</file>
-        </fileList>
+        <fileList/>
       </FileList>
     </entry>
     <entry>

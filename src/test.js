@@ -1,98 +1,179 @@
 laraImport("clava.Clava");
 laraImport("clava.ClavaJoinPoints");
-laraImport("lara.Query");
+laraImport("lara.Io");
+laraImport("weaver.Query");
 
 laraImport("coral.CoralPipeline");
 laraImport("coral.errors.CoralError");
 
 class CoralTester {
+    #baseFolder;
+    #pipeline;
+    #writeTo;
+    #omitTree;
 
-    rootFolder;
-
-    constructor() {
-        this.rootFolder = Clava.getData().getContextFolder();
+    constructor(testFolder, pipeline) {
+        this.#baseFolder = testFolder;
+        this.#pipeline = pipeline;
+        this.#writeTo = null;
+        this.#omitTree = "none";
     }
 
-
-    /**
-     * 
-     * @param {*} path 
-     */
-    #innerTest(path) {
-        const $file = ClavaJoinPoints.file(this.rootFolder + path);
-        Query.root().setFirstChild($file);
-        Clava.rebuildAst();
-
-        // Inner test
-        const pipeline = new CoralPipeline();
-        pipeline.apply();
+    omitTree(omit) {
+        this.#omitTree = omit;
+        return this;
     }
 
-    /**
-     * Pseudo-decorator for test functions
-     * @param {*} file 
-     * @param {*} expectedExceptions 
-     * @returns 
-     */
-    #testImpl(path, expectedExceptions = undefined) {
-        Clava.pushAst();
+    writeTo(path) {
+        this.#writeTo = path;
+        return this;
+    }
 
-        try {
-            this.#innerTest(path);
-        } catch(e) {
-            if (expectedExceptions?.some(c => e instanceof c)) {
-                Clava.popAst();
-                return true;
-            }
+    run() {
+        const results = this.#runTestCase("");
+        this.#printResults(results);
+    }
 
-            Clava.popAst();
-            return false;
+    #printResultsTree(head, results, prefix = "", headPrefix = "") {
+        const info = results.failed === 0? "Pass" : `Failed ${results.failed} out of ${results.total} tests`;
+        println(`${headPrefix}${head} (${info})`);
+
+        if (this.#omitTree === "passedChildren" && results.failed === 0) {
+            return;
         }
 
-        Clava.popAst();
-        return expectedExceptions === undefined;
+        let content = [...results.content];
+        if (this.#omitTree === "passed") {
+            content = content
+                .filter(
+                    ([_, r]) => (r.type === "testcase" && r.failed > 0) || (r.type === "test" && r.result !== "Pass")
+                );
+        }
+        let countdown = content.length;
+
+        for (const [name, subresults] of content) {
+            countdown -= 1;
+            println(prefix + "|");
+            if (subresults.type === "testcase") {
+                const newPrefix = countdown === 0? "     " : "|    ";
+                this.#printResultsTree(name, subresults, prefix + newPrefix, prefix + "+--> ");
+            } else {
+                println(`${prefix}+--> ${name} (${subresults.result})`); // TODO maybe print more context
+            }
+        }
     }
 
-    /**
-     * 
-     * @param {str} file 
-     */
-    test(file) {
-        this.#testImpl("/accepted/" + file);
-    }
-    
-    /**
-     * 
-     * @param {str} file
-     * @param {Array} expectedExceptions
-     * @returns {boolean} True if the test threw an exception
-     */
-    expectedException(file, expectedExceptions) {
-        return this.#testImpl("/error/" + file, expectedExceptions);
+    #printResults(results) {
+        println("\n\n========== Test results: ==========");
+        this.#printResultsTree(".", results);
     }
 
+    #addFolderToClava(basePath, relativePath="") {
+        const completePath = this.#baseFolder + basePath + relativePath;
+        if (Io.isFolder(completePath)) {
+            for (const subpath of Io.getPaths(completePath)) {
+                this.#addFolderToClava(basePath, relativePath + "/" + subpath.getName());
+            }
+        } else if (Io.isFile(completePath)) {
+            const $file = ClavaJoinPoints.file(completePath);
+            // $file.setRelativeFolderpath(basePath+relativePath+"/.."); TODO this doesn't work
+            Clava.addFile($file);
+        }
+    }
+
+    #runTest(path, expectedExceptions=null, singleFile=false) {
+        Clava.pushAst();
+
+        this.#addFolderToClava(path);
+
+        // TODO is there a way to temporarily redirect stdout to a file?
+        // setPrintStream(this.#writeTo + "/" + "/log.txt");
+
+        const result = { type: "test", expectedExceptions, actualException: null };
+        let ok = (expectedExceptions === null || expectedExceptions.length === 0);
+        try {
+            Clava.rebuild();
+            this.#pipeline.apply();
+            if (this.#writeTo !== null) {
+                let writeTo = this.#writeTo + "/" + path;
+                if (singleFile) {
+                    writeTo += "/..";
+                }
+                Clava.writeCode(writeTo);
+            }
+        } catch (e) {
+            result.actualException = e;
+            ok = (expectedExceptions !== null && expectedExceptions.some(c => e instanceof c));
+            if (!ok) {
+                if (this.#writeTo === null) {
+                    println(e.stack);
+                } else {
+                    let writeTo = this.#writeTo + "/" + path + ".log.txt";
+                    writeFile(writeTo, e.stack);
+                }
+            }
+        } finally {
+            Clava.popAst();
+        }
+
+        if (ok) {
+            result.result = "Pass";
+        } else {
+            result.result = "Fail";
+        }
+        
+        return result;
+    }
+
+    #getTestType(subpathParts) {
+        if (subpathParts[1] === "ok") {
+            return [];
+        } else if (subpathParts[1] === "err") {
+            return [CoralError];
+        } else {
+            throw new Error("Invalid test type: " + subpathParts[1]);
+        }
+    }
+
+    #runTestCase(path) {
+        const results = {
+            type: "testcase",
+            content: new Map(),
+            passed: 0,
+            failed: 0,
+            total: 0,
+        };
+        for (const subpath of Io.getPaths(this.#baseFolder + "/" + path)) {
+            const subpathParts = subpath.getName().split(".");
+            const testName = subpathParts[0];
+
+            if (Io.isFolder(subpath)) {
+                if (subpathParts.length === 1) {
+                    const subresults = this.#runTestCase(path + "/" + testName);
+                    results.content.set(testName, subresults);
+                    results.passed += subresults.passed;
+                    results.failed += subresults.failed;
+                    results.total += subresults.total;
+                } else {
+                    const result = this.#runTest(path + "/" + subpath.getName(), this.#getTestType(subpathParts));
+                    results.content.set(testName, result);
+                    result.result === "Pass" ? results.passed += 1 : results.failed += 1;
+                    results.total += 1;
+                }
+            } else if (Io.isFile(subpath)) {
+                const result = this.#runTest(path + "/" + subpath.getName(), this.#getTestType(subpathParts), true);
+                results.content.set(testName, result);
+                result.result === "Pass" ? results.passed += 1 : results.failed += 1;
+                results.total += 1;
+            }
+        }
+        return results;
+    }
 }
 
-
-
-const accept = [
-    "borrow_simple.c",
-    "elision.c",
-    "nll.c",
-    "simple_copy_trait.c"
-];
-const fail =  [
-    "borrow_of_moved_value.c",
-    "moved_while_borrowed.c",
-    "mutable_borrow_of_const.c",
-    "used_after_move.c"
-];
-const tester = new CoralTester();
-
-for (const file of accept) {
-    tester.test(file);
-}
-
-for (const file of fail) {
-    tester.expectedException(file, [CoralError]);
-}
+const rootFolder = Clava.getData().getContextFolder() + "/..";
+const testFolder = rootFolder + "/in/test";
+new CoralTester(testFolder, new CoralPipeline())
+    .writeTo(rootFolder + "/out/woven_code/test")
+    .omitTree("passed")
+    .run();

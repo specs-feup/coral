@@ -7,19 +7,19 @@ laraImport("coral.errors.CoralError");
 
 
 class CoralPipeline {
-    #normalizer;
-    #analyser;
+    constructor() {}
 
-    constructor() {
-        this.#normalizer = new CoralNormalizer();
-        this.#analyser = new CoralAnalyser();
-    }
+apply($root = null) {
+        if ($root === null) {
+            $root = Query.root();
+        }
 
-    apply() {
+        let normalizer = new CoralNormalizer();
+        let analyser = new CoralAnalyser();
+
         try {
-            const $jp = Query.root();
-            this.#normalizer.apply($jp);
-            this.#analyser.apply($jp);
+            normalizer.apply($root);
+            analyser.apply($root);
         } catch (e) {
             if (e instanceof CoralError) {
                 println(e.message);
