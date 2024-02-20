@@ -1,11 +1,11 @@
 laraImport("lara.pass.Pass");
 
 laraImport("coral.graph.DfsVisitor");
-laraImport("coral.errors.CoralError");
+laraImport("coral.error.CoralError");
 
 laraImport("coral.mir.Loan");
 laraImport("coral.mir.Access");
-laraImport("coral.ty.BorrowKind");
+laraImport("coral.mir.ty.BorrowKind");
 
 class BcErrorReporting extends Pass {
 
@@ -43,12 +43,14 @@ class BcErrorReporting extends Pass {
     static _access_legal = (node, access) => {
         for (const loan of BcErrorReporting._relevantLoans(node.scratch("_coral"), access)) {
             // shared borrows like '&x' still permit reads from 'x' (but not writes)
-            if (access.mutability === AccessMutability.READ && loan.kind === BorrowKind.SHARED) {
+            if (access.mutability === AccessMutability.READ && loan.borrowKind === BorrowKind.SHARED) {
                 continue;
             }
 
             // otherwise, report an error, because we have an access
             // that conflicts with an in-scope borrow
+
+            // TODO-pg: phrasing this as "write" is not true: might be read of a mutable reference
             BcErrorReporting._prepareWriteWhileBorrowedError(node, access, loan);
         }
 

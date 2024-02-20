@@ -1,8 +1,8 @@
 laraImport("coral.regionck.RegionVariable");
 
 laraImport("coral.mir.path.Path");
-laraImport("coral.ty.Ty");
-laraImport("coral.ty.RefTy");
+laraImport("coral.mir.ty.Ty");
+laraImport("coral.mir.ty.RefTy");
 
 class Loan {
 

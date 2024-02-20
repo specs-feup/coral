@@ -13,12 +13,8 @@ laraImport("clava.code.SimplifyAssignment");
  */
 class CoralNormalizer extends Pass {
 
-    #statementDecomposer;
-
     constructor() {
         super();
-
-        this.#statementDecomposer = new StatementDecomposer("TMP_");
     }
 
 
@@ -34,18 +30,16 @@ class CoralNormalizer extends Pass {
             // Decomposes `int a,b=5,c;` into `int a; int b = 5; int c;` 
             new DecomposeDeclStmt(),
             // Takes the condition outside of if-else statements
-            new SimplifySelectionStmts(this.#statementDecomposer),
+            new SimplifySelectionStmts(new StatementDecomposer("TMP_")),
         ]);
         
-        const binaryOpIter = Query.searchFrom($jp, "binaryOp", {
-            self: (self) => self.isAssignment && self.operator !== "=",
-        });
-
+        // `a += b` becomes `a = a + b` 
+        const binaryOpIter = Query
+            .searchFrom($jp, "binaryOp", { self: (self) => self.isAssignment && self.operator !== "=" });
         for (const $assign of binaryOpIter) {
             SimplifyAssignment($assign);
         }
 
         return new PassResult(this, $jp);
     }
-
 }

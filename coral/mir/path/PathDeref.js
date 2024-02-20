@@ -1,8 +1,8 @@
 laraImport("coral.mir.path.Path");
 laraImport("coral.mir.path.PathKind");
-laraImport("coral.ty.Ty");
-laraImport("coral.ty.RefTy");
-laraImport("coral.ty.BorrowKind");
+laraImport("coral.mir.ty.Ty");
+laraImport("coral.mir.ty.RefTy");
+laraImport("coral.mir.ty.BorrowKind");
 laraImport("coral.regionck.Regionck");
 
 class PathDeref extends Path {

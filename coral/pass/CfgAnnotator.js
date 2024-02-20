@@ -5,11 +5,11 @@ laraImport("weaver.Query");
 laraImport("coral.regionck.RegionVariable");
 laraImport("coral.regionck.RegionKind");
 
-laraImport("coral.ty.Ty");
-laraImport("coral.ty.RefTy");
-laraImport("coral.ty.BuiltinTy");
-laraImport("coral.ty.ElaboratedTy");
-laraImport("coral.ty.BorrowKind");
+laraImport("coral.mir.ty.Ty");
+laraImport("coral.mir.ty.RefTy");
+laraImport("coral.mir.ty.BuiltinTy");
+laraImport("coral.mir.ty.ElaboratedTy");
+laraImport("coral.mir.ty.BorrowKind");
 
 laraImport("coral.regionck.Regionck");
 laraImport("coral.lifetimes.FnLifetimes");
@@ -260,7 +260,7 @@ class CfgAnnotator extends Pass {
                 this.#annotateExprStmt(node, $exprStmt.returnExpr);
                 break;
             default:
-                println("Unhandled expression annotation for jp: " + $exprStmt.joinPointType);
+                throw new Error("Unhandled expression annotation for jp: " + $exprStmt.joinPointType);
         }
     }
 

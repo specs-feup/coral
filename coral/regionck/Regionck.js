@@ -1,7 +1,4 @@
 laraImport("coral.regionck.OutlivesConstraint");
-laraImport("coral.dotFormatters.LivenessDotFormatter");
-laraImport("coral.dotFormatters.MirDotFormatter");
-
 
 laraImport("coral.regionck.RegionVariable");
 laraImport("coral.pass.CfgAnnotator");
@@ -53,7 +50,6 @@ class Regionck {
         this.cfg = ControlFlowGraph.build($jp, true, { splitInstList: true });
 
         this.liveness = LivenessAnalysis.analyse(this.cfg);
-        // console.log(this.cfg.toDot(new LivenessDotFormatter(this.liveness)) + "\n\n");
         
         const cfgAnnotator = new CfgAnnotator(this);
         cfgAnnotator.apply($jp);
@@ -62,19 +58,19 @@ class Regionck {
     /**
      * @param {boolean} [printConstraintSet=false] If true, prints the constraint set
      */
-    prepare(printConstraintSet = false) {
+    prepare(debug) {
         this.#buildConstraints();
-        if (printConstraintSet) {
+        if (debug) {
             println("Initial Constraint Set:");
             println(this.aggregateRegionckInfo() + "\n\n");
         }
         this.#infer();
         this.#calculateInScopeLoans();
+        if (debug) {
+            println("After Inference:");
+            println(this.aggregateRegionckInfo() + "\n\n");
+        }
         return this;
-    }
-
-    mirToDotFile() {
-        Io.writeFile("../out/dot/mir.gv", this.cfg.toDot(new MirDotFormatter()));
     }
 
 

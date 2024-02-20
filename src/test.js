@@ -4,7 +4,7 @@ laraImport("lara.Io");
 laraImport("weaver.Query");
 
 laraImport("coral.CoralPipeline");
-laraImport("coral.errors.CoralError");
+laraImport("coral.error.CoralError");
 
 class CoralTester {
     #baseFolder;

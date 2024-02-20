@@ -3,7 +3,6 @@ laraImport("lara.pass.results.PassResult");
 laraImport("weaver.Query");
 
 laraImport("coral.regionck.OutlivesConstraint");
-laraImport("coral.ty.RefTy");
 laraImport("coral.regionck.RegionKind");
 laraImport("coral.regionck.RegionVariable");
 laraImport("coral.regionck.Regionck");
@@ -11,12 +10,12 @@ laraImport("coral.regionck.Regionck");
 laraImport("coral.mir.path.PathVarRef");
 laraImport("coral.mir.path.PathDeref");
 
-laraImport("coral.ty.Ty");
-laraImport("coral.ty.RefTy");
-laraImport("coral.ty.BuiltinTy");
-laraImport("coral.ty.ElaboratedTy");
-laraImport("coral.ty.Variance");
-laraImport("coral.ty.BorrowKind");
+laraImport("coral.mir.ty.Ty");
+laraImport("coral.mir.ty.RefTy");
+laraImport("coral.mir.ty.BuiltinTy");
+laraImport("coral.mir.ty.ElaboratedTy");
+laraImport("coral.mir.ty.Variance");
+laraImport("coral.mir.ty.BorrowKind");
 
 
 class ConstraintGenerator extends Pass {

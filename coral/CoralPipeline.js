@@ -3,11 +3,32 @@ laraImport("weaver.Query");
 laraImport("coral.CoralNormalizer");
 laraImport("coral.CoralAnalyser");
 
-laraImport("coral.errors.CoralError");
-
 
 class CoralPipeline {
-    constructor() {}
+    #debug;
+    #mirDotFile;
+    #livenessDotFile;
+
+    constructor() {
+        this.#debug = false;
+        this.#mirDotFile = null;
+        this.#livenessDotFile = null;
+    }
+
+    writeMirToDotFile(path) {
+        this.#mirDotFile = path;
+        return this;
+    }
+
+    writeLivenessToDotFile(path) {
+        this.#livenessDotFile = path;
+        return this;
+    }
+
+    debug() {
+        this.#debug = true;
+        return this;
+    }
 
     apply($root = null) {
         if ($root === null) {
@@ -15,17 +36,12 @@ class CoralPipeline {
         }
 
         let normalizer = new CoralNormalizer();
-        let analyser = new CoralAnalyser();
+        let analyser = new CoralAnalyser()
+            .writeMirToDotFile(this.#mirDotFile)
+            .writeLivenessToDotFile(this.#livenessDotFile)
+            .debug(this.#debug);
 
-        try {
-            normalizer.apply($root);
-            analyser.apply($root);
-        } catch (e) {
-            if (e instanceof CoralError) {
-                println(e.message);
-            } else {
-                throw e;
-            }
-        }
+        normalizer.apply($root);
+        analyser.apply($root);
     }
 }

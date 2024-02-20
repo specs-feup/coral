@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 typedef struct {
     int a;
     int b;
@@ -8,8 +6,9 @@ typedef struct {
 int main() {
     T a = {1, 2};
     
-    const T* ref = &a;
+    const T *ref = &a;
     int n = ref->a;
+    int m = (*ref).b;
 
     a.a = 2;
 

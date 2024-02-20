@@ -2,7 +2,7 @@ int main() {
     int a = 1;
     int b;
     
-    int const *ref1 = &a, const *ref2 = &a;
+    const int *ref1 = &a, *ref2 = &a;
     int const *ref3 = &a;
     b = *ref2;
     int const *ref4 = &a;

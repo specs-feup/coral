@@ -1,4 +1,4 @@
-laraImport("coral.ty.Ty");
+laraImport("coral.mir.ty.Ty");
 
 class ElaboratedTy extends Ty {
 

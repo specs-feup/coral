@@ -1,6 +1,6 @@
 laraImport("coral.mir.AssignmentKind");
 laraImport("coral.mir.path.Path");
-laraImport("coral.ty.Ty");
+laraImport("coral.mir.ty.Ty");
 
 class Assignment {
   
