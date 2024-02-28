@@ -12,6 +12,8 @@ class CoralTester {
     #writeTo;
     #omitTree;
 
+    #CORAL_TEST_UTILS_PRAGMA_NAME = "coral_test";
+
     constructor(testFolder, pipeline) {
         this.#baseFolder = testFolder;
         this.#pipeline = pipeline;
@@ -81,7 +83,47 @@ class CoralTester {
         }
     }
 
-    #runTest(path, expectedExceptions=null, singleFile=false) {
+    // TODO possibly unify with CORAL pragma logic
+    #getGlobalTestUtilsPragma(...subcommands) {
+        const matches = [];
+        
+        for (const $pragma of Query.search("pragma")) {
+            if ($pragma.name !== this.#CORAL_TEST_UTILS_PRAGMA_NAME) {
+                continue;
+            }
+
+            const content = $pragma.content.split(" ");
+            if (content.length < subcommands.length) {
+                continue;
+            }
+            let matched = true;
+            for (let i = 0; i < subcommands.length; i++) {
+                if (content[i] !== subcommands[i]) {
+                    matched = false;
+                    break;
+                }
+            }
+            if (matched) {
+                matches.push({ raw: $pragma, content });
+            }
+        }
+        return matches;
+    }
+
+    #getErrorClass(error) {
+        // Reflection is avoided to prevent possible unintended vulnerabilities
+        // Instead, allowed errors are hardcoded
+        switch (error) {
+            case "CoralError":
+                return CoralError;
+            case "Error":
+                return Error;
+            default:
+                throw new Error("Unsupported error class: " + error);
+        }
+    }
+
+    #runTest(path, isOkExpected=true, singleFile=false) {
         Clava.pushAst();
 
         this.#addFolderToClava(path);
@@ -89,10 +131,22 @@ class CoralTester {
         // TODO is there a way to temporarily redirect stdout to a file?
         // setPrintStream(this.#writeTo + "/" + "/log.txt");
 
-        const result = { type: "test", expectedExceptions, actualException: null };
-        let ok = (expectedExceptions === null || expectedExceptions.length === 0);
+        const result = { type: "test", expectedExceptions: [], actualException: null };
+        let pass = isOkExpected;
+
         try {
             Clava.rebuild();
+
+            if (!isOkExpected) {
+                for (const $pragma of this.#getGlobalTestUtilsPragma("expect")) {
+                    result.expectedExceptions.push(this.#getErrorClass($pragma.content[1]));
+                }
+                
+                if (result.expectedExceptions.length === 0) {
+                    result.expectedExceptions.push(CoralError);
+                }
+            }
+
             this.#pipeline.apply();
             if (this.#writeTo !== null) {
                 let writeTo = this.#writeTo + "/" + path;
@@ -102,9 +156,13 @@ class CoralTester {
                 Clava.writeCode(writeTo);
             }
         } catch (e) {
+            if (!(e instanceof CoralError)) {
+                throw e;
+            }
+
             result.actualException = e;
-            ok = (expectedExceptions !== null && expectedExceptions.some(c => e instanceof c));
-            if (!ok) {
+            pass = !isOkExpected && result.expectedExceptions.some((error) => e instanceof error);
+            if (!pass) {
                 if (this.#writeTo === null) {
                     println(e.stack);
                 } else {
@@ -116,7 +174,7 @@ class CoralTester {
             Clava.popAst();
         }
 
-        if (ok) {
+        if (pass) {
             result.result = "Pass";
         } else {
             result.result = "Fail";
@@ -125,11 +183,11 @@ class CoralTester {
         return result;
     }
 
-    #getTestType(subpathParts) {
+    isOkExpected(subpathParts) {
         if (subpathParts[1] === "ok") {
-            return [];
+            return true;
         } else if (subpathParts[1] === "err") {
-            return [CoralError];
+            return false;
         } else {
             throw new Error("Invalid test type: " + subpathParts[1]);
         }
@@ -155,13 +213,13 @@ class CoralTester {
                     results.failed += subresults.failed;
                     results.total += subresults.total;
                 } else {
-                    const result = this.#runTest(path + "/" + subpath.getName(), this.#getTestType(subpathParts));
+                    const result = this.#runTest(path + "/" + subpath.getName(), this.isOkExpected(subpathParts));
                     results.content.set(testName, result);
                     result.result === "Pass" ? results.passed += 1 : results.failed += 1;
                     results.total += 1;
                 }
             } else if (Io.isFile(subpath)) {
-                const result = this.#runTest(path + "/" + subpath.getName(), this.#getTestType(subpathParts), true);
+                const result = this.#runTest(path + "/" + subpath.getName(), this.isOkExpected(subpathParts), true);
                 results.content.set(testName, result);
                 result.result === "Pass" ? results.passed += 1 : results.failed += 1;
                 results.total += 1;
@@ -172,8 +230,8 @@ class CoralTester {
 }
 
 const rootFolder = Clava.getData().getContextFolder() + "/..";
-const testFolder = rootFolder + "/in/test";
+const testFolder = rootFolder + "/in/test/t";
 new CoralTester(testFolder, new CoralPipeline())
-    .writeTo(rootFolder + "/out/woven_code/test")
+    .writeTo(rootFolder + "/out/woven_code/test/t")
     .omitTree("passed")
     .run();

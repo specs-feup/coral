@@ -1,14 +1,14 @@
 int main() {
-    const float a = 5.0;
+    float a = 5.0;
     const float *ptr1, *ptr2;
 
-    ptr1 = &a;
-    ptr2 = &a;
+    float *restrict ptr3 = &a;
+
+    ptr1 = ptr3;
+    ptr2 = ptr3;
     
     const float b = *ptr1;
     const float c = *ptr2;
-
-    float *restrict ptr3 = ptr1;
 
     *ptr3 += 6.0;
 
