@@ -4,7 +4,7 @@ laraImport("coral.regionck.RegionVariable");
 laraImport("coral.pass.CfgAnnotator");
 laraImport("coral.pass.ConstraintGenerator");
 laraImport("coral.pass.InScopeLoansComputation");
-laraImport("coral.pass.BcErrorReporting");
+laraImport("coral.pass.RegionckErrorReporting");
 
 laraImport("clava.graphs.ControlFlowGraph");
 
@@ -100,7 +100,7 @@ class Regionck {
     }
 
     borrowCheck() {
-        let errorReporting = new BcErrorReporting(this.cfg.startNode);
+        let errorReporting = new RegionckErrorReporting(this.cfg.startNode);
         errorReporting.apply(this.$jp);
 
         return this;

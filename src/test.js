@@ -5,6 +5,8 @@ laraImport("weaver.Query");
 
 laraImport("coral.CoralPipeline");
 laraImport("coral.error.CoralError");
+laraImport("coral.error.borrow.MutateWhileBorrowedError");
+laraImport("coral.error.borrow.UseWhileMutBorrowedError");
 
 class CoralTester {
     #baseFolder;
@@ -116,6 +118,10 @@ class CoralTester {
         switch (error) {
             case "CoralError":
                 return CoralError;
+            case "MutateWhileBorrowedError":
+                return MutateWhileBorrowedError;
+            case "UseWhileMutBorrowedError":
+                return UseWhileMutBorrowedError;
             case "Error":
                 return Error;
             default:
@@ -123,7 +129,7 @@ class CoralTester {
         }
     }
 
-    #runTest(path, isOkExpected=true, singleFile=false) {
+    #runTest(path, isOkExpected = true, singleFile = false) {
         Clava.pushAst();
 
         this.#addFolderToClava(path);
@@ -157,7 +163,8 @@ class CoralTester {
             }
         } catch (e) {
             if (!(e instanceof CoralError)) {
-                throw e;
+                // throw e;
+                print(e.stack)
             }
 
             result.actualException = e;
@@ -230,8 +237,8 @@ class CoralTester {
 }
 
 const rootFolder = Clava.getData().getContextFolder() + "/..";
-const testFolder = rootFolder + "/in/test/t";
+const testFolder = rootFolder + "/in/test";
 new CoralTester(testFolder, new CoralPipeline())
-    .writeTo(rootFolder + "/out/woven_code/test/t")
+    .writeTo(rootFolder + "/out/woven_code/test")
     .omitTree("passed")
     .run();

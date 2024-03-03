@@ -1,4 +1,5 @@
-#pragma coral_test expect CoralError
+#pragma coral_test expect UseWhileMutBorrowedError
+// TODO This test has a bug while printing the error line because $invalid_use is inline
 
 int main() {
     int a = 1;

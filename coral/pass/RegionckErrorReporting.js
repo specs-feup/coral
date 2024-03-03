@@ -1,13 +1,14 @@
 laraImport("lara.pass.Pass");
 
 laraImport("coral.graph.DfsVisitor");
-laraImport("coral.error.UseWhileMutBorrowError");
+laraImport("coral.error.borrow.MutateWhileBorrowedError");
+laraImport("coral.error.borrow.UseWhileMutBorrowedError");
 
 laraImport("coral.mir.Loan");
 laraImport("coral.mir.Access");
 laraImport("coral.mir.ty.BorrowKind");
 
-class BcErrorReporting extends Pass {
+class RegionckErrorReporting extends Pass {
 
     /**
      * @type {cytoscape node}
@@ -22,7 +23,7 @@ class BcErrorReporting extends Pass {
     _apply_impl($jp) {
         DfsVisitor.visit(
             this.startNode,
-            BcErrorReporting._errorReportingVisitorFn
+            RegionckErrorReporting._errorReportingVisitorFn
         );
 
         return new PassResult(this, $jp);
@@ -30,7 +31,7 @@ class BcErrorReporting extends Pass {
 
     static _errorReportingVisitorFn = (node) => {
         for (const access of node.scratch("_coral").accesses) {
-            BcErrorReporting._access_legal(node, access);
+            RegionckErrorReporting._access_legal(node, access);
         }
     }
 
@@ -41,30 +42,21 @@ class BcErrorReporting extends Pass {
      * @returns {boolean}
      */
     static _access_legal = (node, access) => {
-        for (const loan of BcErrorReporting._relevantLoans(node.scratch("_coral"), access)) {
-            // shared borrows like '&x' still permit reads from 'x' (but not writes)
-            if (access.mutability === AccessMutability.READ && loan.borrowKind === BorrowKind.SHARED) {
-                continue;
+        for (const loan of RegionckErrorReporting._relevantLoans(node.scratch("_coral"), access)) {
+            if (loan.borrowKind === BorrowKind.MUTABLE) {
+                const $nextUse = this._findNextUse(node, loan);
+                throw new UseWhileMutBorrowedError(node.data().stmts[0], loan, $nextUse, access);
+            } else if (access.mutability === AccessMutability.WRITE) {
+                const $nextUse = this._findNextUse(node, loan);
+                throw new MutateWhileBorrowedError(node.data().stmts[0], loan, $nextUse, access);
             }
-
-            // otherwise, report an error, because we have an access
-            // that conflicts with an in-scope borrow
-
-            // TODO-pg: phrasing this as "write" is not true: might be read of a mutable reference
-            BcErrorReporting._prepareWriteWhileBorrowedError(node, access, loan);
         }
 
         // Returns that no changes were made
         return false;
     }
 
-    static _findNextUse = (node, access) => {
-    }
-
-    static _prepareWriteWhileBorrowedError = (node, access, loan) => {
-        // throw new CoralError(`Access to ${access.path} @ ${node.id()} conflicts with borrow of ${loan.loanedPath} @ ${loan.node.id()}`);
-        const $jp = node.data().stmts[0];
-        
+    static _findNextUse = (node, loan) => {        
         // Calculate a possible next use
         const dfsResult = node.cy().elements().dfs(
             node,
@@ -79,26 +71,21 @@ class BcErrorReporting extends Pass {
             true
         );
         if (dfsResult.found === undefined) {
-            throw new Error("_prepareWriteWhileBorrowedError: Could not find next use");
+            throw new Error("_findNextUse: Could not find next use");
         }
 
-        let nextUse = dfsResult.path[dfsResult.path.length-2].source();
-        let $nextUse;
+        const nextUse = dfsResult.path[dfsResult.path.length-2].source();
 
         switch (nextUse.data().type) {
             case CfgNodeType.INST_LIST:
-                $nextUse = nextUse.data().stmts[0];
-                break;
+                return nextUse.data().stmts[0];
             case CfgNodeType.IF:
             case CfgNodeType.RETURN:
             case CfgNodeType.LOOP:
-                $nextUse = nextUse.data().nodeStmt;
-                break;
+                return nextUse.data().nodeStmt;
             default:
-                throw new Error(`_prepareWriteWhileBorrowedError: Unknown node type ${nextUse.data().type}`);
+                throw new Error(`_findNextUse: Unknown node type ${nextUse.data().type}`);
         }
-    
-        throw new UseWhileMutBorrowError($jp, loan, $nextUse, access);
     }
 
     /**
@@ -125,4 +112,3 @@ class BcErrorReporting extends Pass {
     }
 
 }
-
