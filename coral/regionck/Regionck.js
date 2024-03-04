@@ -61,14 +61,14 @@ class Regionck {
     prepare(debug) {
         this.#buildConstraints();
         if (debug) {
-            println("Initial Constraint Set:");
-            println(this.aggregateRegionckInfo() + "\n\n");
+            console.log("Initial Constraint Set:");
+            console.log(this.aggregateRegionckInfo() + "\n\n");
         }
         this.#infer();
         this.#calculateInScopeLoans();
         if (debug) {
-            println("After Inference:");
-            println(this.aggregateRegionckInfo() + "\n\n");
+            console.log("After Inference:");
+            console.log(this.aggregateRegionckInfo() + "\n\n");
         }
         return this;
     }

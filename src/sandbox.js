@@ -1,7 +1,7 @@
 laraImport("coral.CoralPipeline");
 
 laraImport("weaver.Query");
-println(Query.root().dump + "\n\n")
+console.log(Query.root().dump + "\n\n")
 
 const pipeline = new CoralPipeline()
     .debug()
@@ -12,7 +12,7 @@ try {
     pipeline.apply(); 
 } catch (e) {
     if (e instanceof CoralError) {
-        println(e.message);
+        console.log(e.message);
     } else {
         throw e;
     }

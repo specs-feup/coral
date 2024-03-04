@@ -40,7 +40,7 @@ class CoralTester {
 
     #printResultsTree(head, results, prefix = "", headPrefix = "") {
         const info = results.failed === 0? "Pass" : `Failed ${results.failed} out of ${results.total} tests`;
-        println(`${headPrefix}${head} (${info})`);
+        console.log(`${headPrefix}${head} (${info})`);
 
         if (this.#omitTree === "passedChildren" && results.failed === 0) {
             return;
@@ -57,18 +57,18 @@ class CoralTester {
 
         for (const [name, subresults] of content) {
             countdown -= 1;
-            println(prefix + "|");
+            console.log(prefix + "|");
             if (subresults.type === "testcase") {
                 const newPrefix = countdown === 0? "     " : "|    ";
                 this.#printResultsTree(name, subresults, prefix + newPrefix, prefix + "+--> ");
             } else {
-                println(`${prefix}+--> ${name} (${subresults.result})`); // TODO maybe print more context
+                console.log(`${prefix}+--> ${name} (${subresults.result})`); // TODO maybe print more context
             }
         }
     }
 
     #printResults(results) {
-        println("\n\n========== Test results: ==========");
+        console.log("\n\n========== Test results: ==========");
         this.#printResultsTree(".", results);
     }
 
@@ -164,14 +164,14 @@ class CoralTester {
         } catch (e) {
             if (!(e instanceof CoralError)) {
                 // throw e;
-                print(e.stack)
+                console.log(e.stack)
             }
 
             result.actualException = e;
             pass = !isOkExpected && result.expectedExceptions.some((error) => e instanceof error);
             if (!pass) {
                 if (this.#writeTo === null) {
-                    println(e.stack);
+                    console.log(e.stack);
                 } else {
                     let writeTo = this.#writeTo + "/" + path + ".log.txt";
                     writeFile(writeTo, e.stack);
