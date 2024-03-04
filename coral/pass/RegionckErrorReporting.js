@@ -82,6 +82,7 @@ class RegionckErrorReporting extends Pass {
             case CfgNodeType.IF:
             case CfgNodeType.RETURN:
             case CfgNodeType.LOOP:
+            case CfgNodeType.COND:
                 return nextUse.data().nodeStmt;
             default:
                 throw new Error(`_findNextUse: Unknown node type ${nextUse.data().type}`);

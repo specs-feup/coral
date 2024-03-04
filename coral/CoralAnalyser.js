@@ -47,12 +47,6 @@ class CoralAnalyser extends SimplePass {
     transformJoinpoint($jp) {
         const regionck = new Regionck($jp).prepare(this.#debug);
 
-        // println("liveness:")
-        // println(regionck.cfg.toDot(new LivenessDotFormatter(regionck.liveness)));
-
-        // println("mir:")
-        // println(regionck.cfg.toDot(new MirDotFormatter()));
-
         if (this.#livenessDotFile) {
             Io.writeFile(this.#livenessDotFile, regionck.cfg.toDot(new LivenessDotFormatter(regionck.liveness)));
         }
