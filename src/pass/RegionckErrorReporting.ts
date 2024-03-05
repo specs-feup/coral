@@ -2,12 +2,12 @@ import Pass from "lara-js/api/lara/pass/Pass.js";
 import cytoscape from "lara-js/api/libs/cytoscape-3.26.0.js";
 import CfgNodeType from "clava-js/api/clava/graphs/cfg/CfgNodeType.js";
 
-import DfsVisitor from "../graph/DfsVisitor.js";
-import MutateWhileBorrowedError from "../error/borrow/MutateWhileBorrowedError.js";
-import UseWhileMutBorrowedError from "../error/borrow/UseWhileMutBorrowedError.js";
-import Loan from "../mir/Loan.js";
-import Access from "../mir/Access.js";
-import BorrowKind from "../mir/ty/BorrowKind.js";
+import DfsVisitor from "coral/graph/DfsVisitor";
+import MutateWhileBorrowedError from "coral/error/borrow/MutateWhileBorrowedError";
+import UseWhileMutBorrowedError from "coral/error/borrow/UseWhileMutBorrowedError";
+import Loan from "coral/mir/Loan";
+import Access from "coral/mir/Access";
+import BorrowKind from "coral/mir/ty/BorrowKind";
 import { Joinpoint } from "clava-js/api/Joinpoints.js";
 import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
 
@@ -112,30 +112,29 @@ export default class RegionckErrorReporting extends Pass {
     };
 
     static _relevantLoans = (scratch: cytoscape.Scratchpad, access: Access): Loan[] => {
-        if (access.depth === Access.Depth.SHALLOW) {
-            return Array.from(scratch.inScopeLoans as Loan[]).filter(
-                (loan) =>
-                    access.path.equals(loan.loanedPath) ||
-                    access.path
-                        .prefixes()
-                        .some((prefix) => prefix.equals(loan.loanedPath)) ||
-                    loan.loanedPath
-                        .shallowPrefixes()
-                        .some((prefix) => prefix.equals(access.path)),
-            );
-        } else if (access.depth === Access.Depth.DEEP) {
-            return Array.from(scratch.inScopeLoans as Loan[]).filter(
-                (loan) =>
-                    access.path.equals(loan.loanedPath) ||
-                    access.path
-                        .prefixes()
-                        .some((prefix) => prefix.equals(loan.loanedPath)) ||
-                    loan.loanedPath
-                        .supportingPrefixes()
-                        .some((prefix) => prefix.equals(access.path)),
-            );
-        } else {
-            throw new Error("Unknown access depth " + access.depth);
+        switch (access.depth) {
+            case Access.Depth.SHALLOW:
+                return Array.from(scratch.inScopeLoans as Loan[]).filter(
+                    (loan) =>
+                        access.path.equals(loan.loanedPath) ||
+                        access.path
+                            .prefixes()
+                            .some((prefix) => prefix.equals(loan.loanedPath)) ||
+                        loan.loanedPath
+                            .shallowPrefixes()
+                            .some((prefix) => prefix.equals(access.path)),
+                );
+            case Access.Depth.DEEP:
+                return Array.from(scratch.inScopeLoans as Loan[]).filter(
+                    (loan) =>
+                        access.path.equals(loan.loanedPath) ||
+                        access.path
+                            .prefixes()
+                            .some((prefix) => prefix.equals(loan.loanedPath)) ||
+                        loan.loanedPath
+                            .supportingPrefixes()
+                            .some((prefix) => prefix.equals(access.path)),
+                );
         }
     };
 }

@@ -1,5 +1,5 @@
-import Ty from "./Ty.js";
-import RegionVariable from "../../regionck/RegionVariable.js";
+import Ty from "coral/mir/ty/Ty";
+import RegionVariable from "coral/regionck/RegionVariable";
 
 export default class ElaboratedTy extends Ty {
     constructor(

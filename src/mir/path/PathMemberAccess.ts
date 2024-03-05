@@ -1,7 +1,7 @@
 import { Joinpoint } from "clava-js/api/Joinpoints.js";
-import Path from "./Path.js";
-import Ty from "../ty/Ty.js";
-import Regionck from "../../regionck/Regionck.js";
+import Path from "coral/mir/path/Path";
+import Ty from "coral/mir/ty/Ty";
+import Regionck from "coral/regionck/Regionck";
 
 // TODO why is this all unimplemented
 export default class PathMemberAccess extends Path {

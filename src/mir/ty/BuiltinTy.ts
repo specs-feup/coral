@@ -1,4 +1,4 @@
-import Ty from "./Ty.js";
+import Ty from "coral/mir/ty/Ty";
 
 export default class BuiltinTy extends Ty {
     constructor(name: string, isConst: boolean = false) {

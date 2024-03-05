@@ -1,4 +1,4 @@
-import Path from "./path/Path.js";
+import Path from "coral/mir/path/Path";
 
 class Access {
     mutability: Access.Mutability;

@@ -2,24 +2,23 @@ import Pass from "lara-js/api/lara/pass/Pass.js";
 import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
 import cytoscape from "lara-js/api/libs/cytoscape-3.26.0.js";
 
-import RegionVariable from "../regionck/RegionVariable.js";
-import Ty from "../mir/ty/Ty.js";
-import RefTy from "../mir/ty/RefTy.js";
-import BuiltinTy from "../mir/ty/BuiltinTy.js";
-import BorrowKind from "../mir/ty/BorrowKind.js";
-import Regionck from "../regionck/Regionck.js";
-import FnLifetimes from "../lifetimes/FnLifetimes.js";
-import PathVarRef from "../mir/path/PathVarRef.js";
-import PathDeref from "../mir/path/PathDeref.js";
-import Loan from "../mir/Loan.js";
-import Access from "../mir/Access.js";
-import Assignment from "../mir/Assignment.js";
-import Path from "../mir/path/Path.js";
+import RegionVariable from "coral/regionck/RegionVariable";
+import Ty from "coral/mir/ty/Ty";
+import RefTy from "coral/mir/ty/RefTy";
+import BuiltinTy from "coral/mir/ty/BuiltinTy";
+import BorrowKind from "coral/mir/ty/BorrowKind";
+import Regionck from "coral/regionck/Regionck";
+import FnLifetimes from "coral/lifetimes/FnLifetimes";
+import PathVarRef from "coral/mir/path/PathVarRef";
+import PathDeref from "coral/mir/path/PathDeref";
+import Loan from "coral/mir/Loan";
+import Access from "coral/mir/Access";
+import Assignment from "coral/mir/Assignment";
+import Path from "coral/mir/path/Path";
 import {
     BinaryOp,
     BuiltinType,
     Call,
-    ExprStmt,
     Expression,
     FunctionJp,
     Joinpoint,
@@ -399,11 +398,11 @@ export default class CfgAnnotator extends Pass {
                 throw new Error("Cannot parse lvalue from literal");
             case "varref":
                 return new PathVarRef($jp as Varref);
-            case "unaryOp":
+            case "unaryOp": {
                 const $unaryOp = $jp as UnaryOp;
                 if ($unaryOp.operator === "*") {
-                    let innerPath = this.#parseLvalue(node, $unaryOp.operand);
-                    let ty = innerPath.retrieveTy(this.regionck);
+                    const innerPath = this.#parseLvalue(node, $unaryOp.operand);
+                    const ty = innerPath.retrieveTy(this.regionck);
                     if (!(ty instanceof RefTy))
                         throw new Error(
                             "Cannot dereference non-reference type " + ty.toString(),
@@ -414,6 +413,7 @@ export default class CfgAnnotator extends Pass {
                         "Unhandled parseLvalue unary op: " + $unaryOp.operator,
                     );
                 }
+            }
             case "memberAccess":
             case "parenExpr":
                 return this.#parseLvalue(node, ($jp as ParenExpr).subExpr);

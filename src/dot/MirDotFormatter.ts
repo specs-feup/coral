@@ -1,4 +1,4 @@
-import Access from "../mir/Access.js";
+import Access from "coral/mir/Access";
 import DotFormatter from "lara-js/api/lara/graphs/DotFormatter.js";
 
 export default class MirDotFormatter extends DotFormatter {
@@ -32,7 +32,7 @@ export default class MirDotFormatter extends DotFormatter {
                 for (const loan of scratch.inScopeLoans.keys()) {
                     str += loan.toString() + "\n";
                 }
-                sections.set("In-scope loans", str) + "\n";
+                sections.set("In-scope loans", str + "\n");
             }
 
             if (scratch.accesses.length > 0) {

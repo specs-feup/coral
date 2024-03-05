@@ -1,4 +1,4 @@
-import RegionVariable from "../../regionck/RegionVariable.js";
+import RegionVariable from "coral/regionck/RegionVariable";
 
 export default abstract class Ty {
     name: string;

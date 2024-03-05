@@ -3,8 +3,8 @@ import cytoscape from "lara-js/api/libs/cytoscape-3.26.0.js";
 import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
 import { Joinpoint } from "clava-js/api/Joinpoints.js";
 
-import Loan from "../mir/Loan.js";
-import Assignment from "../mir/Assignment.js";
+import Loan from "coral/mir/Loan";
+import Assignment from "coral/mir/Assignment";
 
 export default class InScopeLoansComputation extends Pass {
     protected override _name: string = "InScopeLoansComputation";

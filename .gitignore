@@ -1,4 +1,10 @@
+node_modules
 out/
 woven_code/
 in/sandbox/*
 !/in/sandbox/.keep
+consumer_order.txt
+enum_integer_type.txt
+is_temporary.txt
+omp.txt
+types_with_templates.txt

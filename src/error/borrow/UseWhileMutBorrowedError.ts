@@ -1,7 +1,7 @@
-import CoralError from "../CoralError.js";
-import ErrorMessageBuilder from "../ErrorMessageBuilder.js";
-import Access from "../../mir/Access.js";
-import Loan from "../../mir/Loan.js";
+import CoralError from "coral/error/CoralError";
+import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
+import Access from "coral/mir/Access";
+import Loan from "coral/mir/Loan";
 import { Joinpoint } from "clava-js/api/Joinpoints.js";
 
 export default class UseWhileMutBorrowedError extends CoralError {
@@ -13,17 +13,17 @@ export default class UseWhileMutBorrowedError extends CoralError {
     ) {
         super(
             new ErrorMessageBuilder(
-                `Cannot use '${access.path}' while mutably borrowed`,
+                `Cannot use '${access.path.toString()}' while mutably borrowed`,
                 $invalidUse,
             )
                 .code(
                     loan.node.data().stmts[0],
-                    `(mutable) borrow of '${loan.loanedPath}' occurs here`,
+                    `(mutable) borrow of '${loan.loanedPath.toString()}' occurs here`,
                     loan.$jp,
                 )
                 .code(
                     $invalidUse,
-                    `use of '${access.path}' occurs here, while borrow is still active`,
+                    `use of '${access.path.toString()}' occurs here, while borrow is still active`,
                 )
                 .code($nextLoanUse, "borrow is later used here")
                 .toString(),

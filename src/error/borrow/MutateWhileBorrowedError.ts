@@ -1,23 +1,23 @@
-import CoralError from "../CoralError.js";
-import ErrorMessageBuilder from "../ErrorMessageBuilder.js";
-import Access from "../../mir/Access.js";
-import Loan from "../../mir/Loan.js";
+import CoralError from "coral/error/CoralError";
+import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
+import Access from "coral/mir/Access";
+import Loan from "coral/mir/Loan";
 import { Joinpoint } from "clava-js/api/Joinpoints.js";
 
 export default class MutateWhileBorrowedError extends CoralError {
     constructor($invalidUse: Joinpoint, loan: Loan, $nextUse: Joinpoint, access: Access) {
         super(
             new ErrorMessageBuilder(
-                `Cannot mutate '${access.path}' while borrowed`,
+                `Cannot mutate '${access.path.toString()}' while borrowed`,
                 $invalidUse,
             )
                 .code(
                     loan.node.data().stmts[0],
-                    `(${loan.borrowKind}) borrow of '${loan.loanedPath}' occurs here`,
+                    `(${loan.borrowKind}) borrow of '${loan.loanedPath.toString()}' occurs here`,
                 )
                 .code(
                     $invalidUse,
-                    `write or mutable borrow of '${access.path}' occurs here, while borrow is still active`,
+                    `write or mutable borrow of '${access.path.toString()}' occurs here, while borrow is still active`,
                 )
                 .code($nextUse, "borrow is later used here")
                 .toString(),

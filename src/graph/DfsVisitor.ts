@@ -4,7 +4,7 @@ export default class DfsVisitor {
     static visit(
         root: cytoscape.NodeSingular,
         applyFn: (node: cytoscape.NodeSingular) => boolean,
-        propagateFn: (node: cytoscape.NodeSingular) => boolean = (_) => true,
+        propagateFn: (node: cytoscape.NodeSingular) => boolean = () => true,
     ) {
         const toVisit = [];
         const visited = new Set();

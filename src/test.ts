@@ -2,15 +2,15 @@ import Clava from "clava-js/api/clava/Clava.js";
 import Io from "lara-js/api/lara/Io.js";
 import Query from "lara-js/api/weaver/Query.js";
 import ClavaJoinPoints from "clava-js/api/clava/ClavaJoinPoints.js";
-
-import CoralPipeline from "./CoralPipeline.js";
-import CoralError from "./error/CoralError.js";
-import MutateWhileBorrowedError from "./error/borrow/MutateWhileBorrowedError.js";
-import UseWhileMutBorrowedError from "./error/borrow/UseWhileMutBorrowedError.js";
 import { Pragma } from "clava-js/api/Joinpoints.js";
 
-interface TypeOf<T> extends Function {
-    new (...args: any[]): T;
+import CoralPipeline from "coral/CoralPipeline";
+import CoralError from "coral/error/CoralError";
+import MutateWhileBorrowedError from "coral/error/borrow/MutateWhileBorrowedError";
+import UseWhileMutBorrowedError from "coral/error/borrow/UseWhileMutBorrowedError";
+
+interface TypeOf<T> {
+    new (...args: never[]): T;
 }
 
 class CoralTester {
@@ -44,7 +44,7 @@ class CoralTester {
     }
 
     #printResultsTree(
-        head: any,
+        head: string,
         results: CoralTester.TestCaseResults,
         prefix: string = "",
         headPrefix: string = "",
@@ -65,7 +65,7 @@ class CoralTester {
         let content = [...results.content];
         if (this.#omitTree === CoralTester.Options.OmitTree.PASSED) {
             content = content.filter(
-                ([_, r]) =>
+                ([, r]) =>
                     (r.type === "testcase" && r.failed > 0) ||
                     (r.type === "test" && r.result !== "Pass"),
             );
@@ -208,14 +208,14 @@ class CoralTester {
                     if (this.#writeTo === null) {
                         console.log(e.stack);
                     } else {
-                        let writeTo = this.#writeTo + "/" + path + ".log.txt";
+                        const writeTo = this.#writeTo + "/" + path + ".log.txt";
                         // writeTo(writeTo, e.stack);
                     }
                 }
             } else if (e instanceof Error) {
                 console.log(e.stack);
             } else {
-                throw Error("Unexpected exception: " + e);
+                throw e;
             }
         } finally {
             Clava.popAst();

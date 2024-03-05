@@ -1,6 +1,6 @@
-import RegionVariable from "./RegionVariable.js";
-import DfsVisitor from "../graph/DfsVisitor.js";
-import Regionck from "./Regionck.js";
+import RegionVariable from "coral/regionck/RegionVariable";
+import DfsVisitor from "coral/graph/DfsVisitor";
+import Regionck from "coral/regionck/Regionck";
 import cytoscape from "lara-js/api/libs/cytoscape-3.26.0.js";
 
 /**

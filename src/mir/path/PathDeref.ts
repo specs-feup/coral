@@ -1,10 +1,10 @@
-import Path from "./Path.js";
-import Ty from "../ty/Ty.js";
-import RefTy from "../ty/RefTy.js";
-import BorrowKind from "../ty/BorrowKind.js";
-import Regionck from "../../regionck/Regionck.js";
-import { Joinpoint } from "clava-js/api/Joinpoints.js";
-import RegionVariable from "../../regionck/RegionVariable.js";
+import Path from "coral/mir/path/Path";
+import Ty from "coral/mir/ty/Ty";
+import RefTy from "coral/mir/ty/RefTy";
+import BorrowKind from "coral/mir/ty/BorrowKind";
+import Regionck from "coral/regionck/Regionck";
+import { Joinpoint } from "clava-js/api/Joinpoints";
+import RegionVariable from "coral/regionck/RegionVariable";
 
 export default class PathDeref extends Path {
     $jp: Joinpoint;

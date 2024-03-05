@@ -5,8 +5,7 @@
         "outDir": "out/src",
         "declaration": true,
         "strict": true,
-        "allowJs": true, // TODO
-        "checkJs": true,
+        "allowJs": false,
         "moduleResolution": "NodeNext",
         "sourceMap": true,
         "declarationMap": true,

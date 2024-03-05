@@ -1,8 +1,8 @@
 import Query from "lara-js/api/weaver/Query.js";
 import { Joinpoint } from "clava-js/api/Joinpoints.js";
 
-import CoralNormalizer from "./CoralNormalizer.js";
-import CoralAnalyser from "./CoralAnalyser.js";
+import CoralNormalizer from "coral/CoralNormalizer";
+import CoralAnalyser from "coral/CoralAnalyser";
 
 export default class CoralPipeline {
     #debug: boolean;
@@ -35,8 +35,8 @@ export default class CoralPipeline {
             $root = Query.root() as Joinpoint;
         }
 
-        let normalizer = new CoralNormalizer();
-        let analyser = new CoralAnalyser()
+        const normalizer = new CoralNormalizer();
+        const analyser = new CoralAnalyser()
             .writeMirToDotFile(this.#mirDotFile)
             .writeLivenessToDotFile(this.#livenessDotFile)
             .debug(this.#debug);

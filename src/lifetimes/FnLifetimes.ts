@@ -1,10 +1,10 @@
-import CoralError from "../error/CoralError.js";
+import CoralError from "coral/error/CoralError";
 import { BuiltinType, FunctionJp, Pragma } from "clava-js/api/Joinpoints.js";
 
 export default class FnLifetimes {
     $function: FunctionJp;
     returnLifetimes: string[];
-    paramLifetimes: Map<String, String[]>;
+    paramLifetimes: Map<string, string[]>;
 
     #declaredLifetimes: string[] | undefined;
     #declaredParamLifetimes: string[] | undefined;
@@ -131,7 +131,7 @@ export default class FnLifetimes {
      */
     overwritePragmas() {
         const toDetatch = this.pragmas;
-        for (let p of toDetatch) {
+        for (const p of toDetatch) {
             p.detach();
         }
 

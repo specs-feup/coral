@@ -1,5 +1,5 @@
-import Path from "./path/Path.js";
-import Ty from "./ty/Ty.js";
+import Path from "coral/mir/path/Path";
+import Ty from "coral/mir/ty/Ty";
 
 class Assignment {
     kind: Assignment.Kind;
@@ -23,8 +23,10 @@ class Assignment {
     }
 
     toString(): string {
-        if (this.fromPath === undefined) return `${this.kind} to ${this.toPath}`;
-        else return `${this.kind} from ${this.fromPath} to ${this.toPath}`;
+        if (this.fromPath === undefined)
+            return `${this.kind} to ${this.toPath.toString()}`;
+        else
+            return `${this.kind} from ${this.fromPath.toString()} to ${this.toPath.toString()}`;
     }
 }
 

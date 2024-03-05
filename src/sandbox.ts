@@ -1,12 +1,10 @@
-console.log("yayayaa");
-
 // Without this import, clava-js does not work for some reason
 import "clava-js/api/Joinpoints.js";
 
 import Query from "lara-js/api/weaver/Query.js";
 
-import CoralError from "./error/CoralError.js";
-import CoralPipeline from "./CoralPipeline.js";
+import CoralError from "coral/error/CoralError";
+import CoralPipeline from "coral/CoralPipeline";
 
 console.log(Query.root().dump);
 

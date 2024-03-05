@@ -2,14 +2,14 @@ import LivenessAnalysis from "clava-js/api/clava/liveness/LivenessAnalysis.js";
 import ControlFlowGraph from "clava-js/api/clava/graphs/ControlFlowGraph.js";
 import { FunctionJp, Joinpoint, Statement } from "clava-js/api/Joinpoints.js";
 
-import Loan from "../mir/Loan.js";
-import Ty from "../mir/ty/Ty.js";
-import OutlivesConstraint from "./OutlivesConstraint.js";
-import RegionVariable from "./RegionVariable.js";
-import CfgAnnotator from "../pass/CfgAnnotator.js";
-import ConstraintGenerator from "../pass/ConstraintGenerator.js";
-import InScopeLoansComputation from "../pass/InScopeLoansComputation.js";
-import RegionckErrorReporting from "../pass/RegionckErrorReporting.js";
+import Loan from "coral/mir/Loan";
+import Ty from "coral/mir/ty/Ty";
+import OutlivesConstraint from "coral/regionck/OutlivesConstraint";
+import RegionVariable from "coral/regionck/RegionVariable";
+import CfgAnnotator from "coral/pass/CfgAnnotator";
+import ConstraintGenerator from "coral/pass/ConstraintGenerator";
+import InScopeLoansComputation from "coral/pass/InScopeLoansComputation";
+import RegionckErrorReporting from "coral/pass/RegionckErrorReporting";
 
 export default class Regionck {
     $jp: FunctionJp;
@@ -75,12 +75,12 @@ export default class Regionck {
     }
 
     #calculateInScopeLoans() {
-        let inScopeComputation = new InScopeLoansComputation(this.cfg.startNode);
+        const inScopeComputation = new InScopeLoansComputation(this.cfg.startNode);
         inScopeComputation.apply(this.$jp);
     }
 
     borrowCheck(): Regionck {
-        let errorReporting = new RegionckErrorReporting(this.cfg.startNode);
+        const errorReporting = new RegionckErrorReporting(this.cfg.startNode);
         errorReporting.apply(this.$jp);
 
         return this;

@@ -14,9 +14,15 @@
         "build:watch": "tsc --watch",
         "lint": "eslint .",
         "format": "prettier --write .",
-        "sandbox": "cross-env DEBUG=\"*\" npx clava-js out/src/sandbox.js -- clang in/sandbox/main.c",
-        "sandbox:watch": "cross-env DEBUG=\"*\" npx clava-js out/src/sandbox.js -w out/src -w in/sandbox -- clang in/sandbox/main.c",
+        "sandbox": "cross-env DEBUG=\"*\" npx clava-js out/src/sandbox.js -- clang in/sandbox",
+        "sandbox:watch": "cross-env DEBUG=\"*\" npx clava-js out/src/sandbox.js -w out/src -w in/sandbox -- clang in/sandbox",
         "test": "npx clava-js src/test.ts"
+    },
+    "exports": {
+        "./*": {
+            "types": "./out/src/*.d.ts",
+            "default": "./out/src/*.js"
+        }
     },
     "repository": {
         "type": "git",
@@ -35,7 +41,8 @@
     },
     "homepage": "https://github.com/specs-feup/coral#readme",
     "dependencies": {
-        "clava-js": "0.0.1"
+        "clava-js": "0.0.1",
+        "clava-flow": "1.0.0"
     },
     "devDependencies": {
         "@typescript-eslint/eslint-plugin": "^6.7.4",

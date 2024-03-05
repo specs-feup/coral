@@ -1,5 +1,5 @@
-import Ty from "../ty/Ty.js";
-import Regionck from "../../regionck/Regionck.js";
+import Ty from "coral/mir/ty/Ty";
+import Regionck from "coral/regionck/Regionck";
 
 export default abstract class Path {
     abstract toString(): string;

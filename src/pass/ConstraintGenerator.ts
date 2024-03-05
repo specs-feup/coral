@@ -3,17 +3,17 @@ import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
 import { Joinpoint } from "clava-js/api/Joinpoints.js";
 import cytoscape from "lara-js/api/libs/cytoscape-3.26.0.js";
 
-import OutlivesConstraint from "../regionck/OutlivesConstraint.js";
-import RegionVariable from "../regionck/RegionVariable.js";
-import Regionck from "../regionck/Regionck.js";
-import PathDeref from "../mir/path/PathDeref.js";
-import Ty from "../mir/ty/Ty.js";
-import RefTy from "../mir/ty/RefTy.js";
-import BuiltinTy from "../mir/ty/BuiltinTy.js";
-import ElaboratedTy from "../mir/ty/ElaboratedTy.js";
-import Variance from "../mir/ty/Variance.js";
-import BorrowKind from "../mir/ty/BorrowKind.js";
-import Loan from "../mir/Loan.js";
+import OutlivesConstraint from "coral/regionck/OutlivesConstraint";
+import RegionVariable from "coral/regionck/RegionVariable";
+import Regionck from "coral/regionck/Regionck";
+import PathDeref from "coral/mir/path/PathDeref";
+import Ty from "coral/mir/ty/Ty";
+import RefTy from "coral/mir/ty/RefTy";
+import BuiltinTy from "coral/mir/ty/BuiltinTy";
+import ElaboratedTy from "coral/mir/ty/ElaboratedTy";
+import Variance from "coral/mir/ty/Variance";
+import BorrowKind from "coral/mir/ty/BorrowKind";
+import Loan from "coral/mir/Loan";
 
 export default class ConstraintGenerator extends Pass {
     protected override _name: string = "constraint_generator";

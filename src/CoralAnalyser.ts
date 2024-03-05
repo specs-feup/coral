@@ -1,12 +1,11 @@
 import SimplePass from "lara-js/api/lara/pass/SimplePass.js";
 import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
 import Io from "lara-js/api/lara/Io.js";
-import ControlFlowGraph from "clava-js/api/clava/graphs/ControlFlowGraph.js";
-
-import Regionck from "./regionck/Regionck.js";
-import MirDotFormatter from "./dot/MirDotFormatter.js";
-import LivenessDotFormatter from "./dot/LivenessDotFormatter.js";
 import { FunctionJp, Joinpoint } from "clava-js/api/Joinpoints.js";
+
+import Regionck from "coral/regionck/Regionck";
+import MirDotFormatter from "coral/dot/MirDotFormatter";
+import LivenessDotFormatter from "coral/dot/LivenessDotFormatter";
 
 export default class CoralAnalyser extends SimplePass {
     #debug: boolean;
