@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "NodeNext",
+        "outDir": "out/src",
+        "declaration": true,
+        "strict": true,
+        "allowJs": true, // TODO
+        "checkJs": true,
+        "moduleResolution": "NodeNext",
+        "sourceMap": true,
+        "declarationMap": true,
+        "allowSyntheticDefaultImports": true,
+        "forceConsistentCasingInFileNames": true,
+        "noFallthroughCasesInSwitch": true,
+        //"esModuleInterop": true
+    },
+    "exclude": ["node_modules", "out"]
+}
