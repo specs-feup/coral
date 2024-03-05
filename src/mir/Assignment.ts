@@ -1,7 +1,6 @@
 import Path from "./path/Path.js";
 import Ty from "./ty/Ty.js";
 
-
 class Assignment {
     kind: Assignment.Kind;
     fromPath: Path | undefined;

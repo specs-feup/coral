@@ -1,6 +1,5 @@
 import { Joinpoint } from "clava-js/api/Joinpoints.js";
 
-
 class CodeLineHint {
     #$jp: Joinpoint;
     #description: string | null;
@@ -13,7 +12,10 @@ class CodeLineHint {
     }
 
     toString(linePaddingSize: number) {
-        const lineNum = (this.#line_ref.line?.toString() ?? "?").padStart(linePaddingSize, " ");
+        const lineNum = (this.#line_ref.line?.toString() ?? "?").padStart(
+            linePaddingSize,
+            " ",
+        );
 
         let error = ` ${lineNum} |\t${this.#$jp.code}\n`;
         if (this.#description !== null) {
@@ -23,7 +25,6 @@ class CodeLineHint {
         return error;
     }
 }
-
 
 export default class ErrorMessageBuilder {
     #message: string;
@@ -38,7 +39,11 @@ export default class ErrorMessageBuilder {
         this.#lines = [];
     }
 
-    code($jp: Joinpoint, description: string | null = null, $line_ref: Joinpoint | null = null) {
+    code(
+        $jp: Joinpoint,
+        description: string | null = null,
+        $line_ref: Joinpoint | null = null,
+    ) {
         if ($line_ref === null) {
             $line_ref = $jp;
         }
@@ -49,8 +54,9 @@ export default class ErrorMessageBuilder {
 
     toString() {
         const maxPaddingSize = Math.max(...this.#lines);
-        const linePaddingSize = maxPaddingSize === maxPaddingSize ? maxPaddingSize.toString().length + 1 : 3;
-        
+        const linePaddingSize =
+            maxPaddingSize === maxPaddingSize ? maxPaddingSize.toString().length + 1 : 3;
+
         let error = `Error: ${this.#message}\n`;
         error += ` ${"-".repeat(linePaddingSize)}-> ${this.#$main_line_ref.filename ?? "unknown"}:${this.#$main_line_ref.line ?? "??"}\n`;
         error += ` ${" ".repeat(linePaddingSize)} |\n`;

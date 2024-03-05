@@ -6,7 +6,6 @@ import { Joinpoint } from "clava-js/api/Joinpoints.js";
 import Loan from "../mir/Loan.js";
 import Assignment from "../mir/Assignment.js";
 
-
 export default class InScopeLoansComputation extends Pass {
     protected override _name: string = "InScopeLoansComputation";
 
@@ -19,10 +18,9 @@ export default class InScopeLoansComputation extends Pass {
 
     override _apply_impl($jp: Joinpoint): PassResult {
         this.#worklistDataflow(this.startNode);
-        
+
         return new PassResult(this, $jp);
     }
-
 
     #worklistDataflow(root: cytoscape.NodeSingular) {
         // Worklist is FIFO Queue
@@ -39,12 +37,14 @@ export default class InScopeLoansComputation extends Pass {
             for (const inNode of node.incomers().nodes()) {
                 const inScratch = inNode.scratch("_coral");
                 const inner: Set<Loan> = new Set(inScratch.inScopeLoans);
-                
+
                 // Kills from assignment paths
                 if (inScratch.assignment) {
-                    const prefixes = (inScratch.assignment as Assignment).toPath.prefixes();
+                    const prefixes = (
+                        inScratch.assignment as Assignment
+                    ).toPath.prefixes();
                     for (const loan of inScratch.inScopeLoans) {
-                        if (prefixes.some(prefix => loan.loanedPath.equals(prefix))) {
+                        if (prefixes.some((prefix) => loan.loanedPath.equals(prefix))) {
                             inner.delete(loan);
                         }
                     }
@@ -127,7 +127,7 @@ export default class InScopeLoansComputation extends Pass {
         if (scratch.assignment) {
             const prefixes = (scratch.assignment as Assignment).toPath.prefixes();
             for (const loan of inScopeLoans) {
-                if (prefixes.some(prefix => loan.loanedPath.equals(prefix))) {
+                if (prefixes.some((prefix) => loan.loanedPath.equals(prefix))) {
                     toKill.add(loan);
                 }
             }
@@ -156,5 +156,5 @@ export default class InScopeLoansComputation extends Pass {
         scratch.inScopeLoans = inScopeLoans;
 
         return changed;
-    }
+    };
 }

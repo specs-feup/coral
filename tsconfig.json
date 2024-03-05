@@ -12,7 +12,7 @@
         "declarationMap": true,
         "allowSyntheticDefaultImports": true,
         "forceConsistentCasingInFileNames": true,
-        "noFallthroughCasesInSwitch": true,
+        "noFallthroughCasesInSwitch": true
         //"esModuleInterop": true
     },
     "exclude": ["node_modules", "out"]

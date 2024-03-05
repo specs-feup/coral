@@ -6,7 +6,6 @@ import RefTy from "./ty/RefTy.js";
 import BorrowKind from "./ty/BorrowKind.js";
 import RegionVariable from "../regionck/RegionVariable.js";
 
-
 export default class Loan {
     regionVar: RegionVariable;
     leftTy: RefTy;

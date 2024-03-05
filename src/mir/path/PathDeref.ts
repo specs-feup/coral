@@ -6,14 +6,18 @@ import Regionck from "../../regionck/Regionck.js";
 import { Joinpoint } from "clava-js/api/Joinpoints.js";
 import RegionVariable from "../../regionck/RegionVariable.js";
 
-
 export default class PathDeref extends Path {
     $jp: Joinpoint;
     inner: Path;
     borrowKind: BorrowKind;
     regionvar: RegionVariable;
 
-    constructor($jp: Joinpoint, inner: Path, borrowKind: BorrowKind, regionvar: RegionVariable) {
+    constructor(
+        $jp: Joinpoint,
+        inner: Path,
+        borrowKind: BorrowKind,
+        regionvar: RegionVariable,
+    ) {
         super();
         this.$jp = $jp;
         this.inner = inner;

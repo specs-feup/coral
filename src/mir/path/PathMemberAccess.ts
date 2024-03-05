@@ -3,7 +3,6 @@ import Path from "./Path.js";
 import Ty from "../ty/Ty.js";
 import Regionck from "../../regionck/Regionck.js";
 
-
 // TODO why is this all unimplemented
 export default class PathMemberAccess extends Path {
     $jp: Joinpoint;

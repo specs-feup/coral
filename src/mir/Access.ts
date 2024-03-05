@@ -1,6 +1,5 @@
 import Path from "./path/Path.js";
 
-
 class Access {
     mutability: Access.Mutability;
     depth: Access.Depth;

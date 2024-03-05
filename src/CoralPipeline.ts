@@ -4,7 +4,6 @@ import { Joinpoint } from "clava-js/api/Joinpoints.js";
 import CoralNormalizer from "./CoralNormalizer.js";
 import CoralAnalyser from "./CoralAnalyser.js";
 
-
 export default class CoralPipeline {
     #debug: boolean;
     #mirDotFile: string | null;

@@ -3,7 +3,6 @@ import DfsVisitor from "../graph/DfsVisitor.js";
 import Regionck from "./Regionck.js";
 import cytoscape from "lara-js/api/libs/cytoscape-3.26.0.js";
 
-
 /**
  * A constraint that lifetime 'sup' outlives lifetime 'sub' at point 'point'.
  */
@@ -27,7 +26,8 @@ export default class OutlivesConstraint {
      * @returns {boolean} True if changed
      */
     apply(regionck: Regionck): boolean {
-        return DfsVisitor.visit(regionck.cfg.graph.$(`#${this.point}`), 
+        return DfsVisitor.visit(
+            regionck.cfg.graph.$(`#${this.point}`),
             (node: cytoscape.NodeSingular) => {
                 const alreadyContains = this.sup.points.has(node.id());
                 if (alreadyContains) {
@@ -36,6 +36,7 @@ export default class OutlivesConstraint {
                 this.sup.points.add(node.id());
                 return true;
             },
-            (node: cytoscape.NodeSingular) => this.sub.points.has(node.id()));
+            (node: cytoscape.NodeSingular) => this.sub.points.has(node.id()),
+        );
     }
 }

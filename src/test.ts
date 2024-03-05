@@ -9,11 +9,9 @@ import MutateWhileBorrowedError from "./error/borrow/MutateWhileBorrowedError.js
 import UseWhileMutBorrowedError from "./error/borrow/UseWhileMutBorrowedError.js";
 import { Pragma } from "clava-js/api/Joinpoints.js";
 
-
 interface TypeOf<T> extends Function {
     new (...args: any[]): T;
 }
-
 
 class CoralTester {
     #baseFolder: string;
@@ -110,7 +108,9 @@ class CoralTester {
     }
 
     // TODO possibly unify with CORAL pragma logic
-    #getGlobalTestUtilsPragma(...subcommands: string[]): { raw: Pragma; content: string[] }[] {
+    #getGlobalTestUtilsPragma(
+        ...subcommands: string[]
+    ): { raw: Pragma; content: string[] }[] {
         const matches = [];
 
         for (const $jp of Query.search("pragma")) {
@@ -138,8 +138,6 @@ class CoralTester {
         return matches;
     }
 
-    
-
     #getErrorClass(error: string): TypeOf<CoralError> {
         // Reflection is avoided to prevent possible unintended vulnerabilities
         // Instead, allowed errors are hardcoded
@@ -157,7 +155,11 @@ class CoralTester {
         }
     }
 
-    #runTest(path: string, isOkExpected: boolean = true, singleFile: boolean = false): CoralTester.TestResults {
+    #runTest(
+        path: string,
+        isOkExpected: boolean = true,
+        singleFile: boolean = false,
+    ): CoralTester.TestResults {
         Clava.pushAst();
 
         this.#addFolderToClava(path);
@@ -165,7 +167,12 @@ class CoralTester {
         // TODO is there a way to temporarily redirect stdout to a file?
         // setPrintStream(this.#writeTo + "/" + "/log.txt");
 
-        const result: CoralTester.TestResults = { type: "test", result: "Pass", expectedExceptions: [], actualException: null };
+        const result: CoralTester.TestResults = {
+            type: "test",
+            result: "Pass",
+            expectedExceptions: [],
+            actualException: null,
+        };
         let pass = isOkExpected;
 
         try {

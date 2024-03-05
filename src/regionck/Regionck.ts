@@ -11,7 +11,6 @@ import ConstraintGenerator from "../pass/ConstraintGenerator.js";
 import InScopeLoansComputation from "../pass/InScopeLoansComputation.js";
 import RegionckErrorReporting from "../pass/RegionckErrorReporting.js";
 
-
 export default class Regionck {
     $jp: FunctionJp;
     cfg: ControlFlowGraph;
@@ -29,10 +28,10 @@ export default class Regionck {
 
         this.$jp = $jp;
         // TODO this conversion doesn't make any sense. But it's what the original code does
-        this.cfg = ControlFlowGraph.build(($jp as Joinpoint) as Statement, true, true);
+        this.cfg = ControlFlowGraph.build($jp as Joinpoint as Statement, true, true);
 
         this.liveness = LivenessAnalysis.analyse(this.cfg);
-        
+
         const cfgAnnotator = new CfgAnnotator(this);
         cfgAnnotator.apply($jp);
     }
@@ -54,7 +53,6 @@ export default class Regionck {
         }
         return this;
     }
-
 
     #buildConstraints(): Regionck {
         const constraintGenerator = new ConstraintGenerator(this);
@@ -92,7 +90,7 @@ export default class Regionck {
         let result = "Regions:\n";
         for (const region of this.regions) {
             const points = Array.from(region.points).sort();
-            result += `\t'${region.name}: {${points.join(', ')}}\n`;
+            result += `\t'${region.name}: {${points.join(", ")}}\n`;
         }
 
         result += "\nConstraints:\n";

@@ -2,7 +2,6 @@ import Ty from "./Ty.js";
 import BorrowKind from "./BorrowKind.js";
 import RegionVariable from "../../regionck/RegionVariable.js";
 
-
 export default class RefTy extends Ty {
     regionVar: RegionVariable;
     referent: Ty;

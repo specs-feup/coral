@@ -1,6 +1,5 @@
 import Ty from "./Ty.js";
 
-
 export default class BuiltinTy extends Ty {
     constructor(name: string, isConst: boolean = false) {
         super(name, true, isConst, []);

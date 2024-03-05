@@ -15,10 +15,27 @@ import Loan from "../mir/Loan.js";
 import Access from "../mir/Access.js";
 import Assignment from "../mir/Assignment.js";
 import Path from "../mir/path/Path.js";
-import { BinaryOp, BuiltinType, Call, ExprStmt, Expression, FunctionJp, Joinpoint, ParenExpr, PointerType, QualType, ReturnStmt, Type, TypedefType, UnaryOp, Vardecl, Varref, WrapperStmt } from "clava-js/api/Joinpoints.js";
+import {
+    BinaryOp,
+    BuiltinType,
+    Call,
+    ExprStmt,
+    Expression,
+    FunctionJp,
+    Joinpoint,
+    ParenExpr,
+    PointerType,
+    QualType,
+    ReturnStmt,
+    Type,
+    TypedefType,
+    UnaryOp,
+    Vardecl,
+    Varref,
+    WrapperStmt,
+} from "clava-js/api/Joinpoints.js";
 import CfgNodeType from "clava-js/api/clava/graphs/cfg/CfgNodeType.js";
 import Query from "lara-js/api/weaver/Query.js";
-
 
 export default class CfgAnnotator extends Pass {
     protected override _name: string = "cfg_annotator";
@@ -32,7 +49,10 @@ export default class CfgAnnotator extends Pass {
         this.regionck = regionck;
     }
 
-    #new_region_var(name: string = "", kind: RegionVariable.Kind = RegionVariable.Kind.EXISTENTIAL): RegionVariable {
+    #new_region_var(
+        name: string = "",
+        kind: RegionVariable.Kind = RegionVariable.Kind.EXISTENTIAL,
+    ): RegionVariable {
         const id = this.regionVarCounter++;
         const rvar = new RegionVariable(
             id.toString(),
@@ -67,8 +87,10 @@ export default class CfgAnnotator extends Pass {
 
     #createUniversalRegions($jp: FunctionJp) {
         this.fnLifetimes = new FnLifetimes($jp);
-        this.regionck.regions.push(new RegionVariable("0", RegionVariable.Kind.UNIVERSAL, "static"));
-        
+        this.regionck.regions.push(
+            new RegionVariable("0", RegionVariable.Kind.UNIVERSAL, "static"),
+        );
+
         // Annotate param universal regions
         for (const $param of $jp.params) {
             const ty = this.#deconstructType($param.type, $param, false);
@@ -114,9 +136,8 @@ export default class CfgAnnotator extends Pass {
         }
     }
 
-
     #annotateDeclStmt(node: cytoscape.NodeSingular, $vardecl: Vardecl) {
-        const ty = this.#deconstructType($vardecl.type, $vardecl, true);        
+        const ty = this.#deconstructType($vardecl.type, $vardecl, true);
         $vardecl.setUserField("ty", ty);
         const scratch = node.scratch("_coral");
         scratch.lhs = $vardecl;
@@ -124,11 +145,13 @@ export default class CfgAnnotator extends Pass {
         this.regionck.declarations.set($vardecl.name, ty);
 
         if ($vardecl.hasInit) {
-            scratch.accesses.push(new Access(
-                new PathVarRef($vardecl),
-                Access.Mutability.WRITE,
-                Access.Depth.SHALLOW
-            ));
+            scratch.accesses.push(
+                new Access(
+                    new PathVarRef($vardecl),
+                    Access.Mutability.WRITE,
+                    Access.Depth.SHALLOW,
+                ),
+            );
 
             this.#annotateExprStmt(node, $vardecl.init);
             this.#markAssignment(node, new PathVarRef($vardecl), ty, $vardecl.init);
@@ -136,23 +159,25 @@ export default class CfgAnnotator extends Pass {
     }
 
     #markAssignment(node: cytoscape.NodeSingular, path: Path, ty: Ty, $expr: Expression) {
-        // TODO: Detect & Mark full copy/move (only if $expr represents a path?) 
+        // TODO: Detect & Mark full copy/move (only if $expr represents a path?)
         let assignmentKind = ty.isCopyable ? Assignment.Kind.COPY : Assignment.Kind.MOVE;
         if ($expr.instanceOf("literal")) {
             assignmentKind = Assignment.Kind.LITERAL;
         }
-        node.scratch('_coral').assignment = new Assignment(assignmentKind, path, ty);
+        node.scratch("_coral").assignment = new Assignment(assignmentKind, path, ty);
     }
 
-    #deconstructType($type: Type, $jp: Joinpoint, create_region_var: boolean = false): Ty {        
+    #deconstructType(
+        $type: Type,
+        $jp: Joinpoint,
+        create_region_var: boolean = false,
+    ): Ty {
         let isConst = false;
         let isRestrict = false;
 
         if ($type instanceof QualType) {
-            if ($type.qualifiers.includes("const"))
-                isConst = true;
-            if ($type.qualifiers.includes("restrict"))
-                isRestrict = true;
+            if ($type.qualifiers.includes("const")) isConst = true;
+            if ($type.qualifiers.includes("restrict")) isRestrict = true;
             $type = $type.unqualifiedType;
         }
 
@@ -160,7 +185,11 @@ export default class CfgAnnotator extends Pass {
             case "builtinType":
                 return new BuiltinTy(($type as BuiltinType).builtinKind, isConst);
             case "pointerType": {
-                const inner = this.#deconstructType(($type as PointerType).pointee, $jp, create_region_var);
+                const inner = this.#deconstructType(
+                    ($type as PointerType).pointee,
+                    $jp,
+                    create_region_var,
+                );
                 if (inner.isConst && isRestrict)
                     throw new Error("Cannot have a restrict pointer to a const type");
 
@@ -173,15 +202,21 @@ export default class CfgAnnotator extends Pass {
                 );
             }
             case "qualType":
-                throw new Error("Unreachable: QualType cannot have a QualType as unqualified type");
+                throw new Error(
+                    "Unreachable: QualType cannot have a QualType as unqualified type",
+                );
             case "typedefType":
-                return this.#deconstructType(($type as TypedefType).underlyingType, $jp, create_region_var);
+                return this.#deconstructType(
+                    ($type as TypedefType).underlyingType,
+                    $jp,
+                    create_region_var,
+                );
             case "elaboratedType":
-                // Inner should be instance of TagType, inner is 
+                // Inner should be instance of TagType, inner is
                 // console.log($type.joinPointType);
                 // console.log($type.qualifier);
                 // console.log($type.keyword);
-                // console.log("------------------");  
+                // console.log("------------------");
 
                 // console.log($type.namedType.joinPointType);
                 // console.log($type.namedType.kind);
@@ -192,8 +227,9 @@ export default class CfgAnnotator extends Pass {
                 // console.log($type.namedType.decl.kind);
                 throw new Error("Unimplemented Elaborated type annotation");
             default:
-                throw new Error("Unhandled deconstruct declstmt type: " + $type.joinPointType);
-
+                throw new Error(
+                    "Unhandled deconstruct declstmt type: " + $type.joinPointType,
+                );
         }
     }
 
@@ -218,11 +254,13 @@ export default class CfgAnnotator extends Pass {
                 const path = this.#parseLvalue(node, $varref);
                 const ty = $varref.declaration.getUserField("ty") as Ty;
                 // TODO: DEEP WRITE only if moving value, should be implemented, but needs testing due to edge cases
-                node.scratch("_coral").accesses.push(new Access(
-                    path,
-                    ty.isCopyable ? Access.Mutability.READ : Access.Mutability.WRITE,
-                    Access.Depth.DEEP
-                ));
+                node.scratch("_coral").accesses.push(
+                    new Access(
+                        path,
+                        ty.isCopyable ? Access.Mutability.READ : Access.Mutability.WRITE,
+                        Access.Depth.DEEP,
+                    ),
+                );
                 break;
             }
             case "parenExpr":
@@ -231,18 +269,21 @@ export default class CfgAnnotator extends Pass {
                 this.#annotateExprStmt(node, ($exprStmt as ReturnStmt).returnExpr);
                 break;
             default:
-                throw new Error("Unhandled expression annotation for jp: " + $exprStmt.joinPointType);
+                throw new Error(
+                    "Unhandled expression annotation for jp: " + $exprStmt.joinPointType,
+                );
         }
     }
 
-    
     #annotateBinaryOp(node: cytoscape.NodeSingular, $binaryOp: BinaryOp) {
         if ($binaryOp.isAssignment) {
             const path = this.#parseLvalue(node, $binaryOp.left);
             const ty = path.retrieveTy(this.regionck);
             const scratch = node.scratch("_coral");
-            scratch.accesses.push(new Access(path, Access.Mutability.WRITE, Access.Depth.SHALLOW));
-            
+            scratch.accesses.push(
+                new Access(path, Access.Mutability.WRITE, Access.Depth.SHALLOW),
+            );
+
             this.#annotateExprStmt(node, $binaryOp.right);
             this.#markAssignment(node, path, ty, $binaryOp.right);
 
@@ -252,7 +293,6 @@ export default class CfgAnnotator extends Pass {
         this.#annotateExprStmt(node, $binaryOp.left);
         this.#annotateExprStmt(node, $binaryOp.right);
     }
-
 
     #annotateUnaryOp(node: cytoscape.NodeSingular, $unaryOp: UnaryOp) {
         if ($unaryOp.operator === "&") {
@@ -266,7 +306,9 @@ export default class CfgAnnotator extends Pass {
             let leftTy;
             while (true) {
                 if (parent instanceof BinaryOp && parent.isAssignment) {
-                    leftTy = this.#parseLvalue(node, parent.left).retrieveTy(this.regionck);
+                    leftTy = this.#parseLvalue(node, parent.left).retrieveTy(
+                        this.regionck,
+                    );
                     break;
                 }
 
@@ -276,39 +318,56 @@ export default class CfgAnnotator extends Pass {
                 }
 
                 if (parent instanceof ParenExpr) {
-                    throw new Error("annotateUnaryOp: Cannot determine assignment lvalue");                    
+                    throw new Error(
+                        "annotateUnaryOp: Cannot determine assignment lvalue",
+                    );
                 }
 
                 parent = parent.parent;
             }
 
             if (!(leftTy instanceof RefTy)) {
-                throw new Error("annotateUnaryOp: Cannot borrow from non-reference type " + leftTy?.toString());
+                throw new Error(
+                    "annotateUnaryOp: Cannot borrow from non-reference type " +
+                        leftTy?.toString(),
+                );
             }
 
-            const loan = new Loan(regionVar, leftTy, loanedTy, loanedPath, $unaryOp, node);
+            const loan = new Loan(
+                regionVar,
+                leftTy,
+                loanedTy,
+                loanedPath,
+                $unaryOp,
+                node,
+            );
             node.scratch("_coral").loan = loan;
             this.regionck.loans.push(loan);
 
-            node.scratch("_coral").accesses.push(new Access(
-                loanedPath,
-                loan.borrowKind === BorrowKind.MUTABLE ? Access.Mutability.WRITE : Access.Mutability.READ,
-                Access.Depth.DEEP
-            ));
+            node.scratch("_coral").accesses.push(
+                new Access(
+                    loanedPath,
+                    loan.borrowKind === BorrowKind.MUTABLE
+                        ? Access.Mutability.WRITE
+                        : Access.Mutability.READ,
+                    Access.Depth.DEEP,
+                ),
+            );
 
             // Mark Reborrows
-            if (Query.searchFrom($unaryOp, "unaryOp", {operator: '*'}).get() !== undefined) {
+            if (
+                Query.searchFrom($unaryOp, "unaryOp", { operator: "*" }).get() !==
+                undefined
+            ) {
                 node.scratch("_coral").reborrow = true;
             }
         } else if ($unaryOp.operator === "*") {
             // Start of an lvaue
             const path = this.#parseLvalue(node, $unaryOp);
             // TODO: Set correct AccessMutability and AccessDepth
-            node.scratch("_coral").accesses.push(new Access(
-                path,
-                Access.Mutability.READ,
-                Access.Depth.DEEP
-            ));
+            node.scratch("_coral").accesses.push(
+                new Access(path, Access.Mutability.READ, Access.Depth.DEEP),
+            );
         } else {
             // Not relevant, keep going
             this.#annotateExprStmt(node, $unaryOp.operand);
@@ -319,11 +378,9 @@ export default class CfgAnnotator extends Pass {
         for (const $expr of $call.args) {
             const path = this.#parseLvalue(node, $expr);
             // TODO: Set correct AccessMutability and AccessDepth
-            node.scratch("_coral").accesses.push(new Access(
-                path,
-                Access.Mutability.READ,
-                Access.Depth.DEEP
-            ));
+            node.scratch("_coral").accesses.push(
+                new Access(path, Access.Mutability.READ, Access.Depth.DEEP),
+            );
             // TODO: Identify & mark moves
         }
     }
@@ -348,17 +405,20 @@ export default class CfgAnnotator extends Pass {
                     let innerPath = this.#parseLvalue(node, $unaryOp.operand);
                     let ty = innerPath.retrieveTy(this.regionck);
                     if (!(ty instanceof RefTy))
-                        throw new Error("Cannot dereference non-reference type " + ty.toString());
+                        throw new Error(
+                            "Cannot dereference non-reference type " + ty.toString(),
+                        );
                     return new PathDeref($jp, innerPath, ty.borrowKind, ty.regionVar);
-                }
-                else {
-                    throw new Error("Unhandled parseLvalue unary op: " + $unaryOp.operator);
+                } else {
+                    throw new Error(
+                        "Unhandled parseLvalue unary op: " + $unaryOp.operator,
+                    );
                 }
             case "memberAccess":
             case "parenExpr":
                 return this.#parseLvalue(node, ($jp as ParenExpr).subExpr);
             default:
                 throw new Error("Unhandled parseLvalue: " + $jp.joinPointType);
-        }   
+        }
     }
 }

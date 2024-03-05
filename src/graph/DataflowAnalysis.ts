@@ -1,6 +1,5 @@
 import cytoscape from "lara-js/api/libs/cytoscape-3.26.0.js";
 
-
 export default class DataflowAnalysis {
     static dfs(
         root: cytoscape.NodeSingular,

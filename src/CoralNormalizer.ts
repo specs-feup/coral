@@ -9,7 +9,6 @@ import SimplifyAssignment from "clava-js/api/clava/code/SimplifyAssignment.js";
 import { LaraJoinPoint } from "lara-js/api/LaraJoinPoint.js";
 import { BinaryOp } from "clava-js/api/Joinpoints.js";
 
-
 /**
  * Applies the normalization steps required for the Coral analysis
  */
@@ -19,24 +18,27 @@ export default class CoralNormalizer extends Pass {
         super();
     }
 
-   /**
-   * Apply tranformation to
-   * @abstract Contains default implementation only if matchJoinPoint and transformJoinpoint are implemented
-   * 
-   * @param {JoinPoint} $jp Joint point on which the pass will be applied
-   * @return {PassResult} Results of applying this pass to the given joint point
-   */
+    /**
+     * Apply tranformation to
+     * @abstract Contains default implementation only if matchJoinPoint and transformJoinpoint are implemented
+     *
+     * @param {JoinPoint} $jp Joint point on which the pass will be applied
+     * @return {PassResult} Results of applying this pass to the given joint point
+     */
     override _apply_impl($jp: LaraJoinPoint): PassResult {
-        Passes.apply($jp, 
-            // Decomposes `int a,b=5,c;` into `int a; int b = 5; int c;` 
+        Passes.apply(
+            $jp,
+            // Decomposes `int a,b=5,c;` into `int a; int b = 5; int c;`
             new DecomposeDeclStmt() as Pass,
             // Takes the condition outside of if-else statements
             new SimplifySelectionStmts(new StatementDecomposer("TMP_")) as Pass,
         );
-        
-        // `a += b` becomes `a = a + b` 
-        const binaryOpIter = Query
-            .searchFrom($jp, "binaryOp", { self: (self: LaraJoinPoint) => (self as BinaryOp).isAssignment && (self as BinaryOp).operator !== "=" });
+
+        // `a += b` becomes `a = a + b`
+        const binaryOpIter = Query.searchFrom($jp, "binaryOp", {
+            self: (self: LaraJoinPoint) =>
+                (self as BinaryOp).isAssignment && (self as BinaryOp).operator !== "=",
+        });
         for (const $assign of binaryOpIter) {
             SimplifyAssignment($assign as BinaryOp);
         }

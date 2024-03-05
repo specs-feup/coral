@@ -8,7 +8,6 @@ import MirDotFormatter from "./dot/MirDotFormatter.js";
 import LivenessDotFormatter from "./dot/LivenessDotFormatter.js";
 import { FunctionJp, Joinpoint } from "clava-js/api/Joinpoints.js";
 
-
 export default class CoralAnalyser extends SimplePass {
     #debug: boolean;
     #mirDotFile: string | null;
@@ -46,7 +45,10 @@ export default class CoralAnalyser extends SimplePass {
         const regionck = new Regionck($jp).prepare(this.#debug);
 
         if (this.#livenessDotFile) {
-            Io.writeFile(this.#livenessDotFile, regionck.cfg.toDot(new LivenessDotFormatter(regionck.liveness)));
+            Io.writeFile(
+                this.#livenessDotFile,
+                regionck.cfg.toDot(new LivenessDotFormatter(regionck.liveness)),
+            );
         }
 
         if (this.#mirDotFile) {
