@@ -11,7 +11,10 @@
         "declarationMap": true,
         "allowSyntheticDefaultImports": true,
         "forceConsistentCasingInFileNames": true,
-        "noFallthroughCasesInSwitch": true
+        "noFallthroughCasesInSwitch": true,
+        "paths": {
+            "coral/*": ["./src/*.js"]
+        }
         //"esModuleInterop": true
     },
     "exclude": ["node_modules", "out"]
