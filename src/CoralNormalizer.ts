@@ -13,7 +13,7 @@ import { BinaryOp } from "clava-js/api/Joinpoints.js";
  * Applies the normalization steps required for the Coral analysis
  */
 export default class CoralNormalizer extends Pass {
-    protected override _name: string = "coral_normalizer";
+    protected override _name: string = this.constructor.name;
     constructor() {
         super();
     }

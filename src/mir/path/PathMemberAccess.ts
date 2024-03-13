@@ -1,9 +1,11 @@
 import { Joinpoint } from "clava-js/api/Joinpoints.js";
 import Path from "coral/mir/path/Path";
 import Ty from "coral/mir/ty/Ty";
-import Regionck from "coral/regionck/Regionck";
 
-// TODO why is this all unimplemented
+// TODO
+/**
+ * A member access, such as `x.y`.
+ */
 export default class PathMemberAccess extends Path {
     $jp: Joinpoint;
     inner: Path;
@@ -23,19 +25,19 @@ export default class PathMemberAccess extends Path {
         throw new Error("PathMemberAccess equals() not implemented");
     }
 
-    override prefixes(): Path[] {
-        return [this, ...this.inner.prefixes()];
+    override get prefixes(): Path[] {
+        return [this, ...this.inner.prefixes];
     }
 
-    override shallowPrefixes(): Path[] {
-        return [this, ...this.inner.shallowPrefixes()];
+    override get shallowPrefixes(): Path[] {
+        return [this, ...this.inner.shallowPrefixes];
     }
 
-    override supportingPrefixes(): Path[] {
-        return [this, ...this.inner.supportingPrefixes()];
+    override get supportingPrefixes(): Path[] {
+        return [this, ...this.inner.supportingPrefixes];
     }
 
-    override retrieveTy(regionck: Regionck): Ty {
+    override get ty(): Ty {
         throw new Error("TODO: PathMemberAccess retrieveTy() not implemented");
     }
 }

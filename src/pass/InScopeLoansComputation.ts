@@ -7,8 +7,7 @@ import Loan from "coral/mir/Loan";
 import Assignment from "coral/mir/Assignment";
 
 export default class InScopeLoansComputation extends Pass {
-    protected override _name: string = "InScopeLoansComputation";
-
+    protected override _name: string = this.constructor.name;
     startNode: cytoscape.NodeSingular;
 
     constructor(startNode: cytoscape.NodeSingular) {
@@ -42,7 +41,7 @@ export default class InScopeLoansComputation extends Pass {
                 if (inScratch.assignment) {
                     const prefixes = (
                         inScratch.assignment as Assignment
-                    ).toPath.prefixes();
+                    ).toPath.prefixes;
                     for (const loan of inScratch.inScopeLoans) {
                         if (prefixes.some((prefix) => loan.loanedPath.equals(prefix))) {
                             inner.delete(loan);
@@ -125,7 +124,7 @@ export default class InScopeLoansComputation extends Pass {
 
         // Check assignment paths
         if (scratch.assignment) {
-            const prefixes = (scratch.assignment as Assignment).toPath.prefixes();
+            const prefixes = (scratch.assignment as Assignment).toPath.prefixes;
             for (const loan of inScopeLoans) {
                 if (prefixes.some((prefix) => loan.loanedPath.equals(prefix))) {
                     toKill.add(loan);

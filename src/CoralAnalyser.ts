@@ -12,7 +12,7 @@ export default class CoralAnalyser extends SimplePass {
     #mirDotFile: string | null;
     #livenessDotFile: string | null;
 
-    protected override _name: string = "coral_analyser";
+    protected override _name: string = this.constructor.name;
 
     constructor() {
         super();

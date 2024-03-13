@@ -1,31 +1,28 @@
 import RegionVariable from "coral/regionck/RegionVariable";
 
-export default abstract class Ty {
-    name: string;
-    lifetimes: RegionVariable[];
-    isConst: boolean;
-    isCopyable: boolean;
-
-    constructor(
-        name: string,
-        copyable: boolean,
-        isConst: boolean,
-        lifetimes: RegionVariable[],
-    ) {
-        this.name = name;
-        this.isCopyable = copyable;
-        this.isConst = isConst;
-        this.lifetimes = lifetimes;
-    }
+abstract class Ty {
+    abstract get name(): string;
+    abstract get regionVars(): RegionVariable[];
+    abstract get semantics(): Ty.Semantics;
+    abstract get isConst(): boolean;
 
     abstract equals(other: Ty): boolean;
     abstract toString(): string;
 
-    nestedLifetimes(): RegionVariable[] {
-        return this.lifetimes;
+    get nestedRegionVars(): RegionVariable[] {
+        return this.regionVars;
     }
 
     get requiresLifetimes(): boolean {
-        return this.lifetimes.length > 0;
+        return this.regionVars.length > 0;
     }
 }
+
+namespace Ty {
+    export enum Semantics {
+        COPY = "copy",
+        MOVE = "move",
+    }
+}
+
+export default Ty;

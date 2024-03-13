@@ -1,8 +1,22 @@
 import Ty from "coral/mir/ty/Ty";
+import RegionVariable from "coral/regionck/RegionVariable";
 
 export default class BuiltinTy extends Ty {
+    override name: string;
+    override isConst: boolean;
+
     constructor(name: string, isConst: boolean = false) {
-        super(name, true, isConst, []);
+        super();
+        this.name = name;
+        this.isConst = isConst;
+    }
+
+    get regionVars(): RegionVariable[] {
+        return []
+    }
+
+    get semantics(): Ty.Semantics {
+        return Ty.Semantics.MOVE; // TODO should be copy, move only for testing
     }
 
     override equals(other: BuiltinTy) {
@@ -15,9 +29,5 @@ export default class BuiltinTy extends Ty {
 
     override toString(): string {
         return this.name;
-    }
-
-    override get requiresLifetimes(): boolean {
-        return false;
     }
 }

@@ -8,7 +8,7 @@ export default class MutateWhileBorrowedError extends CoralError {
     constructor($invalidUse: Joinpoint, loan: Loan, $nextUse: Joinpoint, access: Access) {
         super(
             new ErrorMessageBuilder(
-                `Cannot mutate '${access.path.toString()}' while borrowed`,
+                `Cannot write to '${access.path.toString()}' while borrowed`,
                 $invalidUse,
             )
                 .code(
@@ -17,11 +17,11 @@ export default class MutateWhileBorrowedError extends CoralError {
                 )
                 .code(
                     $invalidUse,
-                    `write or mutable borrow of '${access.path.toString()}' occurs here, while borrow is still active`,
+                    `write to '${access.path.toString()}' occurs here, while borrow is still active`,
                 )
                 .code($nextUse, "borrow is later used here")
                 .toString(),
         );
-        this.name = "MutateWhileBorrowedError";
+        this.name = this.constructor.name;
     }
 }

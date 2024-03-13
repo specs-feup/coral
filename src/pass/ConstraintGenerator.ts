@@ -16,7 +16,7 @@ import BorrowKind from "coral/mir/ty/BorrowKind";
 import Loan from "coral/mir/Loan";
 
 export default class ConstraintGenerator extends Pass {
-    protected override _name: string = "constraint_generator";
+    protected override _name: string = this.constructor.name;
 
     regionck: Regionck;
     constraints: OutlivesConstraint[];
@@ -52,7 +52,7 @@ export default class ConstraintGenerator extends Pass {
                         `ConstraintGenerator: variable ${variable} not found in declarations`,
                     );
                 }
-                for (const region of ty.nestedLifetimes()) {
+                for (const region of ty.nestedRegionVars) {
                     region.points.add(node.id());
                 }
             }
@@ -88,11 +88,11 @@ export default class ConstraintGenerator extends Pass {
             throw new Error("reborrowConstraints: reborrow without loan");
         }
 
-        for (const path of scratch.loan.loanedPath.supportingPrefixes()) {
+        for (const path of scratch.loan.loanedPath.supportingPrefixes) {
             if (!(path instanceof PathDeref)) continue;
 
             this.#relateRegions(
-                path.regionvar,
+                path.innerTy.regionVar,
                 (scratch.loan as Loan).regionVar,
                 Variance.CONTRA,
                 successor,
@@ -149,17 +149,17 @@ export default class ConstraintGenerator extends Pass {
                     `Cannot relate types ${ty1.toString()} and ${ty2.toString()}, different kinds or names`,
                 );
             }
-            if (ty1.lifetimes.length != ty2.lifetimes.length) {
+            if (ty1.regionVars.length != ty2.regionVars.length) {
                 throw new Error(
                     `Cannot relate types ${ty1.toString()} and ${ty2.toString()}, different number of lifetimes`,
                 );
             }
 
-            for (let i = 0; i < ty1.lifetimes.length; i++) {
+            for (let i = 0; i < ty1.regionVars.length; i++) {
                 // TODO: May need to be changed to go parameter by paramenter, which would require changes to the ElaboratedTy
                 this.#relateRegions(
-                    ty1.lifetimes[i],
-                    ty2.lifetimes[i],
+                    ty1.regionVars[i],
+                    ty2.regionVars[i],
                     Variance.xform(variance, Variance.IN),
                     successor,
                 );

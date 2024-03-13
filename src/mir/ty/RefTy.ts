@@ -6,6 +6,7 @@ export default class RefTy extends Ty {
     regionVar: RegionVariable;
     referent: Ty;
     borrowKind: BorrowKind;
+    override isConst: boolean;
 
     constructor(
         borrowKind: BorrowKind,
@@ -13,33 +14,33 @@ export default class RefTy extends Ty {
         regionVar: RegionVariable,
         isConst: boolean = false,
     ) {
-        super(
-            borrowKind === BorrowKind.MUTABLE
-                ? `&'${regionVar.name} mut `
-                : `&'${regionVar.name} `,
-            borrowKind === BorrowKind.SHARED,
-            isConst,
-            [regionVar],
-        );
-
+        super();
         this.borrowKind = borrowKind;
         this.referent = referent;
         this.regionVar = regionVar;
+        this.isConst = isConst;
     }
 
-    // TODO delete this
-    get isShared(): boolean {
-        return this.borrowKind === BorrowKind.SHARED;
+    get name(): string {
+        switch (this.borrowKind) {
+            case BorrowKind.MUTABLE:
+                return `&'${this.regionVar.name} mut`;
+            case BorrowKind.SHARED:
+                return `&'${this.regionVar.name}`;
+        }
     }
 
-    // TODO delete this
-    get isMutable(): boolean {
-        return this.borrowKind === BorrowKind.MUTABLE;
+    get regionVars(): RegionVariable[] {
+        return [this.regionVar];
     }
 
-    setRegionVar(regionVar: RegionVariable) {
-        this.regionVar = regionVar;
-        this.lifetimes = [regionVar];
+    get semantics(): Ty.Semantics {
+        switch (this.borrowKind) {
+            case BorrowKind.MUTABLE:
+                return Ty.Semantics.MOVE;
+            case BorrowKind.SHARED:
+                return Ty.Semantics.COPY;
+        }
     }
 
     override equals(other: RefTy): boolean {
@@ -47,19 +48,16 @@ export default class RefTy extends Ty {
             other instanceof RefTy &&
             this.borrowKind === other.borrowKind &&
             this.referent.equals(other.referent) &&
-            this.regionVar === other.regionVar
+            this.regionVar === other.regionVar &&
+            this.isConst === other.isConst
         );
     }
 
     override toString(): string {
-        return this.name + this.referent.toString();
+        return `${this.name} ${this.referent.toString()}`;
     }
 
-    override nestedLifetimes(): RegionVariable[] {
-        return this.lifetimes.concat(this.referent.lifetimes);
-    }
-
-    override get requiresLifetimes(): boolean {
-        return true;
+    override get nestedRegionVars(): RegionVariable[] {
+        return this.regionVars.concat(this.referent.regionVars);
     }
 }

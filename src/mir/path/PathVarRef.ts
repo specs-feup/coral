@@ -1,14 +1,18 @@
 import { Vardecl, Varref } from "clava-js/api/Joinpoints.js";
 import Path from "coral/mir/path/Path";
 import Ty from "coral/mir/ty/Ty";
-import Regionck from "coral/regionck/Regionck";
 
+/**
+ * A direct reference or declaration of a variable, such as `x` or `int y`.
+ */
 export default class PathVarRef extends Path {
     $jp: Vardecl | Varref;
+    override ty: Ty;
 
-    constructor($jp: Vardecl | Varref) {
+    constructor($jp: Vardecl | Varref, ty: Ty) {
         super();
         this.$jp = $jp;
+        this.ty = ty;
     }
 
     override toString(): string {
@@ -19,23 +23,15 @@ export default class PathVarRef extends Path {
         return other instanceof PathVarRef && this.$jp.name === other.$jp.name;
     }
 
-    override prefixes(): Path[] {
+    override get prefixes(): Path[] {
         return [this];
     }
 
-    override shallowPrefixes(): Path[] {
+    override get shallowPrefixes(): Path[] {
         return [this];
     }
 
-    override supportingPrefixes(): Path[] {
+    override get supportingPrefixes(): Path[] {
         return [this];
-    }
-
-    override retrieveTy(regionck: Regionck): Ty {
-        const ty = regionck.declarations.get(this.$jp.name);
-        if (ty === undefined) {
-            throw new Error("Variable " + this.$jp.name + " not found");
-        }
-        return ty;
     }
 }

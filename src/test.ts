@@ -310,7 +310,8 @@ namespace CoralTester {
     };
 }
 
-const rootFolder = Clava.getData().getContextFolder() + "/..";
+// TODO change context folder into some function that gives the root of the project
+const rootFolder = Clava.getData().getContextFolder();
 const testFolder = rootFolder + "/in/test";
 new CoralTester(testFolder, new CoralPipeline())
     .writeTo(rootFolder + "/out/woven_code/test")

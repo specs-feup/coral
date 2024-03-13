@@ -28,7 +28,7 @@ export default class Regionck {
 
         this.$jp = $jp;
         // TODO this conversion doesn't make any sense. But it's what the original code does
-        this.cfg = ControlFlowGraph.build($jp as Joinpoint as Statement, true, true);
+        this.cfg = ControlFlowGraph.build($jp.body, true, true);
 
         this.liveness = LivenessAnalysis.analyse(this.cfg);
 

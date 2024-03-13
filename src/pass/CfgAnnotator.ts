@@ -37,7 +37,7 @@ import CfgNodeType from "clava-js/api/clava/graphs/cfg/CfgNodeType.js";
 import Query from "lara-js/api/weaver/Query.js";
 
 export default class CfgAnnotator extends Pass {
-    protected override _name: string = "cfg_annotator";
+    protected override _name: string = this.constructor.name;
 
     regionck: Regionck;
     regionVarCounter: number = 1;
@@ -146,24 +146,21 @@ export default class CfgAnnotator extends Pass {
         if ($vardecl.hasInit) {
             scratch.accesses.push(
                 new Access(
-                    new PathVarRef($vardecl),
+                    new PathVarRef($vardecl, ty),
                     Access.Mutability.WRITE,
                     Access.Depth.SHALLOW,
                 ),
             );
 
             this.#annotateExprStmt(node, $vardecl.init);
-            this.#markAssignment(node, new PathVarRef($vardecl), ty, $vardecl.init);
+            this.#markAssignment(node, new PathVarRef($vardecl, ty));
         }
     }
 
-    #markAssignment(node: cytoscape.NodeSingular, path: Path, ty: Ty, $expr: Expression) {
+    #markAssignment(node: cytoscape.NodeSingular, path: Path) {
         // TODO: Detect & Mark full copy/move (only if $expr represents a path?)
-        let assignmentKind = ty.isCopyable ? Assignment.Kind.COPY : Assignment.Kind.MOVE;
-        if ($expr.instanceOf("literal")) {
-            assignmentKind = Assignment.Kind.LITERAL;
-        }
-        node.scratch("_coral").assignment = new Assignment(assignmentKind, path, ty);
+
+        node.scratch("_coral").assignment = new Assignment(path);
     }
 
     #deconstructType(
@@ -251,12 +248,16 @@ export default class CfgAnnotator extends Pass {
             case "varref": {
                 const $varref = $exprStmt as Varref;
                 const path = this.#parseLvalue(node, $varref);
-                const ty = $varref.declaration.getUserField("ty") as Ty;
+                // const ty = $varref.declaration.getUserField("ty") as Ty;
                 // TODO: DEEP WRITE only if moving value, should be implemented, but needs testing due to edge cases
+
+                // TODO ty is not returning, that's a bug
+
                 node.scratch("_coral").accesses.push(
                     new Access(
                         path,
-                        ty.isCopyable ? Access.Mutability.READ : Access.Mutability.WRITE,
+                        Access.Mutability.READ,
+                        // ty?.isCopyable ? Access.Mutability.READ : Access.Mutability.WRITE, // TODO this doesnt make sense
                         Access.Depth.DEEP,
                     ),
                 );
@@ -277,14 +278,13 @@ export default class CfgAnnotator extends Pass {
     #annotateBinaryOp(node: cytoscape.NodeSingular, $binaryOp: BinaryOp) {
         if ($binaryOp.isAssignment) {
             const path = this.#parseLvalue(node, $binaryOp.left);
-            const ty = path.retrieveTy(this.regionck);
             const scratch = node.scratch("_coral");
             scratch.accesses.push(
                 new Access(path, Access.Mutability.WRITE, Access.Depth.SHALLOW),
             );
 
             this.#annotateExprStmt(node, $binaryOp.right);
-            this.#markAssignment(node, path, ty, $binaryOp.right);
+            this.#markAssignment(node, path);
 
             return;
         }
@@ -298,16 +298,14 @@ export default class CfgAnnotator extends Pass {
             // Create loan, and start of an lvalue
             const loanedPath = this.#parseLvalue(node, $unaryOp.operand);
             const regionVar = this.#new_region_var();
-            const loanedTy = loanedPath.retrieveTy(this.regionck);
+            const loanedTy = loanedPath.ty;
 
             // Borrowkind depends on the assignment left value
             let parent = $unaryOp.parent;
             let leftTy;
             while (true) {
                 if (parent instanceof BinaryOp && parent.isAssignment) {
-                    leftTy = this.#parseLvalue(node, parent.left).retrieveTy(
-                        this.regionck,
-                    );
+                    leftTy = this.#parseLvalue(node, parent.left).ty;
                     break;
                 }
 
@@ -347,8 +345,8 @@ export default class CfgAnnotator extends Pass {
                 new Access(
                     loanedPath,
                     loan.borrowKind === BorrowKind.MUTABLE
-                        ? Access.Mutability.WRITE
-                        : Access.Mutability.READ,
+                        ? Access.Mutability.MUTABLE_BORROW
+                        : Access.Mutability.BORROW,
                     Access.Depth.DEEP,
                 ),
             );
@@ -396,18 +394,20 @@ export default class CfgAnnotator extends Pass {
             case "floatLiteral":
             case "boolLiteral":
                 throw new Error("Cannot parse lvalue from literal");
-            case "varref":
-                return new PathVarRef($jp as Varref);
+            case "varref": {
+                const $varref = $jp as Varref;
+                const ty = this.regionck.declarations.get($varref.name);
+                if (ty === undefined) {
+                    throw new Error("Variable " + $varref.name + " not found");
+                }
+
+                return new PathVarRef($varref, ty);
+            }
             case "unaryOp": {
                 const $unaryOp = $jp as UnaryOp;
                 if ($unaryOp.operator === "*") {
                     const innerPath = this.#parseLvalue(node, $unaryOp.operand);
-                    const ty = innerPath.retrieveTy(this.regionck);
-                    if (!(ty instanceof RefTy))
-                        throw new Error(
-                            "Cannot dereference non-reference type " + ty.toString(),
-                        );
-                    return new PathDeref($jp, innerPath, ty.borrowKind, ty.regionVar);
+                    return new PathDeref($jp, innerPath);
                 } else {
                     throw new Error(
                         "Unhandled parseLvalue unary op: " + $unaryOp.operator,

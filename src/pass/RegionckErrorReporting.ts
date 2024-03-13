@@ -5,14 +5,16 @@ import CfgNodeType from "clava-js/api/clava/graphs/cfg/CfgNodeType.js";
 import DfsVisitor from "coral/graph/DfsVisitor";
 import MutateWhileBorrowedError from "coral/error/borrow/MutateWhileBorrowedError";
 import UseWhileMutBorrowedError from "coral/error/borrow/UseWhileMutBorrowedError";
+import MoveWhileBorrowedError from "coral/error/move/MoveWhileBorrowedError";
 import Loan from "coral/mir/Loan";
 import Access from "coral/mir/Access";
 import BorrowKind from "coral/mir/ty/BorrowKind";
 import { Joinpoint } from "clava-js/api/Joinpoints.js";
 import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
+import MutableBorrowWhileBorrowedError from "coral/error/borrow/MutableBorrowWhileBorrowedError";
 
 export default class RegionckErrorReporting extends Pass {
-    protected override _name: string = "RegionckErrorReporting";
+    protected override _name: string = this.constructor.name;
 
     startNode: cytoscape.NodeSingular;
 
@@ -52,6 +54,22 @@ export default class RegionckErrorReporting extends Pass {
             } else if (access.mutability === Access.Mutability.WRITE) {
                 const $nextUse = this._findNextUse(node, loan);
                 throw new MutateWhileBorrowedError(
+                    node.data().stmts[0],
+                    loan,
+                    $nextUse,
+                    access,
+                );
+            } else if (access.mutability === Access.Mutability.MUTABLE_BORROW) {
+                const $nextUse = this._findNextUse(node, loan);
+                throw new MutableBorrowWhileBorrowedError(
+                    node.data().stmts[0],
+                    loan,
+                    $nextUse,
+                    access,
+                );
+            } else if (access.isMove) {
+                const $nextUse = this._findNextUse(node, loan);
+                throw new MoveWhileBorrowedError(
                     node.data().stmts[0],
                     loan,
                     $nextUse,
@@ -118,10 +136,10 @@ export default class RegionckErrorReporting extends Pass {
                     (loan) =>
                         access.path.equals(loan.loanedPath) ||
                         access.path
-                            .prefixes()
+                            .prefixes
                             .some((prefix) => prefix.equals(loan.loanedPath)) ||
                         loan.loanedPath
-                            .shallowPrefixes()
+                            .shallowPrefixes
                             .some((prefix) => prefix.equals(access.path)),
                 );
             case Access.Depth.DEEP:
@@ -129,10 +147,10 @@ export default class RegionckErrorReporting extends Pass {
                     (loan) =>
                         access.path.equals(loan.loanedPath) ||
                         access.path
-                            .prefixes()
+                            .prefixes
                             .some((prefix) => prefix.equals(loan.loanedPath)) ||
                         loan.loanedPath
-                            .supportingPrefixes()
+                            .supportingPrefixes
                             .some((prefix) => prefix.equals(access.path)),
                 );
         }
