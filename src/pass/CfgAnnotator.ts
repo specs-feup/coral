@@ -250,7 +250,7 @@ export default class CfgAnnotator extends Pass {
                 const $varref = $exprStmt as Varref;
                 const path = this.#parseLvalue($varref);
                 if (path.ty instanceof RefTy) {
-                    this.#annotateLoan(node, $varref, path.ty);
+                    this.#annotateLoan(node, $varref, path.ty.referent);
                     node.scratch("_coral").reborrow = true;
                 } else {
                     node.scratch("_coral").accesses.push(
@@ -272,7 +272,7 @@ export default class CfgAnnotator extends Pass {
         }
     }
 
-    #annotateLoan(node: cytoscape.NodeSingular, $expr: Joinpoint, ty: RefTy | null = null, $parent: Joinpoint | null = null) {
+    #annotateLoan(node: cytoscape.NodeSingular, $expr: Joinpoint, ty: Ty | null = null, $parent: Joinpoint | null = null) {
         const loanedPath = this.#parseLvalue($expr);
         const regionVar = this.#new_region_var();
 
@@ -307,15 +307,17 @@ export default class CfgAnnotator extends Pass {
                 loanedPath,
                 $expr,
                 node,
-                new RefTy(leftTy.borrowKind, ty.referent, regionVar),
+                
             );
             node.scratch("_coral").loan = loan;
             this.regionck.loans.push(loan);
         } else {
-            const loan = new Loan(regionVar, leftTy, loanedPath, $expr, node);
-            node.scratch("_coral").loan = loan;
-            this.regionck.loans.push(loan);
+            
         }
+
+        const loan = new Loan(regionVar, leftTy, loanedPath, $expr, node, ty);
+        node.scratch("_coral").loan = loan;
+        this.regionck.loans.push(loan);
 
         node.scratch("_coral").accesses.push(
             new Access(
@@ -358,7 +360,7 @@ export default class CfgAnnotator extends Pass {
         } else if ($unaryOp.operator === "*") {
             const path = this.#parseLvalue($unaryOp);
             if (path.ty instanceof RefTy) {
-                this.#annotateLoan(node, $unaryOp, path.ty);
+                this.#annotateLoan(node, $unaryOp, path.ty.referent);
                 node.scratch("_coral").reborrow = true;
             } else {
                 node.scratch("_coral").accesses.push(

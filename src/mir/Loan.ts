@@ -21,21 +21,15 @@ export default class Loan {
         loanedPath: Path,
         $jp: Joinpoint,
         node: cytoscape.NodeSingular,
-        loanedTy: RefTy | null = null,
+        loanedTy: Ty | null = null,
     ) {
         this.regionVar = regionVar;
         this.leftTy = leftTy;
         this.loanedPath = loanedPath;
         this.$jp = $jp;
         this.node = node;
-
-        if (loanedTy == null) {
-            this.loanedTy = loanedPath.ty;
-            this.loanedRefTy = new RefTy(this.borrowKind, this.loanedTy, this.regionVar);
-        } else {
-            this.loanedTy = loanedTy.referent;
-            this.loanedRefTy = loanedTy;
-        }
+        this.loanedTy = loanedTy ?? loanedPath.ty;
+        this.loanedRefTy = new RefTy(this.borrowKind, this.loanedTy, this.regionVar);
     }
 
     toString(): string {
