@@ -26,6 +26,7 @@ import {
     PointerType,
     QualType,
     ReturnStmt,
+    Scope,
     Type,
     TypedefType,
     UnaryOp,
@@ -247,24 +248,20 @@ export default class CfgAnnotator extends Pass {
                 break;
             case "varref": {
                 const $varref = $exprStmt as Varref;
-                const path = this.#parseLvalue(node, $varref);
-                // const ty = $varref.declaration.getUserField("ty") as Ty;
-                // TODO: DEEP WRITE only if moving value, should be implemented, but needs testing due to edge cases
-
-                // TODO ty is not returning, that's a bug
-
-                node.scratch("_coral").accesses.push(
-                    new Access(
-                        path,
-                        Access.Mutability.READ,
-                        // ty?.isCopyable ? Access.Mutability.READ : Access.Mutability.WRITE, // TODO this doesnt make sense
-                        Access.Depth.DEEP,
-                    ),
-                );
+                const path = this.#parseLvalue($varref);
+                if (path.ty instanceof RefTy) {
+                    this.#annotateLoan(node, $varref, path.ty);
+                    node.scratch("_coral").reborrow = true;
+                } else {
+                    node.scratch("_coral").accesses.push(
+                        new Access(path, Access.Mutability.READ, Access.Depth.DEEP),
+                    );
+                }
                 break;
             }
             case "parenExpr":
-                throw new Error("Unimplemented: Paren expr annotation");
+                this.#annotateExprStmt(node, ($exprStmt as ParenExpr).subExpr);
+                break;
             case "returnStmt":
                 this.#annotateExprStmt(node, ($exprStmt as ReturnStmt).returnExpr);
                 break;
@@ -275,9 +272,63 @@ export default class CfgAnnotator extends Pass {
         }
     }
 
+    #annotateLoan(node: cytoscape.NodeSingular, $expr: Joinpoint, ty: RefTy | null = null, $parent: Joinpoint | null = null) {
+        const loanedPath = this.#parseLvalue($expr);
+        const regionVar = this.#new_region_var();
+
+        $parent = $parent ?? $expr.parent;
+        while ($parent instanceof ParenExpr) {
+            $parent = $parent.parent;
+        }
+
+        let leftTy;
+        if ($parent instanceof BinaryOp && $parent.isAssignment) {
+            leftTy = this.#parseLvalue($parent.left).ty;
+        } else if ($parent instanceof Vardecl) {
+            leftTy = this.regionck.declarations.get($parent.name);
+        } else {
+            // Assuming the weakest borrow is ok for `ref1;` but is not sound for `*(&a) = 5;`
+            throw new Error(
+                `TODO: annotateLoan: leftTy not found. Loan could be assumed to be the weakest borrow, but there is the risk that that is not sound.`,
+            );
+        }
+
+        if (!(leftTy instanceof RefTy)) {
+            throw new Error(
+                `annotateLoan: Cannot borrow from non-reference type ${leftTy?.toString()}`,
+            );
+        }
+
+        // TODO clean this
+        if (ty) {
+            const loan = new Loan(
+                regionVar,
+                leftTy,
+                loanedPath,
+                $expr,
+                node,
+                new RefTy(leftTy.borrowKind, ty.referent, regionVar),
+            );
+            node.scratch("_coral").loan = loan;
+            this.regionck.loans.push(loan);
+        } else {
+            const loan = new Loan(regionVar, leftTy, loanedPath, $expr, node);
+            node.scratch("_coral").loan = loan;
+            this.regionck.loans.push(loan);
+        }
+
+        node.scratch("_coral").accesses.push(
+            new Access(
+                loanedPath,
+                Access.Mutability.fromBorrowKind(leftTy.borrowKind),
+                Access.Depth.DEEP,
+            ),
+        );
+    }
+
     #annotateBinaryOp(node: cytoscape.NodeSingular, $binaryOp: BinaryOp) {
         if ($binaryOp.isAssignment) {
-            const path = this.#parseLvalue(node, $binaryOp.left);
+            const path = this.#parseLvalue($binaryOp.left);
             const scratch = node.scratch("_coral");
             scratch.accesses.push(
                 new Access(path, Access.Mutability.WRITE, Access.Depth.SHALLOW),
@@ -295,61 +346,7 @@ export default class CfgAnnotator extends Pass {
 
     #annotateUnaryOp(node: cytoscape.NodeSingular, $unaryOp: UnaryOp) {
         if ($unaryOp.operator === "&") {
-            // Create loan, and start of an lvalue
-            const loanedPath = this.#parseLvalue(node, $unaryOp.operand);
-            const regionVar = this.#new_region_var();
-            const loanedTy = loanedPath.ty;
-
-            // Borrowkind depends on the assignment left value
-            let parent = $unaryOp.parent;
-            let leftTy;
-            while (true) {
-                if (parent instanceof BinaryOp && parent.isAssignment) {
-                    leftTy = this.#parseLvalue(node, parent.left).ty;
-                    break;
-                }
-
-                if (parent instanceof Vardecl) {
-                    leftTy = this.regionck.declarations.get(parent.name);
-                    break;
-                }
-
-                if (parent instanceof ParenExpr) {
-                    throw new Error(
-                        "annotateUnaryOp: Cannot determine assignment lvalue",
-                    );
-                }
-
-                parent = parent.parent;
-            }
-
-            if (!(leftTy instanceof RefTy)) {
-                throw new Error(
-                    "annotateUnaryOp: Cannot borrow from non-reference type " +
-                        leftTy?.toString(),
-                );
-            }
-
-            const loan = new Loan(
-                regionVar,
-                leftTy,
-                loanedTy,
-                loanedPath,
-                $unaryOp,
-                node,
-            );
-            node.scratch("_coral").loan = loan;
-            this.regionck.loans.push(loan);
-
-            node.scratch("_coral").accesses.push(
-                new Access(
-                    loanedPath,
-                    loan.borrowKind === BorrowKind.MUTABLE
-                        ? Access.Mutability.MUTABLE_BORROW
-                        : Access.Mutability.BORROW,
-                    Access.Depth.DEEP,
-                ),
-            );
+            this.#annotateLoan(node, $unaryOp.operand, null, $unaryOp.parent);
 
             // Mark Reborrows
             if (
@@ -359,12 +356,15 @@ export default class CfgAnnotator extends Pass {
                 node.scratch("_coral").reborrow = true;
             }
         } else if ($unaryOp.operator === "*") {
-            // Start of an lvaue
-            const path = this.#parseLvalue(node, $unaryOp);
-            // TODO: Set correct AccessMutability and AccessDepth
-            node.scratch("_coral").accesses.push(
-                new Access(path, Access.Mutability.READ, Access.Depth.DEEP),
-            );
+            const path = this.#parseLvalue($unaryOp);
+            if (path.ty instanceof RefTy) {
+                this.#annotateLoan(node, $unaryOp, path.ty);
+                node.scratch("_coral").reborrow = true;
+            } else {
+                node.scratch("_coral").accesses.push(
+                    new Access(path, Access.Mutability.READ, Access.Depth.DEEP),
+                );
+            }
         } else {
             // Not relevant, keep going
             this.#annotateExprStmt(node, $unaryOp.operand);
@@ -373,8 +373,8 @@ export default class CfgAnnotator extends Pass {
 
     #annotateFunctionCall(node: cytoscape.NodeSingular, $call: Call) {
         for (const $expr of $call.args) {
-            const path = this.#parseLvalue(node, $expr);
-            // TODO: Set correct AccessMutability and AccessDepth
+            const path = this.#parseLvalue($expr);
+            // TODO: Set correct AccessMutability and AccessDepth (require knowing the function declaration)
             node.scratch("_coral").accesses.push(
                 new Access(path, Access.Mutability.READ, Access.Depth.DEEP),
             );
@@ -387,7 +387,7 @@ export default class CfgAnnotator extends Pass {
     }
 
     //--------------------------------
-    #parseLvalue(node: cytoscape.NodeSingular, $jp: Joinpoint): Path {
+    #parseLvalue($jp: Joinpoint): Path {
         switch ($jp.joinPointType) {
             case "literal":
             case "intLiteral":
@@ -406,7 +406,7 @@ export default class CfgAnnotator extends Pass {
             case "unaryOp": {
                 const $unaryOp = $jp as UnaryOp;
                 if ($unaryOp.operator === "*") {
-                    const innerPath = this.#parseLvalue(node, $unaryOp.operand);
+                    const innerPath = this.#parseLvalue($unaryOp.operand);
                     return new PathDeref($jp, innerPath);
                 } else {
                     throw new Error(
@@ -416,7 +416,7 @@ export default class CfgAnnotator extends Pass {
             }
             case "memberAccess":
             case "parenExpr":
-                return this.#parseLvalue(node, ($jp as ParenExpr).subExpr);
+                return this.#parseLvalue(($jp as ParenExpr).subExpr);
             default:
                 throw new Error("Unhandled parseLvalue: " + $jp.joinPointType);
         }

@@ -1,4 +1,5 @@
 import Path from "coral/mir/path/Path";
+import BorrowKind from "coral/mir/ty/BorrowKind";
 import Ty from "coral/mir/ty/Ty";
 
 class Access {
@@ -13,9 +14,6 @@ class Access {
     }
 
     get isMove(): boolean {
-        console.log("Im trying to move?");
-        console.log(this.mutability);
-        console.log(this.path.ty.semantics);
         return (
             this.mutability === Access.Mutability.READ &&
             this.path.ty.semantics === Ty.Semantics.MOVE
@@ -33,6 +31,17 @@ namespace Access {
         WRITE = "write",
         BORROW = "borrow",
         MUTABLE_BORROW = "mutable borrow",
+    }
+
+    export namespace Mutability {
+        export function fromBorrowKind(kind: BorrowKind): Mutability {
+            switch (kind) {
+                case BorrowKind.SHARED:
+                    return Mutability.BORROW;
+                case BorrowKind.MUTABLE:
+                    return Mutability.MUTABLE_BORROW;
+            }
+        }
     }
 
     export enum Depth {

@@ -10,6 +10,7 @@ export default class Loan {
     regionVar: RegionVariable;
     leftTy: RefTy;
     loanedTy: Ty;
+    loanedRefTy: RefTy;
     loanedPath: Path;
     $jp: Joinpoint;
     node: cytoscape.NodeSingular;
@@ -17,17 +18,24 @@ export default class Loan {
     constructor(
         regionVar: RegionVariable,
         leftTy: RefTy,
-        loanedTy: Ty,
         loanedPath: Path,
         $jp: Joinpoint,
         node: cytoscape.NodeSingular,
+        loanedTy: RefTy | null = null,
     ) {
         this.regionVar = regionVar;
         this.leftTy = leftTy;
-        this.loanedTy = loanedTy;
         this.loanedPath = loanedPath;
         this.$jp = $jp;
         this.node = node;
+
+        if (loanedTy == null) {
+            this.loanedTy = loanedPath.ty;
+            this.loanedRefTy = new RefTy(this.borrowKind, this.loanedTy, this.regionVar);
+        } else {
+            this.loanedTy = loanedTy.referent;
+            this.loanedRefTy = loanedTy;
+        }
     }
 
     toString(): string {
@@ -36,10 +44,5 @@ export default class Loan {
 
     get borrowKind(): BorrowKind {
         return this.leftTy.borrowKind;
-    }
-
-    get loanedRefTy(): RefTy {
-        // TODO: What about isConst?
-        return new RefTy(this.borrowKind, this.loanedTy, this.regionVar);
     }
 }

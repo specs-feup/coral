@@ -16,7 +16,7 @@ export default class BuiltinTy extends Ty {
     }
 
     get semantics(): Ty.Semantics {
-        return Ty.Semantics.MOVE; // TODO should be copy, move only for testing
+        return Ty.Semantics.COPY;
     }
 
     override equals(other: BuiltinTy) {
