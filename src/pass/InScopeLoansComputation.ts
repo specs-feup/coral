@@ -4,7 +4,7 @@ import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
 import { Joinpoint } from "clava-js/api/Joinpoints.js";
 
 import Loan from "coral/mir/Loan";
-import Assignment from "coral/mir/Assignment";
+import Access from "coral/mir/Access";
 
 export default class InScopeLoansComputation extends Pass {
     protected override _name: string = this.constructor.name;
@@ -38,10 +38,9 @@ export default class InScopeLoansComputation extends Pass {
                 const inner: Set<Loan> = new Set(inScratch.inScopeLoans);
 
                 // Kills from assignment paths
-                if (inScratch.assignment) {
-                    const prefixes = (
-                        inScratch.assignment as Assignment
-                    ).toPath.prefixes;
+                const assignments = (inScratch.accesses as Access[]).filter((a) => a.mutability === Access.Mutability.WRITE);
+                for (const assignment of assignments) {
+                    const prefixes = assignment.path.prefixes;
                     for (const loan of inScratch.inScopeLoans) {
                         if (prefixes.some((prefix) => loan.loanedPath.equals(prefix))) {
                             inner.delete(loan);
@@ -123,8 +122,9 @@ export default class InScopeLoansComputation extends Pass {
         }
 
         // Check assignment paths
-        if (scratch.assignment) {
-            const prefixes = (scratch.assignment as Assignment).toPath.prefixes;
+        const assignments = (scratch.accesses as Access[]).filter((a) => a.mutability === Access.Mutability.WRITE);
+        for (const assignment of assignments) {
+            const prefixes = assignment.path.prefixes;
             for (const loan of inScopeLoans) {
                 if (prefixes.some((prefix) => loan.loanedPath.equals(prefix))) {
                     toKill.add(loan);

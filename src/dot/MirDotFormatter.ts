@@ -19,10 +19,6 @@ export default class MirDotFormatter extends DotFormatter {
                 sections.set("Ty w/ lifetimes", scratch.lhs_ty.toString() + "\n");
             }
 
-            if (scratch.assignment) {
-                sections.set("Assignment", scratch.assignment.toString() + "\n");
-            }
-
             if (scratch.loan !== undefined) {
                 sections.set("Loan", scratch.loan.toString() + "\n");
             }
@@ -41,10 +37,6 @@ export default class MirDotFormatter extends DotFormatter {
                     (scratch.accesses as Access[]).map((a) => a.toString()).join("\n") +
                         "\n",
                 );
-            }
-
-            if (scratch.assignments.length > 0) {
-                sections.set("Assignments", scratch.assignments.join("\n") + "\n");
             }
 
             let ret = "";

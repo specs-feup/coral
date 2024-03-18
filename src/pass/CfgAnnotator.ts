@@ -13,7 +13,6 @@ import PathVarRef from "coral/mir/path/PathVarRef";
 import PathDeref from "coral/mir/path/PathDeref";
 import Loan from "coral/mir/Loan";
 import Access from "coral/mir/Access";
-import Assignment from "coral/mir/Assignment";
 import Path from "coral/mir/path/Path";
 import {
     BinaryOp,
@@ -71,7 +70,6 @@ export default class CfgAnnotator extends Pass {
                 liveOut: this.regionck.liveness.liveOut.get(node.id()) ?? new Set(),
                 accesses: [],
                 inScopeLoans: new Set(),
-                assignments: [],
             };
 
             node.scratch("_coral", scratch);
@@ -154,14 +152,7 @@ export default class CfgAnnotator extends Pass {
             );
 
             this.#annotateExprStmt(node, $vardecl.init);
-            this.#markAssignment(node, new PathVarRef($vardecl, ty));
         }
-    }
-
-    #markAssignment(node: cytoscape.NodeSingular, path: Path) {
-        // TODO: Detect & Mark full copy/move (only if $expr represents a path?)
-
-        node.scratch("_coral").assignment = new Assignment(path);
     }
 
     #deconstructType(
@@ -337,7 +328,6 @@ export default class CfgAnnotator extends Pass {
             );
 
             this.#annotateExprStmt(node, $binaryOp.right);
-            this.#markAssignment(node, path);
 
             return;
         }

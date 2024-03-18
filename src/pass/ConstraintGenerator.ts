@@ -64,10 +64,10 @@ export default class ConstraintGenerator extends Pass {
                 .map((e) => e.id());
             if (
                 successors.length != 1 &&
-                (scratch.loan || scratch.assignments?.length > 0)
+                (scratch.loan)
             ) {
                 throw new Error(
-                    `ConstraintGenerator: node ${node.id()} has ${successors.length} successors and a loan/assignment`,
+                    `ConstraintGenerator: node ${node.id()} has ${successors.length} successors and a loan`,
                 );
             }
 
@@ -111,15 +111,6 @@ export default class ConstraintGenerator extends Pass {
                 Variance.CO,
                 successor,
             );
-        } else {
-            for (const assignment of scratch.assignments) {
-                this.#relateTy(
-                    assignment.leftTy,
-                    assignment.rightTy,
-                    Variance.CONTRA,
-                    successor,
-                );
-            }
         }
     }
 
