@@ -18,7 +18,7 @@ export default class Regionck {
     constraints: OutlivesConstraint[];
     regions: RegionVariable[];
     loans: Loan[];
-    declarations: Map<string, Ty>;
+    declarations: Map<string, Ty>; // TODO get rid of this
 
     constructor($jp: FunctionJp) {
         this.constraints = [];
@@ -27,7 +27,6 @@ export default class Regionck {
         this.declarations = new Map();
 
         this.$jp = $jp;
-        // TODO this conversion doesn't make any sense. But it's what the original code does
         this.cfg = ControlFlowGraph.build($jp.body, true, true);
 
         this.liveness = LivenessAnalysis.analyse(this.cfg);

@@ -35,6 +35,7 @@ import {
 } from "clava-js/api/Joinpoints.js";
 import CfgNodeType from "clava-js/api/clava/graphs/cfg/CfgNodeType.js";
 import Query from "lara-js/api/weaver/Query.js";
+import Declaration from "coral/mir/Declaration";
 
 export default class CfgAnnotator extends Pass {
     protected override _name: string = this.constructor.name;
@@ -69,6 +70,7 @@ export default class CfgAnnotator extends Pass {
                 liveIn: this.regionck.liveness.liveIn.get(node.id()) ?? new Set(),
                 liveOut: this.regionck.liveness.liveOut.get(node.id()) ?? new Set(),
                 accesses: [],
+                declarations: [],
                 inScopeLoans: new Set(),
             };
 
@@ -92,7 +94,6 @@ export default class CfgAnnotator extends Pass {
         // Annotate param universal regions
         for (const $param of $jp.params) {
             const ty = this.#deconstructType($param.type, $param, false);
-            $param.setUserField("ty", ty);
             this.regionck.declarations.set($param.name, ty);
 
             // TODO: Retrieve lifetimes from fnLifetimes
@@ -117,8 +118,6 @@ export default class CfgAnnotator extends Pass {
                         case "exprStmt":
                             this.#annotateExprStmt(node, $stmt.children[0]);
                             break;
-                        case "wrapperStmt":
-                            this.#annotateWrapperStmt(node, $stmt.children[0]);
                     }
                     break;
                 }
@@ -136,10 +135,9 @@ export default class CfgAnnotator extends Pass {
 
     #annotateDeclStmt(node: cytoscape.NodeSingular, $vardecl: Vardecl) {
         const ty = this.#deconstructType($vardecl.type, $vardecl, true);
-        $vardecl.setUserField("ty", ty);
+        const decl = new Declaration($vardecl, ty);
         const scratch = node.scratch("_coral");
-        scratch.lhs = $vardecl;
-        scratch.lhs_ty = ty;
+        scratch.declarations.push(decl);
         this.regionck.declarations.set($vardecl.name, ty);
 
         if ($vardecl.hasInit) {
@@ -276,7 +274,11 @@ export default class CfgAnnotator extends Pass {
         if ($parent instanceof BinaryOp && $parent.isAssignment) {
             leftTy = this.#parseLvalue($parent.left).ty;
         } else if ($parent instanceof Vardecl) {
-            leftTy = this.regionck.declarations.get($parent.name);
+            if (node.scratch("_coral").declarations.length === 1) {
+                leftTy = node.scratch("_coral").declarations[0].ty;
+            } else {
+                throw new Error("Unexpected declarations in this node");
+            }
         } else {
             // Assuming the weakest borrow is ok for `ref1;` but is not sound for `*(&a) = 5;`
             throw new Error(
@@ -374,10 +376,6 @@ export default class CfgAnnotator extends Pass {
         }
     }
 
-    #annotateWrapperStmt(node: cytoscape.NodeSingular, $wrapperStmt: WrapperStmt) {
-        // TODO: Take care of Drops and StorageDeads
-    }
-
     //--------------------------------
     #parseLvalue($jp: Joinpoint): Path {
         switch ($jp.joinPointType) {
@@ -388,6 +386,7 @@ export default class CfgAnnotator extends Pass {
                 throw new Error("Cannot parse lvalue from literal");
             case "varref": {
                 const $varref = $jp as Varref;
+
                 const ty = this.regionck.declarations.get($varref.name);
                 if (ty === undefined) {
                     throw new Error("Variable " + $varref.name + " not found");
