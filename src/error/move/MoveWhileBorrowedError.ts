@@ -12,7 +12,7 @@ export default class MoveWhileBorrowedError extends CoralError {
                 $invalidUse,
             )
                 .code(
-                    loan.node.data().stmts[0],
+                    loan.node.jp,
                     `(${loan.borrowKind}) borrow of '${loan.loanedPath.toString()}' occurs here`,
                 )
                 .code(

@@ -1,102 +1,101 @@
-import LivenessAnalysis from "clava-js/api/clava/liveness/LivenessAnalysis.js";
-import ControlFlowGraph from "clava-js/api/clava/graphs/ControlFlowGraph.js";
-import { FunctionJp, Joinpoint, Statement } from "clava-js/api/Joinpoints.js";
-
-import Loan from "coral/mir/Loan";
+import { Vardecl } from "clava-js/api/Joinpoints.js";
 import Ty from "coral/mir/ty/Ty";
 import OutlivesConstraint from "coral/regionck/OutlivesConstraint";
 import RegionVariable from "coral/regionck/RegionVariable";
-import CfgAnnotator from "coral/pass/CfgAnnotator";
-import ConstraintGenerator from "coral/pass/ConstraintGenerator";
-import InScopeLoansComputation from "coral/pass/InScopeLoansComputation";
-import RegionckErrorReporting from "coral/pass/RegionckErrorReporting";
+import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
+
 
 export default class Regionck {
-    $jp: FunctionJp;
-    cfg: ControlFlowGraph;
-    liveness: LivenessAnalysis;
-    constraints: OutlivesConstraint[];
-    regions: RegionVariable[];
-    loans: Loan[];
-    declarations: Map<string, Ty>; // TODO get rid of this
+    functionEntry: FunctionEntryNode.Class;
+    #constraints: OutlivesConstraint[];
+    #regionVars: RegionVariable[];
+    #symbolTable: Map<string, Ty>;
 
-    constructor($jp: FunctionJp) {
-        this.constraints = [];
-        this.regions = [];
-        this.loans = [];
-        this.declarations = new Map();
-
-        this.$jp = $jp;
-        this.cfg = ControlFlowGraph.build($jp.body, true, true);
-
-        this.liveness = LivenessAnalysis.analyse(this.cfg);
-
-        const cfgAnnotator = new CfgAnnotator(this);
-        cfgAnnotator.apply($jp);
+    constructor(functionEntry: FunctionEntryNode.Class) {
+        this.#constraints = [];
+        this.#regionVars = [];
+        this.#symbolTable = new Map();
+        this.functionEntry = functionEntry;
     }
 
-    /**
-     * @param {boolean} [printConstraintSet=false] If true, prints the constraint set
-     */
-    prepare(debug: boolean): Regionck {
-        this.#buildConstraints();
-        if (debug) {
-            console.log("Initial Constraint Set:");
-            console.log(this.aggregateRegionckInfo() + "\n\n");
-        }
-        this.#infer();
-        this.#calculateInScopeLoans();
-        if (debug) {
-            console.log("After Inference:");
-            console.log(this.aggregateRegionckInfo() + "\n\n");
-        }
-        return this;
+    getTy($varDecl: Vardecl): Ty | undefined {
+        return this.#symbolTable.get($varDecl.astId);
     }
 
-    #buildConstraints(): Regionck {
-        const constraintGenerator = new ConstraintGenerator(this);
-        constraintGenerator.apply(this.$jp);
-
-        return this;
+    registerTy($varDecl: Vardecl, ty: Ty): void {
+        this.#symbolTable.set($varDecl.astId, ty);
     }
 
-    #infer(): Regionck {
-        let changed = true;
-        while (changed) {
-            changed = false;
-
-            for (const constraint of this.constraints) {
-                changed ||= constraint.apply(this);
-            }
-        }
-
-        return this;
+    newRegionVar(kind: RegionVariable.Kind, name?: string): RegionVariable {
+        const id = this.#regionVars.length;
+        const regionVar = new RegionVariable(
+            id.toString(),
+            kind,
+            name? name : id.toString(),
+        );
+        this.#regionVars.push(regionVar);
+        return regionVar;
     }
 
-    #calculateInScopeLoans() {
-        const inScopeComputation = new InScopeLoansComputation(this.cfg.startNode);
-        inScopeComputation.apply(this.$jp);
-    }
+    // prepare(debug: boolean): Regionck {
+    //     this.#buildConstraints();
+    //     if (debug) {
+    //         console.log("Initial Constraint Set:");
+    //         console.log(this.aggregateRegionckInfo() + "\n\n");
+    //     }
+    //     this.#infer();
+    //     this.#calculateInScopeLoans();
+    //     if (debug) {
+    //         console.log("After Inference:");
+    //         console.log(this.aggregateRegionckInfo() + "\n\n");
+    //     }
+    //     return this;
+    // }
 
-    borrowCheck(): Regionck {
-        const errorReporting = new RegionckErrorReporting(this.cfg.startNode);
-        errorReporting.apply(this.$jp);
+    // #buildConstraints(): Regionck {
+    //     const constraintGenerator = new ConstraintGenerator(this);
+    //     constraintGenerator.apply(this.$function);
 
-        return this;
-    }
+    //     return this;
+    // }
 
-    aggregateRegionckInfo(): string {
-        let result = "Regions:\n";
-        for (const region of this.regions) {
-            const points = Array.from(region.points).sort();
-            result += `\t'${region.name}: {${points.join(", ")}}\n`;
-        }
+    // #infer(): Regionck {
+    //     let changed = true;
+    //     while (changed) {
+    //         changed = false;
 
-        result += "\nConstraints:\n";
-        for (const constraint of this.constraints) {
-            result += `\t${constraint.toString()}\n`;
-        }
+    //         for (const constraint of this.constraints) {
+    //             changed ||= constraint.apply(this);
+    //         }
+    //     }
 
-        return result;
-    }
+    //     return this;
+    // }
+
+    // #calculateInScopeLoans() {
+    //     const inScopeComputation = new InScopeLoansComputation(this.cfg.startNode);
+    //     inScopeComputation.apply(this.$function);
+    // }
+
+    // borrowCheck(): Regionck {
+    //     const errorReporting = new RegionckErrorReporting(this.cfg.startNode);
+    //     errorReporting.apply(this.$function);
+
+    //     return this;
+    // }
+
+    // aggregateRegionckInfo(): string {
+    //     let result = "Regions:\n";
+    //     for (const region of this.regions) {
+    //         const points = Array.from(region.points).sort();
+    //         result += `\t'${region.name}: {${points.join(", ")}}\n`;
+    //     }
+
+    //     result += "\nConstraints:\n";
+    //     for (const constraint of this.constraints) {
+    //         result += `\t${constraint.toString()}\n`;
+    //     }
+
+    //     return result;
+    // }
 }

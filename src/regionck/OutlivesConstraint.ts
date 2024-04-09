@@ -1,42 +1,38 @@
+import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
+import CoralNode from "coral/graph/CoralNode";
 import RegionVariable from "coral/regionck/RegionVariable";
-import DfsVisitor from "coral/graph/DfsVisitor";
-import Regionck from "coral/regionck/Regionck";
-import cytoscape from "lara-js/api/libs/cytoscape-3.26.0.js";
+
 
 /**
- * A constraint that lifetime 'sup' outlives lifetime 'sub' at point 'point'.
+ * A constraint that lifetime 'sup' outlives lifetime 'sub' at node 'node'.
  */
 export default class OutlivesConstraint {
     sup: RegionVariable;
     sub: RegionVariable;
-    point: string;
+    node: CoralNode.Class;
 
-    constructor(sup: RegionVariable, sub: RegionVariable, point: string) {
+    constructor(sup: RegionVariable, sub: RegionVariable, node: CoralNode.Class) {
         this.sup = sup;
         this.sub = sub;
-        this.point = point;
+        this.node = node;
     }
 
     toString(): string {
-        return `${this.sup.name} : ${this.sub.name} @ ${this.point}`;
+        return `${this.sup.name}: ${this.sub.name} @ ${this.node.id}`;
     }
 
-    /**
-     * @param {Regionck} regionck
-     * @returns {boolean} True if changed
-     */
-    apply(regionck: Regionck): boolean {
-        return DfsVisitor.visit(
-            regionck.cfg.graph.$(`#${this.point}`),
-            (node: cytoscape.NodeSingular) => {
-                const alreadyContains = this.sup.points.has(node.id());
-                if (alreadyContains) {
-                    return false;
-                }
-                this.sup.points.add(node.id());
-                return true;
-            },
-            (node: cytoscape.NodeSingular) => this.sub.points.has(node.id()),
+    apply() {
+        const nodes = this.node.bfs(
+            (edge) => edge.is(ControlFlowEdge.TypeGuard)
+                && this.sub.points.has(edge.target.id)
         );
+
+        for (const [node] of nodes) {
+            const alreadyContains = this.sup.points.has(node.id);
+            if (alreadyContains) {
+                continue;
+            }
+            this.sup.points.add(node.id);
+        }
     }
 }

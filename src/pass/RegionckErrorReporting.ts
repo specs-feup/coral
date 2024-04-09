@@ -2,7 +2,6 @@ import Pass from "lara-js/api/lara/pass/Pass.js";
 import cytoscape from "lara-js/api/libs/cytoscape-3.26.0.js";
 import CfgNodeType from "clava-js/api/clava/graphs/cfg/CfgNodeType.js";
 
-import DfsVisitor from "coral/graph/DfsVisitor";
 import MutateWhileBorrowedError from "coral/error/borrow/MutateWhileBorrowedError";
 import UseWhileMutBorrowedError from "coral/error/borrow/UseWhileMutBorrowedError";
 import MoveWhileBorrowedError from "coral/error/move/MoveWhileBorrowedError";

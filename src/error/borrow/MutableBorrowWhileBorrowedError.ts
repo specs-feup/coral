@@ -12,7 +12,7 @@ export default class MutableBorrowWhileBorrowedError extends CoralError {
                 $invalidUse,
             )
                 .code(
-                    loan.node.data().stmts[0],
+                    loan.node.jp,
                     `immutable borrow of '${loan.loanedPath.toString()}' occurs here`,
                 )
                 .code(

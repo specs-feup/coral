@@ -24,12 +24,12 @@ export default class ConstraintGenerator extends Pass {
     constructor(regionck: Regionck) {
         super();
         this.regionck = regionck;
-        this.regionck.constraints = [];
-        this.constraints = this.regionck.constraints;
+        this.regionck.#constraints = [];
+        this.constraints = this.regionck.#constraints;
     }
 
     override _apply_impl($jp: Joinpoint): PassResult {
-        const universal = this.regionck.regions.filter(
+        const universal = this.regionck.#regions.filter(
             (r) => r.kind === RegionVariable.Kind.UNIVERSAL,
         );
         universal.forEach((region) => {
@@ -46,7 +46,7 @@ export default class ConstraintGenerator extends Pass {
 
             // Lifetime constraints
             for (const variable of scratch.liveIn.keys()) {
-                const ty = this.regionck.declarations.get(variable);
+                const ty = this.regionck.#symbolTable.get(variable);
                 if (ty === undefined) {
                     throw new Error(
                         `ConstraintGenerator: variable ${variable} not found in declarations`,
@@ -62,10 +62,7 @@ export default class ConstraintGenerator extends Pass {
                 .outgoers()
                 .nodes()
                 .map((e) => e.id());
-            if (
-                successors.length != 1 &&
-                (scratch.loan)
-            ) {
+            if (successors.length != 1 && scratch.loan) {
                 throw new Error(
                     `ConstraintGenerator: node ${node.id()} has ${successors.length} successors and a loan`,
                 );

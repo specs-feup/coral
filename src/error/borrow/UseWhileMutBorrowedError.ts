@@ -17,9 +17,8 @@ export default class UseWhileMutBorrowedError extends CoralError {
                 $invalidUse,
             )
                 .code(
-                    loan.node.data().stmts[0],
+                    loan.node.jp,
                     `(mutable) borrow of '${loan.loanedPath.toString()}' occurs here`,
-                    loan.$jp,
                 )
                 .code(
                     $invalidUse,

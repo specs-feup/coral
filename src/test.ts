@@ -16,7 +16,7 @@ interface TypeOf<T> {
 class CoralTester {
     #baseFolder: string;
     #pipeline: CoralPipeline;
-    #writeTo: string | null;
+    #writeTo: string | undefined;
     #omitTree: CoralTester.Options.OmitTree;
 
     #CORAL_TEST_UTILS_PRAGMA_NAME = "coral_test";
@@ -24,7 +24,7 @@ class CoralTester {
     constructor(testFolder: string, pipeline: CoralPipeline) {
         this.#baseFolder = testFolder;
         this.#pipeline = pipeline;
-        this.#writeTo = null;
+        this.#writeTo = undefined;
         this.#omitTree = CoralTester.Options.OmitTree.NONE;
     }
 
@@ -171,7 +171,7 @@ class CoralTester {
             type: "test",
             result: "Pass",
             expectedExceptions: [],
-            actualException: null,
+            actualException: undefined,
         };
         let pass = isOkExpected;
 
@@ -191,7 +191,7 @@ class CoralTester {
             }
 
             this.#pipeline.apply();
-            if (this.#writeTo !== null) {
+            if (this.#writeTo !== undefined) {
                 let writeTo = this.#writeTo + "/" + path;
                 if (singleFile) {
                     writeTo += "/..";
@@ -205,7 +205,7 @@ class CoralTester {
                     !isOkExpected &&
                     result.expectedExceptions.some((error) => e instanceof error);
                 if (!pass) {
-                    if (this.#writeTo === null) {
+                    if (this.#writeTo === undefined) {
                         console.log(e.stack);
                     } else {
                         const writeTo = this.#writeTo + "/" + path + ".log.txt";
@@ -306,7 +306,7 @@ namespace CoralTester {
         type: "test";
         result: "Pass" | "Fail";
         expectedExceptions: TypeOf<Error>[];
-        actualException: Error | null;
+        actualException: Error | undefined;
     };
 }
 

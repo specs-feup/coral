@@ -2,10 +2,10 @@ import { Joinpoint } from "clava-js/api/Joinpoints.js";
 
 class CodeLineHint {
     #$jp: Joinpoint;
-    #description: string | null;
+    #description: string | undefined;
     #line_ref: Joinpoint;
 
-    constructor($jp: Joinpoint, description: string | null, $line_ref: Joinpoint) {
+    constructor($jp: Joinpoint, description: string | undefined, $line_ref: Joinpoint) {
         this.#$jp = $jp;
         this.#description = description;
         this.#line_ref = $line_ref;
@@ -18,7 +18,7 @@ class CodeLineHint {
         );
 
         let error = ` ${lineNum} |\t${this.#$jp.code}\n`;
-        if (this.#description !== null) {
+        if (this.#description !== undefined) {
             error += ` ${" ".repeat(linePaddingSize)} |\t\t${this.#description}\n`;
         }
 
@@ -41,10 +41,10 @@ export default class ErrorMessageBuilder {
 
     code(
         $jp: Joinpoint,
-        description: string | null = null,
-        $line_ref: Joinpoint | null = null,
+        description: string | undefined = undefined,
+        $line_ref: Joinpoint | undefined = undefined,
     ) {
-        if ($line_ref === null) {
+        if ($line_ref === undefined) {
             $line_ref = $jp;
         }
         this.#lines.push($line_ref.line ?? 1);

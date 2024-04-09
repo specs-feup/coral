@@ -5,29 +5,31 @@ import Ty from "coral/mir/ty/Ty";
 import RefTy from "coral/mir/ty/RefTy";
 import BorrowKind from "coral/mir/ty/BorrowKind";
 import RegionVariable from "coral/regionck/RegionVariable";
+import CoralNode from "coral/graph/CoralNode";
 
 export default class Loan {
+    node: CoralNode.Class;
     regionVar: RegionVariable;
+    reborrow: boolean;
     leftTy: RefTy;
+    loanedPath: Path;
     loanedTy: Ty;
     loanedRefTy: RefTy;
-    loanedPath: Path;
-    $jp: Joinpoint;
-    node: cytoscape.NodeSingular;
 
     constructor(
+        node: CoralNode.Class,
         regionVar: RegionVariable,
+        reborrow: boolean,
         leftTy: RefTy,
         loanedPath: Path,
-        $jp: Joinpoint,
-        node: cytoscape.NodeSingular,
-        loanedTy: Ty | null = null,
+        loanedTy?: Ty,
     ) {
+        this.node = node;
         this.regionVar = regionVar;
+        this.reborrow = reborrow;
         this.leftTy = leftTy;
         this.loanedPath = loanedPath;
-        this.$jp = $jp;
-        this.node = node;
+
         this.loanedTy = loanedTy ?? loanedPath.ty;
         this.loanedRefTy = new RefTy(this.borrowKind, this.loanedTy, this.regionVar);
     }
