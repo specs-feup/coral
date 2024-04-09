@@ -17,6 +17,7 @@ import CoralGraph from "coral/graph/CoralGraph";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
 import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
 import CoralNode from "coral/graph/CoralNode";
+import DanglingReferenceError from "coral/error/borrow/DanglingReferenceError";
 
     
 export default class RegionckErrorReporting implements GraphTransformation {
@@ -75,7 +76,10 @@ export default class RegionckErrorReporting implements GraphTransformation {
     }
 
     #checkAccess(node: CoralNode.Class, access: Access, loan: Loan) {
-        if (loan.borrowKind === BorrowKind.MUTABLE) {
+        if (access.mutability === Access.Mutability.STORAGE_DEAD) {
+            const $nextUse = this.#findNextUse(node, loan);
+            throw new DanglingReferenceError(node.jp, loan, $nextUse, access);
+        } else if (loan.borrowKind === BorrowKind.MUTABLE) {
             const $nextUse = this.#findNextUse(node, loan);
             throw new UseWhileMutBorrowedError(node.jp, loan, $nextUse, access);
         } else if (access.mutability === Access.Mutability.WRITE) {
@@ -84,8 +88,6 @@ export default class RegionckErrorReporting implements GraphTransformation {
         } else if (access.mutability === Access.Mutability.MUTABLE_BORROW) {
             const $nextUse = this.#findNextUse(node, loan);
             throw new MutableBorrowWhileBorrowedError(node.jp, loan, $nextUse, access);
-        } else if (access.mutability === Access.Mutability.STORAGE_DEAD) {
-            // TODO
         } else if (access.isMove) {
             const $nextUse = this.#findNextUse(node, loan);
             throw new MoveWhileBorrowedError(node.jp, loan, $nextUse, access);

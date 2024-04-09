@@ -1,23 +1,23 @@
-import { Joinpoint } from "clava-js/api/Joinpoints.js";
+import { Joinpoint, Statement } from "clava-js/api/Joinpoints.js";
 
 class CodeLineHint {
-    #$jp: Joinpoint;
+    #jpCode: string;
     #description: string | undefined;
-    #line_ref: Joinpoint;
+    #line: number;
 
-    constructor($jp: Joinpoint, description: string | undefined, $line_ref: Joinpoint) {
-        this.#$jp = $jp;
+    constructor(jpCode: string, description: string | undefined, $line: number) {
+        this.#jpCode = jpCode;
         this.#description = description;
-        this.#line_ref = $line_ref;
+        this.#line = $line;
     }
 
     toString(linePaddingSize: number) {
-        const lineNum = (this.#line_ref.line?.toString() ?? "?").padStart(
+        const lineNum = (this.#line.toString() ?? "?").padStart(
             linePaddingSize,
             " ",
         );
 
-        let error = ` ${lineNum} |\t${this.#$jp.code}\n`;
+        let error = ` ${lineNum} |\t${this.#jpCode}\n`;
         if (this.#description !== undefined) {
             error += ` ${" ".repeat(linePaddingSize)} |\t\t${this.#description}\n`;
         }
@@ -48,7 +48,22 @@ export default class ErrorMessageBuilder {
             $line_ref = $jp;
         }
         this.#lines.push($line_ref.line ?? 1);
-        this.#body.push(new CodeLineHint($jp, description, $line_ref));
+        
+        while (!($jp instanceof Statement)) {
+            $jp = $jp.parent;
+        }
+
+        this.#body.push(new CodeLineHint($jp.code, description, $line_ref.line));
+        return this;
+    }
+
+    codeString(
+        jpCode: string,
+        description: string | undefined = undefined,
+        line: number,
+    ) {
+        this.#lines.push(line);
+        this.#body.push(new CodeLineHint(jpCode, description, line));
         return this;
     }
 
