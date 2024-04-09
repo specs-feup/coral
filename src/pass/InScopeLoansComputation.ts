@@ -5,43 +5,55 @@ import { Joinpoint } from "clava-js/api/Joinpoints.js";
 
 import Loan from "coral/mir/Loan";
 import Access from "coral/mir/Access";
+import { GraphTransformation } from "clava-flow/graph/Graph";
+import CoralGraph from "coral/graph/CoralGraph";
+import BaseGraph from "clava-flow/graph/BaseGraph";
+import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
+import FlowNode from "clava-flow/flow/node/FlowNode";
+import CoralNode from "coral/graph/CoralNode";
 
-export default class InScopeLoansComputation extends Pass {
-    protected override _name: string = this.constructor.name;
-    startNode: cytoscape.NodeSingular;
 
-    constructor(startNode: cytoscape.NodeSingular) {
-        super();
-        this.startNode = startNode;
+export default class InScopeLoansComputation implements GraphTransformation {
+    apply(graph: BaseGraph.Class): void {
+        if (!graph.is(CoralGraph.TypeGuard)) {
+            throw new Error("InScopeLoansComputation can only be applied to CoralGraphs");
+        }
+
+        const coralGraph = graph.as(CoralGraph.Class);
+
+        for (const functionEntry of coralGraph.functions) {
+            this.#processFunction(functionEntry);
+        }
     }
 
-    override _apply_impl($jp: Joinpoint): PassResult {
-        this.#worklistDataflow(this.startNode);
-
-        return new PassResult(this, $jp);
-    }
-
-    #worklistDataflow(root: cytoscape.NodeSingular) {
+    #processFunction(functionEntry: FunctionEntryNode.Class) {
         // Worklist is FIFO Queue
-        const worklist = Array.from(root.cy().nodes());
-        const worklistSet = new Set(worklist);
+        const worklist = new Set(functionEntry.reachableNodes);
 
-        while (worklist.length > 0) {
-            const node = worklist.shift() as cytoscape.NodeSingular;
-            worklistSet.delete(node);
+        while (worklist.size > 0) {
+            const node = worklist.values().next().value as FlowNode.Class;
+            worklist.delete(node);
+
+            if (!node.is(CoralNode.TypeGuard)) {
+                throw new Error("InScopeLoansComputation: node is not a CoralNode");
+            }
+
+            const coralNode = node.as(CoralNode.Class);
 
             const inSet: Set<Loan> = new Set();
 
             // Union of all incoming edges
-            for (const inNode of node.incomers().nodes()) {
-                const inScratch = inNode.scratch("_coral");
-                const inner: Set<Loan> = new Set(inScratch.inScopeLoans);
+            for (const inNode of node.previousNodes) {
+                if (!inNode.is(CoralNode.TypeGuard)) {
+                    throw new Error("InScopeLoansComputation: node is not a CoralNode");
+                }
+                const inCoralNode = inNode.as(CoralNode.Class);
+                const inner: Set<Loan> = new Set(inCoralNode.inScopeLoans);
 
                 // Kills from assignment paths
-                const assignments = (inScratch.accesses as Access[]).filter((a) => a.mutability === Access.Mutability.WRITE);
-                for (const assignment of assignments) {
+                for (const assignment of inCoralNode.assignments) {
                     const prefixes = assignment.path.prefixes;
-                    for (const loan of inScratch.inScopeLoans) {
+                    for (const loan of inCoralNode.inScopeLoans) {
                         if (prefixes.some((prefix) => loan.loanedPath.equals(prefix))) {
                             inner.delete(loan);
                         }
@@ -49,8 +61,8 @@ export default class InScopeLoansComputation extends Pass {
                 }
 
                 // Gen from new loan
-                if (inScratch.loan) {
-                    inner.add(inScratch.loan);
+                if (inCoralNode.loan) {
+                    inner.add(inCoralNode.loan);
                 }
 
                 // Union of all incoming edges
@@ -62,7 +74,7 @@ export default class InScopeLoansComputation extends Pass {
             // Kills from loans going out of scope in current node (?)
             const toKill: Set<Loan> = new Set();
             for (const loan of inSet) {
-                if (!loan.regionVar.points.has(node.id())) {
+                if (!loan.regionVar.points.has(node.id)) {
                     toKill.add(loan);
                 }
             }
@@ -72,10 +84,10 @@ export default class InScopeLoansComputation extends Pass {
 
             // Compare for changes
             let changed = false;
-            if (node.scratch("_coral").inScopeLoans.size !== inSet.size) {
+            if (coralNode.inScopeLoans.size !== inSet.size) {
                 changed = true;
             } else {
-                for (const loan of node.scratch("_coral").inScopeLoans) {
+                for (const loan of coralNode.inScopeLoans) {
                     if (!inSet.has(loan)) {
                         changed = true;
                         break;
@@ -85,18 +97,18 @@ export default class InScopeLoansComputation extends Pass {
 
             // Update real values and add successors to worklist
             if (changed) {
-                node.scratch("_coral").inScopeLoans = inSet;
-                for (const out of node.outgoers().nodes()) {
-                    if (!worklistSet.has(out)) {
-                        worklist.push(out);
-                        worklistSet.add(out);
+                coralNode.inScopeLoans = inSet;
+                for (const out of node.nextNodes) {
+                    if (!worklist.has(out)) {
+                        worklist.add(out);
                     }
                 }
             }
         }
     }
 
-    static _inScopeLoansTransferFn = (node: cytoscape.NodeSingular) => {
+    // TODO why does this exist?
+    static #inScopeLoansTransferFn = (node: cytoscape.NodeSingular) => {
         const scratch = node.scratch("_coral");
         const toAdd: Set<Loan> = new Set();
         const toKill: Set<Loan> = new Set();
@@ -122,7 +134,9 @@ export default class InScopeLoansComputation extends Pass {
         }
 
         // Check assignment paths
-        const assignments = (scratch.accesses as Access[]).filter((a) => a.mutability === Access.Mutability.WRITE);
+        const assignments = (scratch.accesses as Access[]).filter(
+            (a) => a.mutability === Access.Mutability.WRITE,
+        );
         for (const assignment of assignments) {
             const prefixes = assignment.path.prefixes;
             for (const loan of inScopeLoans) {

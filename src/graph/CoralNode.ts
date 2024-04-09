@@ -25,8 +25,16 @@ namespace CoralNode {
             return this.scratchData.coral.accesses;
         }
 
+        get assignments(): Access[] {
+            return this.scratchData.coral.accesses.filter((access) => access.mutability === Access.Mutability.WRITE);
+        }
+
         get inScopeLoans(): Set<Loan> {
             return this.scratchData.coral.inScopeLoans;
+        }
+
+        set inScopeLoans(loans: Set<Loan>) {
+            this.scratchData.coral.inScopeLoans = loans;
         }
 
         get varsEnteringScope(): Vardecl[] {
@@ -108,6 +116,8 @@ namespace CoralNode {
             if (!BaseNode.TypeGuard.isScratchDataCompatible(scratchData)) return false;
             if (!LivenessNode.TypeGuard.isScratchDataCompatible(scratchData)) return false;
             if (!scratchData.$jp) return false;
+            const sData = scratchData as ScratchData;
+            if (!sData.coral) return false;
             return true;
         },
     };

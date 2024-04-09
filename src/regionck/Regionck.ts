@@ -4,15 +4,14 @@ import OutlivesConstraint from "coral/regionck/OutlivesConstraint";
 import RegionVariable from "coral/regionck/RegionVariable";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
 
-
 export default class Regionck {
     functionEntry: FunctionEntryNode.Class;
-    #constraints: OutlivesConstraint[];
+    constraints: OutlivesConstraint[];
     #regionVars: RegionVariable[];
     #symbolTable: Map<string, Ty>;
 
     constructor(functionEntry: FunctionEntryNode.Class) {
-        this.#constraints = [];
+        this.constraints = [];
         this.#regionVars = [];
         this.#symbolTable = new Map();
         this.functionEntry = functionEntry;
@@ -31,71 +30,28 @@ export default class Regionck {
         const regionVar = new RegionVariable(
             id.toString(),
             kind,
-            name? name : id.toString(),
+            name ? name : id.toString(),
         );
         this.#regionVars.push(regionVar);
         return regionVar;
     }
 
-    // prepare(debug: boolean): Regionck {
-    //     this.#buildConstraints();
-    //     if (debug) {
-    //         console.log("Initial Constraint Set:");
-    //         console.log(this.aggregateRegionckInfo() + "\n\n");
-    //     }
-    //     this.#infer();
-    //     this.#calculateInScopeLoans();
-    //     if (debug) {
-    //         console.log("After Inference:");
-    //         console.log(this.aggregateRegionckInfo() + "\n\n");
-    //     }
-    //     return this;
-    // }
+    get universalRegionVars(): RegionVariable[] {
+        return this.#regionVars.filter((r) => r.kind === RegionVariable.Kind.UNIVERSAL);
+    }
 
-    // #buildConstraints(): Regionck {
-    //     const constraintGenerator = new ConstraintGenerator(this);
-    //     constraintGenerator.apply(this.$function);
+    debugInfo(): string {
+        let result = "\t|Regions:\n";
+        for (const region of this.#regionVars) {
+            const points = Array.from(region.points).sort();
+            result += `\t|\t'${region.name}: {${points.join(", ")}}\n`;
+        }
 
-    //     return this;
-    // }
+        result += "\nConstraints:\n";
+        for (const constraint of this.constraints) {
+            result += `\t|\t${constraint.toString()}\n`;
+        }
 
-    // #infer(): Regionck {
-    //     let changed = true;
-    //     while (changed) {
-    //         changed = false;
-
-    //         for (const constraint of this.constraints) {
-    //             changed ||= constraint.apply(this);
-    //         }
-    //     }
-
-    //     return this;
-    // }
-
-    // #calculateInScopeLoans() {
-    //     const inScopeComputation = new InScopeLoansComputation(this.cfg.startNode);
-    //     inScopeComputation.apply(this.$function);
-    // }
-
-    // borrowCheck(): Regionck {
-    //     const errorReporting = new RegionckErrorReporting(this.cfg.startNode);
-    //     errorReporting.apply(this.$function);
-
-    //     return this;
-    // }
-
-    // aggregateRegionckInfo(): string {
-    //     let result = "Regions:\n";
-    //     for (const region of this.regions) {
-    //         const points = Array.from(region.points).sort();
-    //         result += `\t'${region.name}: {${points.join(", ")}}\n`;
-    //     }
-
-    //     result += "\nConstraints:\n";
-    //     for (const constraint of this.constraints) {
-    //         result += `\t${constraint.toString()}\n`;
-    //     }
-
-    //     return result;
-    // }
+        return result + "\n\n";
+    }
 }

@@ -70,18 +70,15 @@ export default class CoralPipeline {
                 ),
             )
             .apply(new GraphAnnotator())
-            // .apply(new ConstraintGenerator())
-            // .apply(new InScopeLoansComputation())
-            // .apply(new RegionckErrorReporting())
+            .apply(new ConstraintGenerator(this.#debug))
+            .apply(new InScopeLoansComputation())
+            .apply(new RegionckErrorReporting())
             ;
 
         if (this.#mirDotFile) {
             graph.toDotFile(new CoralDotFormatter(), this.#mirDotFile);
         }
     }
-
-    // const regionck = new Regionck($jp).prepare(this.#debug);
-    // regionck.borrowCheck();
 }
 
 // class LivenessDotFormatter extends DotFormatter {

@@ -21,7 +21,7 @@ class Access {
     }
 
     toString(): string {
-        return `${this.depth} ${this.mutability} of ${this.path.toString()}`;
+        return `${this.path.toString()}, ${this.mutability}, ${this.depth}`;
     }
 }
 
@@ -31,6 +31,7 @@ namespace Access {
         WRITE = "write",
         BORROW = "borrow",
         MUTABLE_BORROW = "mutable borrow",
+        STORAGE_DEAD = "storage dead",
     }
 
     export namespace Mutability {

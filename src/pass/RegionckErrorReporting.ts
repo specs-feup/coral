@@ -11,147 +11,101 @@ import BorrowKind from "coral/mir/ty/BorrowKind";
 import { Joinpoint } from "clava-js/api/Joinpoints.js";
 import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
 import MutableBorrowWhileBorrowedError from "coral/error/borrow/MutableBorrowWhileBorrowedError";
+import { GraphTransformation } from "clava-flow/graph/Graph";
+import BaseGraph from "clava-flow/graph/BaseGraph";
+import CoralGraph from "coral/graph/CoralGraph";
+import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
+import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
+import CoralNode from "coral/graph/CoralNode";
 
-export default class RegionckErrorReporting extends Pass {
-    protected override _name: string = this.constructor.name;
-
-    startNode: cytoscape.NodeSingular;
-
-    constructor(startNode: cytoscape.NodeSingular) {
-        super();
-        this.startNode = startNode;
-    }
-
-    override _apply_impl($jp: Joinpoint): PassResult {
-        DfsVisitor.visit(this.startNode, RegionckErrorReporting._errorReportingVisitorFn);
-
-        return new PassResult(this, $jp);
-    }
-
-    static _errorReportingVisitorFn = (node: cytoscape.NodeSingular) => {
-        for (const access of node.scratch("_coral").accesses) {
-            RegionckErrorReporting._access_legal(node, access);
+    
+export default class RegionckErrorReporting implements GraphTransformation {
+    apply(graph: BaseGraph.Class): void {
+        if (!graph.is(CoralGraph.TypeGuard)) {
+            throw new Error("RegionckErrorReporting can only be applied to CoralGraphs");
         }
 
-        // Returns that no changes were made
-        return false;
-    };
+        const coralGraph = graph.as(CoralGraph.Class);
 
-    static _access_legal = (node: cytoscape.NodeSingular, access: Access): boolean => {
-        for (const loan of RegionckErrorReporting._relevantLoans(
-            node.scratch("_coral"),
-            access,
-        )) {
-            if (loan.borrowKind === BorrowKind.MUTABLE) {
-                const $nextUse = this._findNextUse(node, loan);
-                throw new UseWhileMutBorrowedError(
-                    node.data().stmts[0],
-                    loan,
-                    $nextUse,
-                    access,
+        for (const functionEntry of coralGraph.functions) {
+            this.#processFunction(functionEntry);
+        }
+    }
+
+    #processFunction(functionEntry: FunctionEntryNode.Class) {
+        for (const node of functionEntry.reachableNodes) {
+            if (!node.is(CoralNode.TypeGuard)) {
+                continue;
+            }
+
+            const coralNode = node.as(CoralNode.Class);
+            for (const access of coralNode.accesses) {
+                for (const loan of this.#relevantLoans(coralNode, access)) {
+                    this.#checkAccess(coralNode, access, loan);
+                }
+            }
+        }
+    }
+
+    #relevantLoans(node: CoralNode.Class, access: Access): Loan[] {
+        switch (access.depth) {
+            case Access.Depth.SHALLOW:
+                return Array.from(node.inScopeLoans).filter(
+                    (loan) =>
+                        access.path.equals(loan.loanedPath) ||
+                        access.path.prefixes.some((prefix) =>
+                            prefix.equals(loan.loanedPath),
+                        ) ||
+                        loan.loanedPath.shallowPrefixes.some((prefix) =>
+                            prefix.equals(access.path),
+                        ),
                 );
-            } else if (access.mutability === Access.Mutability.WRITE) {
-                const $nextUse = this._findNextUse(node, loan);
-                throw new MutateWhileBorrowedError(
-                    node.data().stmts[0],
-                    loan,
-                    $nextUse,
-                    access,
+            case Access.Depth.DEEP:
+                return Array.from(node.inScopeLoans).filter(
+                    (loan) =>
+                        access.path.equals(loan.loanedPath) ||
+                        access.path.prefixes.some((prefix) =>
+                            prefix.equals(loan.loanedPath),
+                        ) ||
+                        loan.loanedPath.supportingPrefixes.some((prefix) =>
+                            prefix.equals(access.path),
+                        ),
                 );
-            } else if (access.mutability === Access.Mutability.MUTABLE_BORROW) {
-                const $nextUse = this._findNextUse(node, loan);
-                throw new MutableBorrowWhileBorrowedError(
-                    node.data().stmts[0],
-                    loan,
-                    $nextUse,
-                    access,
-                );
-            } else if (access.isMove) {
-                const $nextUse = this._findNextUse(node, loan);
-                throw new MoveWhileBorrowedError(
-                    node.data().stmts[0],
-                    loan,
-                    $nextUse,
-                    access,
-                );
+        }
+    }
+
+    #checkAccess(node: CoralNode.Class, access: Access, loan: Loan) {
+        if (loan.borrowKind === BorrowKind.MUTABLE) {
+            const $nextUse = this.#findNextUse(node, loan);
+            throw new UseWhileMutBorrowedError(node.jp, loan, $nextUse, access);
+        } else if (access.mutability === Access.Mutability.WRITE) {
+            const $nextUse = this.#findNextUse(node, loan);
+            throw new MutateWhileBorrowedError(node.jp, loan, $nextUse, access);
+        } else if (access.mutability === Access.Mutability.MUTABLE_BORROW) {
+            const $nextUse = this.#findNextUse(node, loan);
+            throw new MutableBorrowWhileBorrowedError(node.jp, loan, $nextUse, access);
+        } else if (access.mutability === Access.Mutability.STORAGE_DEAD) {
+            // TODO
+        } else if (access.isMove) {
+            const $nextUse = this.#findNextUse(node, loan);
+            throw new MoveWhileBorrowedError(node.jp, loan, $nextUse, access);
+        }
+    }
+
+    #findNextUse(node: CoralNode.Class, loan: Loan): Joinpoint {
+        for (const [vNode, path] of node.bfs((e) => e.is(ControlFlowEdge.TypeGuard))) {
+            if (path.length == 0) continue;
+            const previousNode = path[path.length - 1].source;
+            if (
+                loan.regionVar.points.has(previousNode.id)
+                && !loan.regionVar.points.has(vNode.id)
+            ) {
+                if (previousNode.is(CoralNode.TypeGuard)) {
+                    return previousNode.as(CoralNode.Class).jp;
+                }
             }
         }
 
-        // Returns that no changes were made
-        return false;
-    };
-
-    static _findNextUse = (node: cytoscape.NodeSingular, loan: Loan): Joinpoint => {
-        // Calculate a possible next use
-        const dfsResult = node
-            .cy()
-            .elements()
-            .dfs({
-                root: node,
-                visit: (
-                    v: cytoscape.NodeSingular,
-                    e: cytoscape.EdgeSingular | undefined,
-                    u: cytoscape.NodeSingular | undefined,
-                    i: number,
-                    depth: number,
-                ) => {
-                    if (depth == 0) return;
-
-                    if (
-                        u !== undefined &&
-                        loan.regionVar.points.has(u.id()) &&
-                        !loan.regionVar.points.has(v.id())
-                    ) {
-                        return true;
-                    }
-                },
-                directed: true,
-            });
-        if (dfsResult.found === undefined) {
-            throw new Error("_findNextUse: Could not find next use");
-        }
-
-        const nextUse = (
-            dfsResult.path[dfsResult.path.length - 2] as cytoscape.EdgeSingular
-        ).source();
-
-        switch (nextUse.data().type) {
-            case CfgNodeType.INST_LIST:
-                return nextUse.data().stmts[0];
-            case CfgNodeType.IF:
-            case CfgNodeType.RETURN:
-            case CfgNodeType.LOOP:
-            case CfgNodeType.COND:
-                return nextUse.data().nodeStmt;
-            default:
-                throw new Error(`_findNextUse: Unknown node type ${nextUse.data().type}`);
-        }
-    };
-
-    static _relevantLoans = (scratch: cytoscape.Scratchpad, access: Access): Loan[] => {
-        switch (access.depth) {
-            case Access.Depth.SHALLOW:
-                return Array.from(scratch.inScopeLoans as Loan[]).filter(
-                    (loan) =>
-                        access.path.equals(loan.loanedPath) ||
-                        access.path
-                            .prefixes
-                            .some((prefix) => prefix.equals(loan.loanedPath)) ||
-                        loan.loanedPath
-                            .shallowPrefixes
-                            .some((prefix) => prefix.equals(access.path)),
-                );
-            case Access.Depth.DEEP:
-                return Array.from(scratch.inScopeLoans as Loan[]).filter(
-                    (loan) =>
-                        access.path.equals(loan.loanedPath) ||
-                        access.path
-                            .prefixes
-                            .some((prefix) => prefix.equals(loan.loanedPath)) ||
-                        loan.loanedPath
-                            .supportingPrefixes
-                            .some((prefix) => prefix.equals(access.path)),
-                );
-        }
-    };
+        throw new Error("findNextUse: Could not find next use");
+    }
 }

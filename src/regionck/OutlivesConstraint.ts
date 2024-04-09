@@ -21,7 +21,9 @@ export default class OutlivesConstraint {
         return `${this.sup.name}: ${this.sub.name} @ ${this.node.id}`;
     }
 
-    apply() {
+    apply(): boolean {
+        let changed = false;
+
         const nodes = this.node.bfs(
             (edge) => edge.is(ControlFlowEdge.TypeGuard)
                 && this.sub.points.has(edge.target.id)
@@ -33,6 +35,9 @@ export default class OutlivesConstraint {
                 continue;
             }
             this.sup.points.add(node.id);
+            changed = true;
         }
+
+        return changed;
     }
 }

@@ -6,10 +6,12 @@ import ScopeEndNode from "clava-flow/flow/node/instruction/ScopeEndNode";
 import ScopeStartNode from "clava-flow/flow/node/instruction/ScopeStartNode";
 import SwitchNode from "clava-flow/flow/node/instruction/SwitchNode";
 import VarDeclarationNode from "clava-flow/flow/node/instruction/VarDeclarationNode";
+import LivenessNode from "clava-flow/flow/transformation/liveness/LivenessNode";
 import BaseGraph from "clava-flow/graph/BaseGraph";
 import { GraphTransformation } from "clava-flow/graph/Graph";
 import {
     BinaryOp,
+    Body,
     BuiltinType,
     Call,
     ElaboratedType,
@@ -59,20 +61,21 @@ export default class GraphAnnotator implements GraphTransformation {
         const coralGraph = graph.as(CoralGraph.Class);
 
         for (const functionEntry of coralGraph.functions) {
+            this.#regionck = coralGraph.getRegionck(functionEntry);
             this.#annotateFunction(functionEntry);
         }
     }
 
     #annotateFunction(functionEntry: FunctionEntryNode.Class) {
-        this.#regionck = new Regionck(functionEntry);
-        this.#regionck.newRegionVar(RegionVariable.Kind.UNIVERSAL, "static");
+        // TODO is static only inside function or should it be the same in every function?
+        this.#regionck!.newRegionVar(RegionVariable.Kind.UNIVERSAL, "static");
 
         for (const node of functionEntry.reachableNodes) {
-            if (!node.is(CoralNode.TypeGuard)) {
+            if (!node.is(LivenessNode.TypeGuard)) {
                 continue;
             }
 
-            const coralNode = node.as(CoralNode.Class);
+            const coralNode = node.init(new CoralNode.Builder).as(CoralNode.Class);
 
             if (node.is(ScopeStartNode.TypeGuard)) {
                 const scopeStartNode = node.as(ScopeStartNode.Class);
@@ -109,7 +112,10 @@ export default class GraphAnnotator implements GraphTransformation {
         const vars = [];
         for (const $jp of Query.searchFrom($scope, "vardecl")) {
             const $vardecl = $jp as Vardecl;
-            if ($vardecl.currentRegion.astId !== $scope.astId) {
+
+            const $scopeId = $scope instanceof Body ? $scope.owner.astId : $scope.astId;
+
+            if ($vardecl.currentRegion.astId !== $scopeId) {
                 continue;
             }
             vars.push($vardecl);
@@ -125,6 +131,19 @@ export default class GraphAnnotator implements GraphTransformation {
         if (type === "start") {
             node.varsEnteringScope = vars;
         } else {
+            for (const $vardecl of vars) {
+                const ty = this.#regionck!.getTy($vardecl);
+                if (ty === undefined) {
+                    throw new Error("Variable " + $vardecl.name + " not found");
+                }
+                node.accesses.push(
+                    new Access(
+                        new PathVarRef($vardecl, ty),
+                        Access.Mutability.STORAGE_DEAD,
+                        Access.Depth.SHALLOW,
+                    ),
+                );
+            }
             node.varsLeavingScope = vars;
         }
     }

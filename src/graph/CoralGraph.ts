@@ -19,7 +19,14 @@ namespace CoralGraph {
         D extends Data = Data,
         S extends ScratchData = ScratchData,
     > extends FlowGraph.Class<D, S> {
-        
+        getRegionck(functionEntry: FunctionEntryNode.Class): Regionck {
+            let regionck = this.scratchData.coral.functions.get(functionEntry.jp.name);
+            if (regionck === undefined) {
+                regionck = new Regionck(functionEntry);
+                this.scratchData.coral.functions.set(functionEntry.jp.name, regionck);
+            }
+            return regionck;
+        }
     }
 
     export class Builder
