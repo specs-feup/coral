@@ -101,7 +101,6 @@ export default class GraphAnnotator implements GraphTransformation {
                 if ($jp instanceof If) {
                     this.#annotateExpr(coralNode, $jp.cond);
                 } else if ($jp instanceof Loop) {
-                    // TODO check if this is correct (at least for while loops)
                     this.#annotateExpr(coralNode, ($jp.cond as ExprStmt).expr);
                 }
             }
@@ -112,10 +111,12 @@ export default class GraphAnnotator implements GraphTransformation {
         const vars = [];
         for (const $jp of Query.searchFrom($scope, "vardecl")) {
             const $vardecl = $jp as Vardecl;
+            let $vardeclScope = $vardecl.parent;
+            while (!($vardeclScope instanceof Scope)) {
+                $vardeclScope = $vardeclScope.parent;
+            }
 
-            const $scopeId = $scope instanceof Body ? $scope.owner.astId : $scope.astId;
-
-            if ($vardecl.currentRegion.astId !== $scopeId) {
+            if ($vardeclScope.astId !== $scope.astId) {
                 continue;
             }
             vars.push($vardecl);
