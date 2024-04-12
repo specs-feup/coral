@@ -34,4 +34,11 @@ export default class PathVarRef extends Path {
     override get supportingPrefixes(): Path[] {
         return [this];
     }
+
+    get $vardecl(): Vardecl {
+        if (this.$jp instanceof Vardecl) {
+            return this.$jp;
+        }
+        return this.$jp.vardecl;
+    }
 }

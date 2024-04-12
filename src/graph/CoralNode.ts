@@ -7,6 +7,7 @@ import { NodeBuilder, NodeTypeGuard } from "clava-flow/graph/Node";
 import { Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
 import Access from "coral/mir/Access";
 import Loan from "coral/mir/Loan";
+import MoveTable from "coral/mir/MoveTable";
 
 namespace CoralNode {
     export class Class<
@@ -61,6 +62,14 @@ namespace CoralNode {
             this.scratchData.coral.loan = loan;
         }
 
+        get moveTable(): MoveTable {
+            return this.scratchData.coral.moveTable;
+        }
+
+        set moveTable(moveTable: MoveTable) {
+            this.scratchData.coral.moveTable = moveTable;
+        }
+
         override get jp(): Joinpoint {
             return this.scratchData.$jp;
         }
@@ -98,6 +107,7 @@ namespace CoralNode {
                     accesses: [],
                     varsEnteringScope: [],
                     varsLeavingScope: [],
+                    moveTable: new MoveTable(),
                 }
             };
         }
@@ -131,6 +141,7 @@ namespace CoralNode {
             varsEnteringScope: Vardecl[];
             varsLeavingScope: Vardecl[];
             loan?: Loan;
+            moveTable: MoveTable;
         };
         $jp: Joinpoint;
     }

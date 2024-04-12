@@ -19,6 +19,7 @@ import GraphAnnotator from "coral/pass/GraphAnnotator";
 import ConstraintGenerator from "coral/pass/ConstraintGenerator";
 import InScopeLoansComputation from "coral/pass/InScopeLoansComputation";
 import RegionckErrorReporting from "coral/pass/RegionckErrorReporting";
+import MoveAnalyser from "coral/pass/MoveAnalyser";
 
 export default class CoralPipeline {
     #debug: boolean;
@@ -73,6 +74,7 @@ export default class CoralPipeline {
             .apply(new ConstraintGenerator(this.#debug))
             .apply(new InScopeLoansComputation())
             .apply(new RegionckErrorReporting())
+            .apply(new MoveAnalyser())
             ;
 
         if (this.#mirDotFile) {

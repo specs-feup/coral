@@ -1,4 +1,4 @@
-#pragma coral_test expect DroppedWhileBorrowedError
+#pragma coral_test expect DanglingReferenceError
 
 int main() {
     const int *ref1;

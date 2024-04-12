@@ -165,6 +165,8 @@ export default class GraphAnnotator implements GraphTransformation {
         // }
 
         if ($vardecl.hasInit) {
+            this.#annotateExpr(node, $vardecl.init);
+            
             node.accesses.push(
                 new Access(
                     new PathVarRef($vardecl, ty),
@@ -172,8 +174,6 @@ export default class GraphAnnotator implements GraphTransformation {
                     Access.Depth.SHALLOW,
                 ),
             );
-
-            this.#annotateExpr(node, $vardecl.init);
         }
     }
 
@@ -206,15 +206,15 @@ export default class GraphAnnotator implements GraphTransformation {
 
     #annotateBinaryOp(node: CoralNode.Class, $binaryOp: BinaryOp) {
         if ($binaryOp.isAssignment) {
+            this.#annotateExpr(node, $binaryOp.right);
             const path = this.#parseLvalue($binaryOp.left);
             node.accesses.push(
                 new Access(path, Access.Mutability.WRITE, Access.Depth.SHALLOW),
             );
         } else {
             this.#annotateExpr(node, $binaryOp.left);
+            this.#annotateExpr(node, $binaryOp.right);
         }
-
-        this.#annotateExpr(node, $binaryOp.right);
     }
 
     #annotateUnaryOp(node: CoralNode.Class, $unaryOp: UnaryOp) {

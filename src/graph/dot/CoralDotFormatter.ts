@@ -22,6 +22,7 @@ import GotoLabelNode from "clava-flow/flow/node/instruction/GotoLabelNode";
 import GotoNode from "clava-flow/flow/node/instruction/GotoNode";
 import CoralNode from "coral/graph/CoralNode";
 import { Case, If, Loop } from "clava-js/api/Joinpoints.js";
+import MoveTable from "coral/mir/MoveTable";
 
 export default class CoralDotFormatter extends DotFormatter {
     override formatNode(node: BaseNode.Class): DotFormatter.Node {
@@ -125,6 +126,17 @@ export default class CoralDotFormatter extends DotFormatter {
             for (const access of coralNode.accesses) {
                 label += `\nAccess(${access.toString()})`;
             }
+
+            label += `\n---`;
+            const states: [string, MoveTable.State][] = [["uninit", MoveTable.State.UNINIT], ["valid", MoveTable.State.VALID], ["moved", MoveTable.State.MOVED], ["maybe u.", MoveTable.State.MAYBE_UNINIT], ["maybe m.", MoveTable.State.MAYBE_MOVED]] ;
+            for (const [l, state] of states) {
+                const vars = coralNode.moveTable.getVars(state).map((v) => v.name);
+                if (vars.length > 0) {
+                    label += `\n${l} {${vars.join(", ")}}`;
+                }
+                
+            }
+
         }
 
         
