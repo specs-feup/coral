@@ -130,7 +130,7 @@ export default class CoralDotFormatter extends DotFormatter {
             label += `\n---`;
             const states: [string, MoveTable.State][] = [["uninit", MoveTable.State.UNINIT], ["valid", MoveTable.State.VALID], ["moved", MoveTable.State.MOVED], ["maybe u.", MoveTable.State.MAYBE_UNINIT], ["maybe m.", MoveTable.State.MAYBE_MOVED]] ;
             for (const [l, state] of states) {
-                const vars = coralNode.moveTable.getVars(state).map((v) => v.name);
+                const vars = coralNode.moveTable.getVars(state).filter(v => v).map((v) => v.name);
                 if (vars.length > 0) {
                     label += `\n${l} {${vars.join(", ")}}`;
                 }

@@ -45,9 +45,8 @@ export default class MoveAnalyser implements GraphTransformation {
                                 if (!n.is(CoralNode.TypeGuard)) {
                                     throw new Error("Expected node to be a CoralNode.");
                                 }
-                                return n.as(CoralNode.Class);
-                            })
-                            .map((n) => n.moveTable),
+                                return n.as(CoralNode.Class).moveTable;
+                            }),
                     );
                 }
 

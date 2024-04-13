@@ -34,7 +34,7 @@ export default class PathDeref extends Path {
     }
 
     override toString(): string {
-        return `(*${this.inner.toString()})`;
+        return `*${this.inner.toString()}`;
     }
 
     override equals(other: Path): boolean {

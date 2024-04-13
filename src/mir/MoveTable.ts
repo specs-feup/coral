@@ -1,5 +1,7 @@
-import { Vardecl } from "clava-js/api/Joinpoints.js";
-import CoralError from "coral/error/CoralError";
+import { Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
+import MoveBehindReferenceError from "coral/error/move/MoveBehindReferenceError";
+import UseBeforeInitError from "coral/error/move/UseBeforeInitError";
+import UseWhileMovedError from "coral/error/move/UseWhileMovedError";
 import Access from "coral/mir/Access";
 import Path from "coral/mir/path/Path";
 import PathDeref from "coral/mir/path/PathDeref";
@@ -8,10 +10,13 @@ import PathVarRef from "coral/mir/path/PathVarRef";
 class MoveTable {
     #states: Map<string, MoveTable.State>;
     #vardecls: Map<string, Vardecl>;
+    // Used to remember location of move in case of error
+    #exampleMoveAccess: Map<string, Joinpoint>;
 
     constructor() {
         this.#states = new Map();
         this.#vardecls = new Map();
+        this.#exampleMoveAccess = new Map();
     }
 
     get($vardecl: Vardecl): MoveTable.State {
@@ -52,10 +57,12 @@ class MoveTable {
                     if (state === MoveTable.State.VALID) {
                         if (access.isMove) {
                             this.#states.set(path.$vardecl.astId, MoveTable.State.MOVED);
+                            this.#exampleMoveAccess.set(path.$vardecl.astId, path.$jp);
                         }
-                    } else {
-                        // TODO ERROR
-                        throw new CoralError("TODO ERROR FOR THIS");
+                    } else if (state === MoveTable.State.MOVED || state === MoveTable.State.MAYBE_MOVED) {
+                        throw new UseWhileMovedError(path.$jp, path.$vardecl, access, this.#exampleMoveAccess.get(path.$vardecl.astId)!);
+                    } else if (state === MoveTable.State.UNINIT || state === MoveTable.State.MAYBE_UNINIT) {
+                        throw new UseBeforeInitError(path.$jp, path.$vardecl, access);
                     }
                     break;
                 }
@@ -67,26 +74,25 @@ class MoveTable {
                     break;
             }
         } else if (path instanceof PathDeref) {
-            const state = this.#pathToState(path);
-            if (state !== MoveTable.State.VALID) {
-                // TODO ERROR
-                throw new CoralError("TODO ERROR FOR THIS");
+            const $vardecl = this.#pathToVardecl(path);
+            const state = this.get($vardecl);
+            if (state === MoveTable.State.UNINIT || state === MoveTable.State.MAYBE_UNINIT) {
+                throw new UseBeforeInitError(path.$jp, $vardecl, access);
             }
             
             if (access.isMove) {
-                // TODO ERROR
-                throw new CoralError("TODO ERROR FOR THIS");
+                throw new MoveBehindReferenceError(path.$jp, $vardecl, access);
             }
         } else {
             throw new Error("Unsupported path type");
         }
     }
 
-    #pathToState(path: Path): MoveTable.State {
+    #pathToVardecl(path: Path): Vardecl {
         if (path instanceof PathVarRef) {
-            return this.get(path.$vardecl);
+            return path.$vardecl;
         } else if (path instanceof PathDeref) {
-            return this.#pathToState(path.inner);
+            return this.#pathToVardecl(path.inner);
         } else {
             throw new Error("Unsupported path type");
         }
@@ -114,6 +120,9 @@ class MoveTable {
                 if (currentValue === undefined) {
                     result.#states.set(key, value);
                     result.#vardecls.set(key, table.#vardecls.get(key)!);
+                    if (value === MoveTable.State.MOVED || value === MoveTable.State.MAYBE_MOVED) {
+                        result.#exampleMoveAccess.set(key, table.#exampleMoveAccess.get(key)!);
+                    }
                     continue;
                 }
 
@@ -137,6 +146,9 @@ class MoveTable {
                         result.#states.set(key, MoveTable.State.MAYBE_UNINIT);
                     } else {
                         result.#states.set(key, MoveTable.State.MAYBE_MOVED);
+                        if (value === MoveTable.State.MAYBE_MOVED) {
+                            result.#exampleMoveAccess.set(key, table.#exampleMoveAccess.get(key)!);
+                        }
                     }
                 } else if (
                     currentValue === MoveTable.State.UNINIT ||
@@ -152,6 +164,9 @@ class MoveTable {
                     }
                 } else {
                     result.#states.set(key, MoveTable.State.MAYBE_MOVED);
+                    if (value === MoveTable.State.MOVED) {
+                        result.#exampleMoveAccess.set(key, table.#exampleMoveAccess.get(key)!);
+                    }
                 }
             }
         }

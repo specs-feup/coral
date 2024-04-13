@@ -108,6 +108,8 @@ export default class GraphAnnotator implements GraphTransformation {
     }
 
     #annotateScope(node: CoralNode.Class, $scope: Scope, type: "start" | "end") {
+        console.log($scope.astId);
+        console.log($scope.code);
         const vars = [];
         for (const $jp of Query.searchFrom($scope, "vardecl")) {
             const $vardecl = $jp as Vardecl;
