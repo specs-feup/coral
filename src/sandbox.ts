@@ -5,7 +5,8 @@ import Query from "lara-js/api/weaver/Query.js";
 
 import CoralError from "coral/error/CoralError";
 import CoralPipeline from "coral/CoralPipeline";
-import { Vardecl, Varref } from "clava-js/api/Joinpoints.js";
+import { Joinpoint, Vardecl, Varref } from "clava-js/api/Joinpoints.js";
+import CoralPragma from "coral/pragma/CoralPragma";
 
 console.log(Query.root().dump);
 

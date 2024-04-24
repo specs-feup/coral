@@ -5,7 +5,7 @@ import PathDeref from "coral/mir/path/PathDeref";
 import Ty from "coral/mir/ty/Ty";
 import RefTy from "coral/mir/ty/RefTy";
 import BuiltinTy from "coral/mir/ty/BuiltinTy";
-import ElaboratedTy from "coral/mir/ty/ElaboratedTy";
+import StructTy from "coral/mir/ty/StructTy";
 import Variance from "coral/mir/ty/Variance";
 import BorrowKind from "coral/mir/ty/BorrowKind";
 import Loan from "coral/mir/Loan";
@@ -14,7 +14,6 @@ import BaseGraph from "clava-flow/graph/BaseGraph";
 import CoralGraph from "coral/graph/CoralGraph";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
 import CoralNode from "coral/graph/CoralNode";
-
 
 export default class ConstraintGenerator implements GraphTransformation {
     #regionck?: Regionck;
@@ -43,7 +42,9 @@ export default class ConstraintGenerator implements GraphTransformation {
             this.#inferConstraints();
 
             if (this.#debug) {
-                console.log(`Constraint Set for ${functionEntry.jp.name} after inference:`);
+                console.log(
+                    `Constraint Set for ${functionEntry.jp.name} after inference:`,
+                );
                 console.log(this.#regionck!.debugInfo());
             }
         }
@@ -141,7 +142,7 @@ export default class ConstraintGenerator implements GraphTransformation {
             return;
         }
 
-        if (ty1 instanceof ElaboratedTy && ty2 instanceof ElaboratedTy) {
+        if (ty1 instanceof StructTy && ty2 instanceof StructTy) {
             if (ty1.name != ty2.name) {
                 throw new Error(
                     `Cannot relate types ${ty1.toString()} and ${ty2.toString()}, different kinds or names`,
@@ -154,7 +155,7 @@ export default class ConstraintGenerator implements GraphTransformation {
             }
 
             for (let i = 0; i < ty1.regionVars.length; i++) {
-                // TODO: May need to be changed to go parameter by paramenter, which would require changes to the ElaboratedTy
+                // TODO: May need to be changed to go parameter by paramenter, which would require changes to the StructTy
                 this.#relateRegions(
                     ty1.regionVars[i],
                     ty2.regionVars[i],
@@ -200,7 +201,7 @@ export default class ConstraintGenerator implements GraphTransformation {
                 break;
         }
     }
-    
+
     #inferConstraints() {
         let changed = true;
         while (changed) {

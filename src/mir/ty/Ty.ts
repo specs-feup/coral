@@ -1,3 +1,4 @@
+import { Joinpoint } from "clava-js/api/Joinpoints.js";
 import RegionVariable from "coral/regionck/RegionVariable";
 
 abstract class Ty {
@@ -5,6 +6,7 @@ abstract class Ty {
     abstract get regionVars(): RegionVariable[];
     abstract get semantics(): Ty.Semantics;
     abstract get isConst(): boolean;
+    abstract get $jp(): Joinpoint;
 
     abstract equals(other: Ty): boolean;
     abstract toString(): string;

@@ -15,6 +15,7 @@ import {
     BuiltinType,
     Call,
     ElaboratedType,
+    EnumDecl,
     ExprStmt,
     Expression,
     FunctionJp,
@@ -24,9 +25,12 @@ import {
     MemberAccess,
     Param,
     ParenExpr,
+    ParenType,
     PointerType,
     QualType,
+    RecordJp,
     Scope,
+    TagType,
     Type,
     TypedefType,
     UnaryOp,
@@ -44,11 +48,21 @@ import PathVarRef from "coral/mir/path/PathVarRef";
 import BorrowKind from "coral/mir/ty/BorrowKind";
 import BuiltinTy from "coral/mir/ty/BuiltinTy";
 import RefTy from "coral/mir/ty/RefTy";
+import StructTy from "coral/mir/ty/StructTy";
 import Ty from "coral/mir/ty/Ty";
+import MetaRefTy from "coral/mir/ty/meta/MetaRefTy";
+import MetaTy from "coral/mir/ty/meta/MetaTy";
+import CoralPragma from "coral/pragma/CoralPragma";
+import LifetimeBoundPragma from "coral/pragma/LifetimeBoundPragma";
+import LifetimeAssignmentPragma from "coral/pragma/lifetime/LifetimeAssignmentPragma";
+import LfPath from "coral/pragma/lifetime/path/LfPath";
+import LfPathDeref from "coral/pragma/lifetime/path/LfPathDeref";
+import LfPathMemberAccess from "coral/pragma/lifetime/path/LfPathMemberAccess";
+import LfPathVarRef from "coral/pragma/lifetime/path/LfPathVarRef";
+import MetaRegionVariable from "coral/regionck/MetaRegionVariable";
 import RegionVariable from "coral/regionck/RegionVariable";
 import Regionck from "coral/regionck/Regionck";
 import Query from "lara-js/api/weaver/Query.js";
-
 
 export default class GraphAnnotator implements GraphTransformation {
     #regionck?: Regionck;
@@ -75,7 +89,7 @@ export default class GraphAnnotator implements GraphTransformation {
                 continue;
             }
 
-            const coralNode = node.init(new CoralNode.Builder).as(CoralNode.Class);
+            const coralNode = node.init(new CoralNode.Builder()).as(CoralNode.Class);
 
             if (node.is(ScopeStartNode.TypeGuard)) {
                 const scopeStartNode = node.as(ScopeStartNode.Class);
@@ -108,8 +122,6 @@ export default class GraphAnnotator implements GraphTransformation {
     }
 
     #annotateScope(node: CoralNode.Class, $scope: Scope, type: "start" | "end") {
-        console.log($scope.astId);
-        console.log($scope.code);
         const vars = [];
         for (const $jp of Query.searchFrom($scope, "vardecl")) {
             const $vardecl = $jp as Vardecl;
@@ -158,7 +170,7 @@ export default class GraphAnnotator implements GraphTransformation {
         // if ($vardecl instanceof Param) {
         //     // Annotate param universal regions
         //     regiock.fnLifetimes = new FnLifetimes(functionEntry.jp);
-            
+
         //     const ty = this.#parseType($vardecl.type);
 
         //     // TODO: Retrieve lifetimes from fnLifetimes
@@ -169,7 +181,7 @@ export default class GraphAnnotator implements GraphTransformation {
 
         if ($vardecl.hasInit) {
             this.#annotateExpr(node, $vardecl.init);
-            
+
             node.accesses.push(
                 new Access(
                     new PathVarRef($vardecl, ty),
@@ -197,10 +209,12 @@ export default class GraphAnnotator implements GraphTransformation {
             this.#annotateExpr(node, $expr.subExpr);
         } else {
             // TODO Unhandled:
-            // Member Access
+            // Member Access -> this.#annotateReadAccess
             // UnaryExprOrType
             // ArrayAccess
             // Cast
+
+            // TODO initializer expressions (e.g. `{1, 2}`) are not handled
             throw new Error(
                 "Unhandled expression annotation for jp: " + $expr.joinPointType,
             );
@@ -222,7 +236,9 @@ export default class GraphAnnotator implements GraphTransformation {
 
     #annotateUnaryOp(node: CoralNode.Class, $unaryOp: UnaryOp) {
         if ($unaryOp.operator === "&") {
-            const reborrow = Query.searchFrom($unaryOp, "unaryOp", { operator: "*" }).get() !== undefined;
+            const reborrow =
+                Query.searchFrom($unaryOp, "unaryOp", { operator: "*" }).get() !==
+                undefined;
             this.#annotateReference(node, $unaryOp, reborrow);
         } else if ($unaryOp.operator === "*") {
             this.#annotateReadAccess(node, $unaryOp);
@@ -241,7 +257,7 @@ export default class GraphAnnotator implements GraphTransformation {
         while ($parent instanceof ParenExpr) {
             $parent = $parent.parent;
         }
-        
+
         let leftTy: Ty | undefined;
         if ($parent instanceof BinaryOp && $parent.isAssignment) {
             leftTy = this.#parseLvalue($parent.left).ty;
@@ -302,9 +318,12 @@ export default class GraphAnnotator implements GraphTransformation {
         }
     }
 
-    #parseType($type: Type, regionVar?: RegionVariable): Ty {
-        let isConst = false;
-        let isRestrict = false;
+    #parseType(
+        $type: Type,
+        regionVar?: RegionVariable,
+        isConst = false,
+        isRestrict = false,
+    ): Ty {
         if ($type instanceof QualType) {
             if ($type.qualifiers.includes("const")) {
                 isConst = true;
@@ -316,7 +335,7 @@ export default class GraphAnnotator implements GraphTransformation {
         }
 
         if ($type instanceof BuiltinType) {
-            return new BuiltinTy($type.builtinKind, isConst);
+            return new BuiltinTy($type.builtinKind, $type, isConst);
         } else if ($type instanceof PointerType) {
             const inner = this.#parseType($type.pointee, regionVar);
             if (inner.isConst && isRestrict) {
@@ -325,29 +344,212 @@ export default class GraphAnnotator implements GraphTransformation {
             return new RefTy(
                 inner.isConst ? BorrowKind.SHARED : BorrowKind.MUTABLE,
                 inner,
-                regionVar ? regionVar : this.#regionck!.newRegionVar(RegionVariable.Kind.EXISTENTIAL),
+                $type,
+                regionVar
+                    ? regionVar
+                    : this.#regionck!.newRegionVar(RegionVariable.Kind.EXISTENTIAL),
                 isConst,
             );
         } else if ($type instanceof TypedefType) {
-            // TODO careful with isConst and isRestrict
-            return this.#parseType($type.underlyingType, regionVar);
+            return this.#parseType($type.underlyingType, regionVar, isConst, isRestrict);
         } else if ($type instanceof ElaboratedType) {
-            // TODO
-            // Inner should be instance of TagType, inner is
-            // console.log($type.joinPointType);
-            // console.log($type.qualifier);
-            // console.log($type.keyword);
-            // console.log("------------------");
-
-            // console.log($type.namedType.joinPointType);
-            // console.log($type.namedType.kind);
-            // console.log($type.namedType.name);
-            // console.log("------------------");
-
-            // console.log($type.namedType.decl.joinPointType);
-            // console.log($type.namedType.decl.kind);
-            throw new Error("Unimplemented Elaborated type annotation");
+            return this.#parseType($type.namedType, regionVar, isConst, isRestrict);
+        } else if ($type instanceof ParenType) {
+            return this.#parseType($type.innerType, regionVar, isConst, isRestrict);
+        } else if ($type instanceof TagType) {
+            const $decl = $type.decl;
+            if ($decl instanceof RecordJp) {
+                // TODO write struct definition in Regiock to cache and instantiate it here
+                this.#parseStruct($decl);
+            } else if ($decl instanceof EnumDecl) {
+                return new BuiltinTy(`enum ${$decl.name}`, $decl, isConst);
+            } else {
+                // TypedefNameDecl;
+                //     TypedefDecl;
+                throw new Error("Unhandled parseType TagType: " + $decl.joinPointType);
+            }
         } else {
+            // UndefinedType;
+            // AdjustedType;
+            // ArrayType;
+            //     VariableArrayType;
+            // FunctionType;
+            throw new Error("Unhandled parseType: " + $type.joinPointType);
+        }
+    }
+
+    #parseIncompleteStruct($struct: RecordJp) {
+        const isComplete = $struct.fields.length > 0;
+
+        const pragmas = CoralPragma.parse($struct.pragmas);
+        const hasCopyFlag = pragmas.some((p) => p.name === "copy");
+        const hasMoveFlag = pragmas.some((p) => p.name === "move");
+        if (hasCopyFlag && hasMoveFlag) {
+            // TODO error
+        }
+        const dropFnPragmas = pragmas.filter((p) => p.name === "drop");
+
+        let dropFnName: string | undefined = undefined;
+        if (dropFnPragmas.length === 1) {
+            if (dropFnPragmas[0].tokens.length !== 1) {
+                // TODO error
+            }
+            dropFnName = dropFnPragmas[0].tokens[0];
+        } else if (dropFnPragmas.length > 1) {
+            // TODO error
+        }
+
+        const lifetimes = LifetimeBoundPragma.parse(pragmas);
+        const lifetimesSet = new Set(lifetimes.map((p) => p.name));
+
+        return {
+            isComplete,
+            hasCopyFlag,
+            hasMoveFlag,
+            dropFnName,
+            lifetimes,
+            lifetimesSet,
+        };
+    }
+
+    #parseStruct($struct: RecordJp) {
+        const {
+            isComplete,
+            hasCopyFlag,
+            hasMoveFlag,
+            dropFnName,
+            lifetimes,
+            lifetimesSet,
+        } = this.#parseIncompleteStruct($struct);
+
+        for (const $other of Query.search("record", { name: $struct.name })) {
+            const otherInfo = this.#parseIncompleteStruct($other as RecordJp);
+            if (hasCopyFlag !== otherInfo.hasCopyFlag) {
+                // TODO error
+            }
+            if (hasMoveFlag !== otherInfo.hasMoveFlag) {
+                // TODO error
+            }
+            if (dropFnName !== otherInfo.dropFnName) {
+                // TODO error
+            }
+            if (lifetimesSet.size !== otherInfo.lifetimesSet.size) {
+                // TODO error
+            }
+            for (const lifetime of lifetimesSet.values()) {
+                if (!otherInfo.lifetimesSet.has(lifetime)) {
+                    // TODO error
+                }
+            }
+        }
+
+        let dropFn: FunctionJp | undefined = undefined;
+        if (dropFnName !== undefined) {
+            dropFn = Query.search("function", { name: dropFnName }).first() as
+                | FunctionJp
+                | undefined;
+            if (dropFn?.params.length !== 1) {
+                // TODO error
+            }
+
+            // TODO check if parameter is a reference to the struct
+        }
+
+        const fields = new Map<string, MetaTy>();
+        for (const $field of $struct.fields) {
+            const metaRegionVarAssignments = LifetimeAssignmentPragma
+                .parse(CoralPragma.parse($field.pragmas))
+                .map((p) => [p.lhs, p.rhs]);
+            const fieldTy = this.#parseMetaType($field.name, $field.type, lifetimesSet, metaRegionVarAssignments);
+
+            // #pragma coral lf a = %a
+            fields.set($field.name, fieldTy);
+        }
+
+        // TODO infer COPY or MOVE
+    }
+
+    #parseMetaType(
+        name: string,
+        $type: Type,
+        metaRegionVars: Set<string>,
+        metaRegionVarAssignments: [LfPath, string][],
+        isConst = false,
+        isRestrict = false,
+    ): MetaTy {
+        if ($type instanceof QualType) {
+            if ($type.qualifiers.includes("const")) {
+                isConst = true;
+            }
+            if ($type.qualifiers.includes("restrict")) {
+                isRestrict = true;
+            }
+            $type = $type.unqualifiedType;
+        }
+
+        if ($type instanceof BuiltinType) {
+            if (metaRegionVarAssignments.length > 0) {
+                // TODO error
+            }
+            return new BuiltinTy($type.builtinKind, $type, isConst);
+        } else if ($type instanceof PointerType) {
+            const innerLfs = metaRegionVarAssignments
+                .filter(([lfPath, _]) => lfPath instanceof LfPathDeref)
+                .map(([lfPath, regionVar]) => [(lfPath as LfPathDeref).inner, regionVar] as [LfPath, string]);
+            const inner = this.#parseMetaType(name, $type.pointee, metaRegionVars, innerLfs);
+            if (inner.isConst && isRestrict) {
+                throw new Error("Cannot have a restrict pointer to a const type");
+            }
+            if (metaRegionVarAssignments.some(([lfPath, _]) => lfPath instanceof LfPathMemberAccess)) {
+                // TODO error
+            }
+            const outer = metaRegionVarAssignments
+                .filter(([lfPath, _]) => lfPath instanceof LfPathVarRef);
+            if (outer.length > 1) {
+                // TODO error
+            }
+            if (outer.length === 0) {
+                // TODO error
+            }
+            if ((outer[0][0] as LfPathVarRef).identifier !== name) {
+                // TODO error
+            }
+            return new MetaRefTy(
+                inner.isConst ? BorrowKind.SHARED : BorrowKind.MUTABLE,
+                inner,
+                $type,
+                new MetaRegionVariable(outer[0][1]),
+                isConst,
+            );
+        } else if ($type instanceof TypedefType) {
+            return this.#parseMetaType(name, $type.underlyingType, metaRegionVars, metaRegionVarAssignments, isConst, isRestrict);
+        } else if ($type instanceof ElaboratedType) {
+            return this.#parseMetaType(name, $type.namedType, metaRegionVars, metaRegionVarAssignments, isConst, isRestrict);
+        } else if ($type instanceof ParenType) {
+            return this.#parseMetaType(name, $type.innerType, metaRegionVars, metaRegionVarAssignments, isConst, isRestrict);
+        } else if ($type instanceof TagType) {
+            const $decl = $type.decl;
+            if ($decl instanceof RecordJp) {
+                if (metaRegionVarAssignments.some(([lfPath, _]) => !(lfPath instanceof LfPathMemberAccess))) {
+                    // TODO error
+                }
+                // TODO do not parse the type, just keep the jp and map the region vars
+            } else if ($decl instanceof EnumDecl) {
+                if (metaRegionVarAssignments.length > 0) {
+                    // TODO error
+                }
+                return new BuiltinTy(`enum ${$decl.name}`, $decl, isConst);
+            } else {
+                // TypedefNameDecl;
+                //     TypedefDecl;
+                throw new Error("Unhandled parseType TagType: " + $decl.joinPointType);
+            }
+        } else {
+            // UndefinedType;
+            // AdjustedType;
+            // ArrayType;
+            //     VariableArrayType;
+            // FunctionType;
             throw new Error("Unhandled parseType: " + $type.joinPointType);
         }
     }

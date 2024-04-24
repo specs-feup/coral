@@ -74,8 +74,7 @@ export default class CoralPipeline {
             .apply(new ConstraintGenerator(this.#debug))
             .apply(new InScopeLoansComputation())
             .apply(new RegionckErrorReporting())
-            .apply(new MoveAnalyser())
-            ;
+            .apply(new MoveAnalyser());
 
         if (this.#mirDotFile) {
             graph.toDotFile(new CoralDotFormatter(), this.#mirDotFile);

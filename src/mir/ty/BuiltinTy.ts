@@ -1,22 +1,26 @@
+import { BuiltinType, EnumDecl } from "clava-js/api/Joinpoints.js";
 import Ty from "coral/mir/ty/Ty";
+import MetaTy from "coral/mir/ty/meta/MetaTy";
 import RegionVariable from "coral/regionck/RegionVariable";
 
-export default class BuiltinTy extends Ty {
+export default class BuiltinTy extends Ty implements MetaTy {
     override name: string;
     override isConst: boolean;
+    override $jp: BuiltinType | EnumDecl;
 
-    constructor(name: string, isConst: boolean = false) {
+    constructor(name: string, $jp: BuiltinType | EnumDecl, isConst: boolean = false) {
         super();
         this.name = name;
         this.isConst = isConst;
+        this.$jp = $jp;
     }
 
     get regionVars(): RegionVariable[] {
-        return []
+        return [];
     }
 
     get semantics(): Ty.Semantics {
-        return Ty.Semantics.MOVE; // TODO change this
+        return Ty.Semantics.COPY;
     }
 
     override equals(other: BuiltinTy) {
@@ -29,5 +33,9 @@ export default class BuiltinTy extends Ty {
 
     override toString(): string {
         return this.name;
+    }
+
+    toTy(): Ty {
+        return this;
     }
 }

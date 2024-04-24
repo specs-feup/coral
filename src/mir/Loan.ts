@@ -31,7 +31,7 @@ export default class Loan {
         this.loanedPath = loanedPath;
 
         this.loanedTy = loanedTy ?? loanedPath.ty;
-        this.loanedRefTy = new RefTy(this.borrowKind, this.loanedTy, this.regionVar);
+        this.loanedRefTy = new RefTy(this.borrowKind, this.loanedTy, this.leftTy.$jp, this.regionVar);
     }
 
     toString(): string {

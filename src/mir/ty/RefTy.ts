@@ -1,27 +1,31 @@
 import Ty from "coral/mir/ty/Ty";
 import BorrowKind from "coral/mir/ty/BorrowKind";
 import RegionVariable from "coral/regionck/RegionVariable";
+import { PointerType } from "clava-js/api/Joinpoints.js";
 
 export default class RefTy extends Ty {
     regionVar: RegionVariable;
     referent: Ty;
     borrowKind: BorrowKind;
     override isConst: boolean;
+    override $jp: PointerType;
 
     constructor(
         borrowKind: BorrowKind,
         referent: Ty,
+        $jp: PointerType,
         regionVar: RegionVariable,
         isConst: boolean = false,
     ) {
         super();
         this.borrowKind = borrowKind;
         this.referent = referent;
+        this.$jp = $jp;
         this.regionVar = regionVar;
         this.isConst = isConst;
     }
 
-    get name(): string {
+    override get name(): string {
         switch (this.borrowKind) {
             case BorrowKind.MUTABLE:
                 return `&'${this.regionVar.name} mut`;
@@ -30,11 +34,11 @@ export default class RefTy extends Ty {
         }
     }
 
-    get regionVars(): RegionVariable[] {
+    override get regionVars(): RegionVariable[] {
         return [this.regionVar];
     }
 
-    get semantics(): Ty.Semantics {
+    override get semantics(): Ty.Semantics {
         switch (this.borrowKind) {
             case BorrowKind.MUTABLE:
                 return Ty.Semantics.MOVE;
@@ -58,6 +62,7 @@ export default class RefTy extends Ty {
     }
 
     override get nestedRegionVars(): RegionVariable[] {
+        // TODO maybe this should be this.referent.nestedRegionVars
         return this.regionVars.concat(this.referent.regionVars);
     }
 }
