@@ -51,7 +51,9 @@ import RefTy from "coral/mir/ty/RefTy";
 import StructTy from "coral/mir/ty/StructTy";
 import Ty from "coral/mir/ty/Ty";
 import MetaRefTy from "coral/mir/ty/meta/MetaRefTy";
+import MetaStructTy from "coral/mir/ty/meta/MetaStructTy";
 import MetaTy from "coral/mir/ty/meta/MetaTy";
+import StructDef from "coral/mir/ty/meta/StructDef";
 import CoralPragma from "coral/pragma/CoralPragma";
 import LifetimeBoundPragma from "coral/pragma/LifetimeBoundPragma";
 import LifetimeAssignmentPragma from "coral/pragma/lifetime/LifetimeAssignmentPragma";
@@ -60,6 +62,7 @@ import LfPathDeref from "coral/pragma/lifetime/path/LfPathDeref";
 import LfPathMemberAccess from "coral/pragma/lifetime/path/LfPathMemberAccess";
 import LfPathVarRef from "coral/pragma/lifetime/path/LfPathVarRef";
 import MetaRegionVariable from "coral/regionck/MetaRegionVariable";
+import MetaRegionVariableBound from "coral/regionck/MetaRegionVariableBound";
 import RegionVariable from "coral/regionck/RegionVariable";
 import Regionck from "coral/regionck/Regionck";
 import Query from "lara-js/api/weaver/Query.js";
@@ -412,7 +415,7 @@ export default class GraphAnnotator implements GraphTransformation {
         };
     }
 
-    #parseStruct($struct: RecordJp) {
+    #parseStruct($struct: RecordJp): StructDef {
         const {
             isComplete,
             hasCopyFlag,
@@ -445,28 +448,58 @@ export default class GraphAnnotator implements GraphTransformation {
 
         let dropFn: FunctionJp | undefined = undefined;
         if (dropFnName !== undefined) {
-            dropFn = Query.search("function", { name: dropFnName }).first() as
-                | FunctionJp
-                | undefined;
-            if (dropFn?.params.length !== 1) {
+            dropFn = Query.search("function", { name: dropFnName }).first() as FunctionJp | undefined;
+            if (dropFn === undefined) {
+                // TODO error
+                throw new Error("TODO ERROR");
+            }
+            if (dropFn.params.length !== 1) {
                 // TODO error
             }
 
             // TODO check if parameter is a reference to the struct
         }
 
+        const metaRegionVars = Array.from(lifetimesSet).map(
+            (name) => new MetaRegionVariable(name),
+        );
+
+        const bounds = lifetimes
+            .filter((p) => p.bound !== undefined)
+            .map((p) => new MetaRegionVariableBound(p.name, p.bound!));
+
         const fields = new Map<string, MetaTy>();
         for (const $field of $struct.fields) {
             const metaRegionVarAssignments = LifetimeAssignmentPragma
                 .parse(CoralPragma.parse($field.pragmas))
-                .map((p) => [p.lhs, p.rhs]);
+                .map((p): [LfPath, string] => [p.lhs, p.rhs]);
             const fieldTy = this.#parseMetaType($field.name, $field.type, lifetimesSet, metaRegionVarAssignments);
 
-            // #pragma coral lf a = %a
             fields.set($field.name, fieldTy);
         }
 
-        // TODO infer COPY or MOVE
+
+
+        
+
+        // TODO infer COPY or MOVE HERE
+        const semantics = Ty.Semantics.MOVE;
+
+
+
+
+
+        
+
+        return new StructDef(
+            $struct,
+            isComplete,
+            semantics,
+            fields,
+            metaRegionVars,
+            bounds,
+            dropFn,
+        );
     }
 
     #parseMetaType(
@@ -477,6 +510,7 @@ export default class GraphAnnotator implements GraphTransformation {
         isConst = false,
         isRestrict = false,
     ): MetaTy {
+        // TODO check metaRegionVars
         if ($type instanceof QualType) {
             if ($type.qualifiers.includes("const")) {
                 isConst = true;
@@ -494,14 +528,26 @@ export default class GraphAnnotator implements GraphTransformation {
             return new BuiltinTy($type.builtinKind, $type, isConst);
         } else if ($type instanceof PointerType) {
             const innerLfs = metaRegionVarAssignments
-                .filter(([lfPath, _]) => lfPath instanceof LfPathDeref)
-                .map(([lfPath, regionVar]) => [(lfPath as LfPathDeref).inner, regionVar] as [LfPath, string]);
+                .filter(([lfPath, _]) => !(lfPath instanceof LfPathVarRef))
+                .map(
+                    ([lfPath, regionVar]): [LfPath, string] => {
+                        if (lfPath instanceof LfPathDeref) {
+                            return [(lfPath as LfPathDeref).inner, regionVar];
+                        } else if (lfPath instanceof LfPathMemberAccess) {
+                            const lfPathInner = lfPath.inner;
+                            if (!(lfPathInner instanceof LfPathDeref)) {
+                                // TODO error
+                                throw new Error("TODO ERROR");
+                            }
+                            return [new LfPathMemberAccess(lfPathInner.inner, lfPath.member), regionVar]
+                        }
+                        throw new Error("Unhandled LfPath");
+                    }
+                        
+                );
             const inner = this.#parseMetaType(name, $type.pointee, metaRegionVars, innerLfs);
             if (inner.isConst && isRestrict) {
                 throw new Error("Cannot have a restrict pointer to a const type");
-            }
-            if (metaRegionVarAssignments.some(([lfPath, _]) => lfPath instanceof LfPathMemberAccess)) {
-                // TODO error
             }
             const outer = metaRegionVarAssignments
                 .filter(([lfPath, _]) => lfPath instanceof LfPathVarRef);
@@ -533,7 +579,24 @@ export default class GraphAnnotator implements GraphTransformation {
                 if (metaRegionVarAssignments.some(([lfPath, _]) => !(lfPath instanceof LfPathMemberAccess))) {
                     // TODO error
                 }
-                // TODO do not parse the type, just keep the jp and map the region vars
+
+                const regionVarMap = new Map<string, MetaRegionVariable>();
+
+                for (const [lfPath, regionVar] of metaRegionVarAssignments) {
+                    const memberAccess = lfPath as LfPathMemberAccess;
+                    const memberAccessInner = memberAccess.inner;
+                    if (memberAccessInner instanceof LfPathVarRef) {
+                        if (memberAccessInner.identifier !== name) {
+                            // TODO error
+                        }
+                    } else {
+                        // TODO error
+                    }
+
+                    regionVarMap.set(memberAccess.member, new MetaRegionVariable(regionVar));
+                }
+
+                return new MetaStructTy($decl, regionVarMap, isConst);
             } else if ($decl instanceof EnumDecl) {
                 if (metaRegionVarAssignments.length > 0) {
                     // TODO error
