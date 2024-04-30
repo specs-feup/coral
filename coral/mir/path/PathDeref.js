@@ -1,11 +1,13 @@
-laraImport("coral.mir.path.Path");
-laraImport("coral.mir.path.PathKind");
-laraImport("coral.ty.Ty");
-laraImport("coral.ty.RefTy");
-laraImport("coral.ty.BorrowKind");
-laraImport("coral.borrowck.Regionck");
+import Path from "./Path.js";
+import PathKind from "./PathKind.js";
+import Ty from "../../ty/Ty.js";
+import RefTy from "../../ty/RefTy.js";
+import BorrowKind from "../../ty/BorrowKind.js";
+import Regionck from "../../borrowck/Regionck.js";
+import RegionVariable from "../../borrowck/RegionVariable.js";
+import { Joinpoint } from "clava-js/api/Joinpoints.js";
 
-class PathDeref extends Path {
+export default class PathDeref extends Path {
    
     /**
      * @type {BorrowKind}
@@ -14,14 +16,16 @@ class PathDeref extends Path {
 
     /**
      * 
-     * @param {JoinPoint} $jp 
+     * @param {Joinpoint} $jp 
      * @param {Path} inner 
      * @param {BorrowKind} borrowKind 
+     * @param {RegionVariable} regionVar
      */
-    constructor($jp, inner, borrowKind) {
+    constructor($jp, inner, borrowKind, regionVar) {
         super($jp, inner);
 
         this.borrowKind = borrowKind;
+        this.regionVar = regionVar;
     }
 
     /**

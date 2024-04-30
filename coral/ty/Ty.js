@@ -1,9 +1,9 @@
-laraImport("coral.borrowck.RegionVariable");
+import RegionVariable from "../borrowck/RegionVariable.js";
 
 /**
  * @abstract
  */
-class Ty {
+export default class Ty {
 
     /**
      * @type {string}
@@ -41,7 +41,8 @@ class Ty {
 
     /**
      * 
-     * @param {Ty} other 
+     * @param {Ty} other
+     * @returns {boolean} 
      */
     equals(other) {}
 

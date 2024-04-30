@@ -1,7 +1,8 @@
-laraImport("lara.pass.SimplePass");
-laraImport("clava.ClavaJoinPoints");
-laraImport("lara.pass.results.PassResult");
-laraImport("weaver.Query")
+import { Joinpoint } from "clava-js/api/Joinpoints.js";
+import SimplePass from "lara-js/api/lara/pass/SimplePass.js";
+import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
+
+import Query from "lara-js/api/weaver/Query.js";
 
 /**
  * Infers which variables can be safely set as const, that are reachable from the given join point.
@@ -10,16 +11,15 @@ laraImport("weaver.Query")
  *
  * Does not support variables that are arrays, in those cases the code stays unchanged.
  */
-class InferConstantVar extends SimplePass {
+export default class InferConstantVar extends SimplePass {
+
+  _name = "InferConstantVar";
 
   /**
-   * @return {string} Name of the pass
-   * @override
+   * 
+   * @param {Joinpoint} $jp 
+   * @returns
    */
-  get name() {
-    return "InferConstantVar";
-  }
-  
   matchJoinpoint($jp) {
     if (
       !$jp.instanceOf("vardecl") || // Must be a variable declaration
@@ -33,6 +33,11 @@ class InferConstantVar extends SimplePass {
     return Query.searchFrom($jp.currentRegion, "varref", {"name": $jp.name, "use": u => (u !== "read")}).get().length === 0;
   }
 
+  /**
+   * 
+   * @param {Joinpoint} $jp 
+   * @returns 
+   */
   transformJoinpoint($jp) {
 
     // TODO: handle pointers and arrays

@@ -1,8 +1,11 @@
-laraImport("lara.pass.Pass");
-laraImport("coral.graph.DataflowAnalysis");
-laraImport("coral.mir.Loan");
+import Pass from "lara-js/api/lara/pass/Pass.js";
+import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
 
-class InScopeLoansComputation extends Pass {
+import Loan from "../mir/Loan.js";
+
+export default class InScopeLoansComputation extends Pass {
+
+    _name = "InScopeLoansComputation";
 
     /**
      * @type {cytoscape node}

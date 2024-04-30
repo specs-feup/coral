@@ -1,0 +1,43 @@
+{
+  "name": "coral",
+  "version": "1.0.0",
+  "description": "A Rust-like Borrow Checker for C",
+  "type": "module",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "make",
+    "lint": "eslint .",
+    "run": "npx clava-js src/main.mjs -- clang tests/error/prototype/nll_used_while_borrowed.c"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tiagodusilva/coral.git"
+  },
+  "keywords": [
+    "clava",
+    "rust",
+    "c",
+    "borrow checker",
+    "static analysis"
+  ],
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/tiagodusilva/coral/issues"
+  },
+  "homepage": "https://github.com/tiagodusilva/coral#readme",
+  "dependencies": {
+    "clava-js": "0.0.1"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.7.4",
+    "@typescript-eslint/parser": "^6.7.4",
+    "eslint": "^8.50.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-jest": "^27.4.2",
+    "eslint-plugin-tsdoc": "^0.2.17",
+    "typescript": "^5.2.2"
+  }
+}

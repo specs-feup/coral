@@ -1,8 +1,8 @@
-laraImport("coral.mir.AssignmentKind");
-laraImport("coral.mir.path.Path");
-laraImport("coral.ty.Ty");
+import AssignmentKind from "./AssignmentKind.js";
+import Path from "./path/Path.js";
+import Ty from "../ty/Ty.js";
 
-class Assignment {
+export default class Assignment {
   
     /**
      * @param {AssignmentKind} kind

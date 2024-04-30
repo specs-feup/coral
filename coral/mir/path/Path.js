@@ -1,11 +1,12 @@
-laraImport("coral.mir.path.PathKind");
-laraImport("coral.ty.Ty");
-laraImport("coral.borrowck.Regionck");
+import PathKind from "./PathKind.js";
+import Ty from "../../ty/Ty.js";
+import Regionck from "../../borrowck/Regionck.js";
+import { Joinpoint } from "clava-js/api/Joinpoints.js";
 
 /**
  * @abstract
  */
-class Path {
+export default class Path {
 
     /**
      * @param {Path | undefined} inner
@@ -13,7 +14,7 @@ class Path {
     inner;
 
     /**
-     * @param {JoinPoint} $jp
+     * @param {Joinpoint} $jp
      */
     $jp;
 

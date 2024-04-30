@@ -1,12 +1,12 @@
-laraImport("coral.borrowck.RegionVariable");
-laraImport("coral.borrowck.Regionck");
-laraImport("coral.graph.DfsVisitor");
+import RegionVariable from "./RegionVariable.js";
+import Regionck from "./Regionck.js";
+import DfsVisitor from "../graph/DfsVisitor.js";
 
 
 /**
  * A constraint that lifetime 'sup' outlives lifetime 'sub' at point 'point'.
  */
-class OutlivesConstraint {
+export default class OutlivesConstraint {
     /**
      * @type {RegionVariable}
      */

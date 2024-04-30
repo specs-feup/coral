@@ -1,12 +1,11 @@
-laraImport("weaver.Query");
+import Query from "lara-js/api/weaver/Query.js";
 
-laraImport("coral.CoralNormalizer");
-laraImport("coral.CoralAnalyser");
+import CoralNormalizer from "./CoralNormalizer.js";
+import CoralAnalyser from "./CoralAnalyser.js";
 
-laraImport("coral.errors.CoralError");
+import CoralError from "./errors/CoralError.js";
 
-
-class CoralPipeline {
+export default class CoralPipeline {
     #normalizer;
     #analyser;
 
@@ -18,11 +17,14 @@ class CoralPipeline {
     apply() {
         try {
             const $jp = Query.root();
+            console.log("CORAL Pipeline Started");
             this.#normalizer.apply($jp);
+            console.log("CORAL Normalizer Finished");
             this.#analyser.apply($jp);
+            console.log("CORAL Analyser Finished");
         } catch (e) {
             if (e instanceof CoralError) {
-                println(e.message);
+                console.log(e.message);
             } else {
                 throw e;
             }

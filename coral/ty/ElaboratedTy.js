@@ -1,6 +1,7 @@
-laraImport("coral.ty.Ty");
+import Ty from "./Ty.js";
 
-class ElaboratedTy extends Ty {
+
+export default class ElaboratedTy extends Ty {
 
     /**
      * struct, enum, etc

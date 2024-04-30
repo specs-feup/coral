@@ -1,19 +1,20 @@
-laraImport("weaver.Query");
-laraImport("lara.pass.Pass");
-laraImport("lara.pass.composition.Passes");
-laraImport("lara.pass.results.AggregatePassResult");
-laraImport("clava.code.StatementDecomposer");
+import Query from "lara-js/api/weaver/Query.js";
+import Pass from "lara-js/api/lara/pass/Pass.js";
+import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
+import Passes from "lara-js/api/lara/pass/composition/Passes.js";
+import AggregatePassResult from "lara-js/api/lara/pass/results/AggregatePassResult.js";
+import StatementDecomposer from "clava-js/api/clava/code/StatementDecomposer.js";
+import SimplifySelectionStmts from "clava-js/api/clava/pass/SimplifySelectionStmts.js";
+import SimplifyAssignment from "clava-js/api/clava/code/SimplifyAssignment.js";
+import DecomposeDeclStmt from "clava-js/api/clava/pass/DecomposeDeclStmt.js";
 
-laraImport("clava.pass.DecomposeDeclStmt");
-laraImport("clava.pass.SimplifySelectionStmts");
-laraImport("clava.code.SimplifyAssignment");
+import LifetimeElision from "./pass/LifetimeElision.js";
 
-laraImport("coral.pass.LifetimeElision");
 
 /**
  * Applies the normalization steps required for the Coral analysis
  */
-class CoralNormalizer extends Pass {
+export default class CoralNormalizer extends Pass {
 
     #statementDecomposer;
 

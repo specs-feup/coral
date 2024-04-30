@@ -1,28 +1,33 @@
-laraImport("lara.pass.Pass");
+import Pass from "lara-js/api/lara/pass/Pass.js";
 
-laraImport("coral.borrowck.RegionVariable");
-laraImport("coral.borrowck.RegionKind");
+import RegionVariable from "../borrowck/RegionVariable.js";
+import RegionKind from "../borrowck/RegionKind.js";
+import Ty from "../ty/Ty.js";
+import RefTy from "../ty/RefTy.js";
+import BuiltinTy from "../ty/BuiltinTy.js";
+import ElaboratedTy from "../ty/ElaboratedTy.js";
+import BorrowKind from "../ty/BorrowKind.js";
+import Regionck from "../borrowck/Regionck.js";
+import PathVarRef from "../mir/path/PathVarRef.js";
+import PathMemberAccess from "../mir/path/PathMemberAccess.js";
+import PathDeref from "../mir/path/PathDeref.js";
+import PathKind from "../mir/path/PathKind.js";
+import Loan from "../mir/Loan.js";
+import Access from "../mir/Access.js";
+import AccessDepth from "../mir/AccessDepth.js";
+import AccessMutability from "../mir/AccessMutability.js";
+import Assignment from "../mir/Assignment.js";
+import AssignmentKind from "../mir/AssignmentKind.js";
+import FnLifetimes from "../lifetimes/FnLifetimes.js";
+import CfgNodeType from "clava-js/api/clava/graphs/cfg/CfgNodeType.js";
+import { BinaryOp, Call, Expression, Joinpoint, QualType, Type, UnaryOp, Vardecl, Varref } from "clava-js/api/Joinpoints.js";
+import Path from "../mir/path/Path.js";
+import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
+import Query from "lara-js/api/weaver/Query.js";
 
-laraImport("coral.ty.Ty");
-laraImport("coral.ty.RefTy");
-laraImport("coral.ty.BuiltinTy");
-laraImport("coral.ty.ElaboratedTy");
-laraImport("coral.ty.BorrowKind");
+export default class CfgAnnotator extends Pass {
 
-laraImport("coral.borrowck.Regionck");
-
-laraImport("coral.mir.path.PathVarRef");
-laraImport("coral.mir.path.PathMemberAccess");
-laraImport("coral.mir.path.PathDeref");
-laraImport("coral.mir.path.PathKind");
-
-laraImport("coral.mir.Loan");
-laraImport("coral.mir.Access");
-
-laraImport("coral.mir.Assignment");
-laraImport("coral.mir.AssignmentKind");
-
-class CfgAnnotator extends Pass {
+    _name = "CfgAnnotator";
 
     /**
      * @type {Regionck}
@@ -33,6 +38,7 @@ class CfgAnnotator extends Pass {
      * @type {number}
      */
     regionVarCounter;
+
     /**
      * @type {FnLifetimes}
      */
@@ -57,7 +63,7 @@ class CfgAnnotator extends Pass {
 
     /**
      * Apply tranformation to
-     * @param {JoinPoint} $jp Joint point on which the pass will be applied
+     * @param {Joinpoint} $jp Joint point on which the pass will be applied
      * @return {PassResult} Results of applying this pass to the given joint point
      */
     _apply_impl($jp) {
@@ -77,6 +83,8 @@ class CfgAnnotator extends Pass {
         this.#createUniversalRegions($jp);
         this.#annotateLifetimeTypes();
         delete this.fnLifetimes;
+
+        return new PassResult(this, $jp);
     }
 
     #createUniversalRegions($jp) {
@@ -87,7 +95,7 @@ class CfgAnnotator extends Pass {
         for (const $param of $jp.params) {
             const ty = this.#deconstructType($param.type, $param, false);
             $param.setUserField("ty", ty);
-            this.borrowck.declarations.set($param.name, ty);
+            this.regionck.declarations.set($param.name, ty);
 
             // TODO: Retrieve lifetimes from fnLifetimes
             // & Create multiple regionVars if needed
@@ -128,7 +136,11 @@ class CfgAnnotator extends Pass {
         }
     }
 
-
+    /**
+     * 
+     * @param {*} node 
+     * @param {Vardecl} $vardecl 
+     */
     #annotateDeclStmt(node, $vardecl) {
         const ty = this.#deconstructType($vardecl.type, $vardecl, true);        
         $vardecl.setUserField("ty", ty);
@@ -154,7 +166,7 @@ class CfgAnnotator extends Pass {
      * @param {*} node 
      * @param {Path} path 
      * @param {Ty} ty 
-     * @param {$expression} $expr The $expr being assigned to the path
+     * @param {Expression} $expr The $expr being assigned to the path
      */
     #markAssignment(node, path, ty, $expr) {
         // TODO: Detect & Mark full copy/move (only if $expr represents a path?) 
@@ -165,6 +177,13 @@ class CfgAnnotator extends Pass {
         node.scratch('_coral').assignment = new Assignment(assignmentKind, path, ty);
     }
 
+    /**
+     * 
+     * @param {Type} $type 
+     * @param {Joinpoint} $jp 
+     * @param {boolean} create_region_var 
+     * @returns {Ty}
+     */
     #deconstructType($type, $jp, create_region_var=false) {        
         let isConst = false;
         let isRestrict = false;
@@ -199,18 +218,18 @@ class CfgAnnotator extends Pass {
                 return this.#deconstructType($type.underlyingType, $jp, create_region_var);
             case "elaboratedType":
                 // Inner should be instance of TagType, inner is 
-                // println($type.joinPointType);
-                // println($type.qualifier);
-                // println($type.keyword);
-                // println("------------------");  
+                // console.log($type.joinPointType);
+                // console.log($type.qualifier);
+                // console.log($type.keyword);
+                // console.log("------------------");  
 
-                // println($type.namedType.joinPointType);
-                // println($type.namedType.kind);
-                // println($type.namedType.name);
-                // println("------------------");
+                // console.log($type.namedType.joinPointType);
+                // console.log($type.namedType.kind);
+                // console.log($type.namedType.name);
+                // console.log("------------------");
 
-                // println($type.namedType.decl.joinPointType);
-                // println($type.namedType.decl.kind);
+                // console.log($type.namedType.decl.joinPointType);
+                // console.log($type.namedType.decl.kind);
                 throw new Error("Unimplemented Elaborated type annotation");
             default:
                 throw new Error("Unhandled deconstruct declstmt type: " + $type.joinPointType);
@@ -218,7 +237,11 @@ class CfgAnnotator extends Pass {
         }
     }
 
-
+    /**
+     * 
+     * @param {*} node 
+     * @param {Expression} $exprStmt 
+     */
     #annotateExprStmt(node, $exprStmt) {
         switch ($exprStmt.joinPointType) {
             case "literal":
@@ -237,12 +260,12 @@ class CfgAnnotator extends Pass {
                 break;
             case "varref": {
                 const path = this.#parseLvalue(node, $exprStmt);
-                const ty = $exprStmt.declaration.userField("ty");
+                const ty = $exprStmt.declaration.getUserField("ty");
                 // TODO: DEEP WRITE only if moving value, should be implemented, but needs testing due to edge cases
                 node.scratch("_coral").accesses.push(new Access(
-                    path,
-                    ty.isCopyable ? AccessMutability.READ : AccessMutability.WRITE,
-                    AccessDepth.DEEP
+                path,
+                ty?.isCopyable ? AccessMutability.READ : AccessMutability.WRITE,
+                AccessDepth.DEEP
                 ));
                 break;
             }
@@ -252,11 +275,16 @@ class CfgAnnotator extends Pass {
                 this.#annotateExprStmt(node, $exprStmt.returnExpr);
                 break;
             default:
-                println("Unhandled expression annotation for jp: " + $exprStmt.joinPointType);
+                console.log("Unhandled expression annotation for jp: " + $exprStmt.joinPointType);
         }
     }
 
-    
+    /**
+     * 
+     * @param {*} node 
+     * @param {BinaryOp} $binaryOp 
+     * @returns 
+     */
     #annotateBinaryOp(node, $binaryOp) {
         if ($binaryOp.isAssignment) {
             const path = this.#parseLvalue(node, $binaryOp.left);
@@ -274,7 +302,11 @@ class CfgAnnotator extends Pass {
         this.#annotateExprStmt(node, $binaryOp.right);
     }
 
-
+    /**
+     * 
+     * @param {*} node 
+     * @param {UnaryOp} $unaryOp 
+     */
     #annotateUnaryOp(node, $unaryOp) {
         if ($unaryOp.operator === "&") {
             // Create loan, and start of an lvalue
@@ -283,12 +315,26 @@ class CfgAnnotator extends Pass {
             const loanedTy = loanedPath.retrieveTy(this.regionck);
 
             // Borrowkind depends on the assignment left value
-            let assignment = $unaryOp.parent;
-            while (assignment.joinPointType !== "binaryOp" || !assignment.isAssignment) {
-                assignment = assignment.parent;
+            let parent = $unaryOp.parent;
+            let leftTy;
+            while (true) {
+                if (parent.joinPointType === "binaryOp" && parent.isAssignment) {
+                    leftTy = this.#parseLvalue(node, parent.left).retrieveTy(this.regionck);
+                    break;
+                }
+                
+                if (parent.joinPointType === "vardecl") {
+                    leftTy = this.regionck.declarations.get(parent.name);
+                    break;
+                }
+
+                if (parent.joinPointType !== "parenExpr") {
+                    throw new Error("annotateUnaryOp: Cannot determine assignment lvalue");                    
+                }
+
+                parent = parent.parent;
             }
 
-            const leftTy = this.#parseLvalue(node, assignment.left).retrieveTy(this.regionck);
             if (!(leftTy instanceof RefTy)) {
                 throw new Error("annotateUnaryOp: Cannot borrow from non-reference type " + leftTy.toString());
             }
@@ -303,7 +349,11 @@ class CfgAnnotator extends Pass {
                 AccessDepth.DEEP
             ));
 
-            // TODO: I think I'm missing something here
+            // Mark Reborrows
+            if (Query.searchFrom($unaryOp, "unaryOp", {operator: '*'}).get() !== undefined) {
+                node.scratch("_coral").reborrow = true;
+            }
+
         } else if ($unaryOp.operator === "*") {
             // Start of an lvaue
             const path = this.#parseLvalue(node, $unaryOp);
@@ -319,7 +369,11 @@ class CfgAnnotator extends Pass {
         }
     }
 
-
+    /**
+     * 
+     * @param {*} node 
+     * @param {Call} $call 
+     */
     #annotateFunctionCall(node, $call) {
         for (const $expr of $call.args) {
             const path = this.#parseLvalue(node, $expr);
@@ -346,8 +400,8 @@ class CfgAnnotator extends Pass {
     /**
      * 
      * @param {*} node 
-     * @param {JoinPoint} $jp 
-     * @returns {Path}
+     * @param {Joinpoint} $jp 
+     * @returns {Path | undefined}
      */
     #parseLvalue(node, $jp) {
         switch ($jp.joinPointType) {
@@ -364,7 +418,7 @@ class CfgAnnotator extends Pass {
                     let ty = innerPath.retrieveTy(this.regionck);
                     if (!(ty instanceof RefTy))
                         throw new Error("Cannot dereference non-reference type " + ty.toString());
-                    return new PathDeref($jp, innerPath, ty.borrowKind);
+                    return new PathDeref($jp, innerPath, ty.borrowKind, ty.regionVar);
                 }
                 else {
                     throw new Error("Unhandled parseLvalue unary op: " + $jp.operator);

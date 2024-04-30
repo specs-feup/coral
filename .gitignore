@@ -1,6 +1,9 @@
 .vscode
 
 clava-tool/
+clava-build/
 out/
 !out/.gitkeep
 
+node_modules/
+woven_code/

@@ -1,8 +1,8 @@
-laraImport("coral.ty.Ty");
-laraImport("coral.ty.BorrowKind");
-laraImport("coral.borrowck.RegionVariable");
+import Ty from "./Ty.js";
+import BorrowKind from "./BorrowKind.js";
+import RegionVariable from "../borrowck/RegionVariable.js";
 
-class RefTy extends Ty {
+export default class RefTy extends Ty {
 
     /**
      * @type {RegionVariable}

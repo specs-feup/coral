@@ -2,7 +2,7 @@
 /**
  * Utility class for Coral
  */
-class CoralUtils {
+export default class CoralUtils {
 
   /**
    * Returns true if the joinpoint is a borrow

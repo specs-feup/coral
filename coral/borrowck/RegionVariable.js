@@ -1,6 +1,6 @@
-laraImport("coral.borrowck.RegionKind");
+import RegionKind from "./RegionKind.js";
 
-class RegionVariable {
+export default class RegionVariable {
     /**
      * @param {RegionKind} kind
      */

@@ -1,4 +1,4 @@
-class CoralError extends Error {
+export default class CoralError extends Error {
 
   constructor(message) {
     super(message);

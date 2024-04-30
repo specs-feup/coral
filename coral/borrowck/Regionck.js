@@ -1,38 +1,46 @@
-laraImport("coral.borrowck.OutlivesConstraint");
-laraImport("coral.dotFormatters.LivenessDotFormatter");
-laraImport("coral.dotFormatters.MirDotFormatter");
+import Io from "lara-js/api/lara/Io.js";
+import ControlFlowGraph from "clava-js/api/clava/graphs/ControlFlowGraph.js";
+import LivenessAnalysis from "clava-js/api/clava/liveness/LivenessAnalysis.js";
 
+import OutlivesConstraint from "./OutlivesConstraint.js";
+import LivenessDotFormatter from "../dotFormatters/LivenessDotFormatter.js";
+import MirDotFormatter from "../dotFormatters/MirDotFormatter.js";
+import RegionVariable from "./RegionVariable.js";
+import CfgAnnotator from "../pass/CfgAnnotator.js";
+import ConstraintGenerator from "../pass/ConstraintGenerator.js";
+import InScopeLoansComputation from "../pass/InScopeLoansComputation.js";
+import BcErrorReporting from "../pass/BcErrorReporting.js";
+import Ty from "../ty/Ty.js";
+import Loan from "../mir/Loan.js";
+import { Joinpoint } from "clava-js/api/Joinpoints.js";
 
-laraImport("coral.borrowck.RegionVariable");
-laraImport("coral.pass.CfgAnnotator");
-laraImport("coral.pass.ConstraintGenerator");
-laraImport("coral.pass.InScopeLoansComputation");
-laraImport("coral.pass.BcErrorReporting");
-
-laraImport("clava.graphs.ControlFlowGraph");
-
-laraImport("lara.Io");
-
-class Regionck {
+export default class Regionck {
 
     /**
-     * @type {JoinPoint} Function JoinPoint
+     * @type {Joinpoint} Function JoinPoint
      */
     jp;
+
     /**
      * @type {ControlFlowGraph}
      */
     cfg;
+
     /**
      * @type {LivenessAnalysis}
      */
     liveness;
+
     /**
      * @type {OutlivesConstraint[]}
      */
     constraints;
 
+    /**
+     * @type {RegionVariable[]}
+     */
     regions;
+    
     /**
      * @type {Loan[]}
      */
@@ -43,6 +51,10 @@ class Regionck {
      */
     declarations;
 
+    /**
+     * 
+     * @param {Joinpoint} $jp 
+     */
     constructor($jp) {
         this.constraints = [];
         this.regions = [];
@@ -50,7 +62,7 @@ class Regionck {
         this.declarations = new Map();
 
         this.$jp = $jp;
-        this.cfg = ControlFlowGraph.build($jp, true, { splitInstList: true });
+        this.cfg = ControlFlowGraph.build($jp, true, true);
 
         this.liveness = LivenessAnalysis.analyse(this.cfg);
         // console.log(this.cfg.toDot(new LivenessDotFormatter(this.liveness)) + "\n\n");
@@ -65,8 +77,8 @@ class Regionck {
     prepare(printConstraintSet = false) {
         this.#buildConstraints();
         if (printConstraintSet) {
-            println("Initial Constraint Set:");
-            println(this.aggregateRegionckInfo() + "\n\n");
+            console.log("Initial Constraint Set:");
+            console.log(this.aggregateRegionckInfo() + "\n\n");
         }
         this.#infer();
         this.#calculateInScopeLoans();
@@ -74,7 +86,8 @@ class Regionck {
     }
 
     mirToDotFile() {
-        Io.writeFile("../out/dot/mir.gv", this.cfg.toDot(new MirDotFormatter()));
+        const f = Io.writeFile("./out/dot/mir.gv", this.cfg.toDot(new MirDotFormatter()));
+        console.log(`Output MIR to ${f.getAbsolutePath()}`);
     }
 
 
@@ -91,7 +104,7 @@ class Regionck {
             changed = false;
 
             for (const constraint of this.constraints) {
-                changed |= constraint.apply(this);
+                changed = changed || constraint.apply(this);
             }
         }
 

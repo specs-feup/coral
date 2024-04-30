@@ -5,7 +5,7 @@
       <string>workspace</string>
       <FileList>
         <fileList>
-          <file>tests/error/prototype/nll_used_while_borrowed.c</file>
+          <file>tests/accepted/reborrow.c</file>
         </fileList>
       </FileList>
     </entry>
@@ -61,7 +61,7 @@
     </entry>
     <entry>
       <string>api_autoload</string>
-      <boolean>true</boolean>
+      <boolean>false</boolean>
     </entry>
     <entry>
       <string>continueOnParsingErrors</string>
@@ -174,7 +174,7 @@
     </entry>
     <entry>
       <string>aspect</string>
-      <file>src/main.js</file>
+      <file>src/main.mjs</file>
     </entry>
     <entry>
       <string>ignoreHeaderIncludes</string>
