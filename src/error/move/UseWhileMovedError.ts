@@ -1,10 +1,10 @@
 import CoralError from "coral/error/CoralError";
 import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
 import Access from "coral/mir/Access";
-import { Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
+import { Joinpoint, Type, Vardecl } from "clava-js/api/Joinpoints.js";
 
 export default class UseWhileMovedError extends CoralError {
-    constructor($invalidUse: Joinpoint, $declaration: Vardecl, access: Access, $move: Joinpoint) {
+    constructor($invalidUse: Joinpoint, $declaration: Vardecl, access: Access, move: Access) {
         super(
             new ErrorMessageBuilder(
                 `Use of moved value '${access.path.toString()}'`,
@@ -12,16 +12,10 @@ export default class UseWhileMovedError extends CoralError {
             )
                 .code(
                     $declaration,
-                    `move occurs because '${access.path.toString()}' has type '${$declaration.type.code}' which does not have 'Copy' semantics`,
+                    `move occurs because '${move.path.toString()}' has type '${move.path.ty.name}' which does not have 'Copy' semantics`,
                 )
-                .code(
-                    $move,
-                    `value moved here`,
-                )
-                .code(
-                    $invalidUse,
-                    `value used here after move`,
-                )
+                .code(move.path.$jp, `value moved here`)
+                .code($invalidUse, `value used here after move`)
                 .toString(),
         );
         this.name = this.constructor.name;

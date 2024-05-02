@@ -44,6 +44,7 @@ import Access from "coral/mir/Access";
 import Loan from "coral/mir/Loan";
 import Path from "coral/mir/path/Path";
 import PathDeref from "coral/mir/path/PathDeref";
+import PathMemberAccess from "coral/mir/path/PathMemberAccess";
 import PathVarRef from "coral/mir/path/PathVarRef";
 import BorrowKind from "coral/mir/ty/BorrowKind";
 import BuiltinTy from "coral/mir/ty/BuiltinTy";
@@ -210,6 +211,8 @@ export default class GraphAnnotator implements GraphTransformation {
             this.#annotateReadAccess(node, $expr);
         } else if ($expr instanceof ParenExpr) {
             this.#annotateExpr(node, $expr.subExpr);
+        } else if ($expr instanceof MemberAccess) {
+            this.#annotateReadAccess(node, $expr);
         } else {
             // TODO Unhandled:
             // Member Access -> this.#annotateReadAccess
@@ -309,7 +312,7 @@ export default class GraphAnnotator implements GraphTransformation {
         // }
     }
 
-    #annotateReadAccess(node: CoralNode.Class, $expr: Varref | UnaryOp) {
+    #annotateReadAccess(node: CoralNode.Class, $expr: Varref | UnaryOp | MemberAccess) {
         const path = this.#parseLvalue($expr);
 
         if (path.ty instanceof RefTy) {
@@ -362,245 +365,15 @@ export default class GraphAnnotator implements GraphTransformation {
         } else if ($type instanceof TagType) {
             const $decl = $type.decl;
             if ($decl instanceof RecordJp) {
-                // TODO write struct definition in Regiock to cache and instantiate it here
-                this.#parseStruct($decl);
+                const structDef = this.#regionck!.structDefs.get($decl);
+
+                const regionVars = new Map<string, RegionVariable>();
+                for (const metaRegionVar of structDef.metaRegionVars) {
+                    regionVars.set(metaRegionVar.name, this.#regionck!.newRegionVar(RegionVariable.Kind.EXISTENTIAL));
+                }
+
+                return new StructTy(structDef, regionVars, isConst);
             } else if ($decl instanceof EnumDecl) {
-                return new BuiltinTy(`enum ${$decl.name}`, $decl, isConst);
-            } else {
-                // TypedefNameDecl;
-                //     TypedefDecl;
-                throw new Error("Unhandled parseType TagType: " + $decl.joinPointType);
-            }
-        } else {
-            // UndefinedType;
-            // AdjustedType;
-            // ArrayType;
-            //     VariableArrayType;
-            // FunctionType;
-            throw new Error("Unhandled parseType: " + $type.joinPointType);
-        }
-    }
-
-    #parseIncompleteStruct($struct: RecordJp) {
-        const isComplete = $struct.fields.length > 0;
-
-        const pragmas = CoralPragma.parse($struct.pragmas);
-        const hasCopyFlag = pragmas.some((p) => p.name === "copy");
-        const hasMoveFlag = pragmas.some((p) => p.name === "move");
-        if (hasCopyFlag && hasMoveFlag) {
-            // TODO error
-        }
-        const dropFnPragmas = pragmas.filter((p) => p.name === "drop");
-
-        let dropFnName: string | undefined = undefined;
-        if (dropFnPragmas.length === 1) {
-            if (dropFnPragmas[0].tokens.length !== 1) {
-                // TODO error
-            }
-            dropFnName = dropFnPragmas[0].tokens[0];
-        } else if (dropFnPragmas.length > 1) {
-            // TODO error
-        }
-
-        const lifetimes = LifetimeBoundPragma.parse(pragmas);
-        const lifetimesSet = new Set(lifetimes.map((p) => p.name));
-
-        return {
-            isComplete,
-            hasCopyFlag,
-            hasMoveFlag,
-            dropFnName,
-            lifetimes,
-            lifetimesSet,
-        };
-    }
-
-    #parseStruct($struct: RecordJp): StructDef {
-        const {
-            isComplete,
-            hasCopyFlag,
-            hasMoveFlag,
-            dropFnName,
-            lifetimes,
-            lifetimesSet,
-        } = this.#parseIncompleteStruct($struct);
-
-        for (const $other of Query.search("record", { name: $struct.name })) {
-            const otherInfo = this.#parseIncompleteStruct($other as RecordJp);
-            if (hasCopyFlag !== otherInfo.hasCopyFlag) {
-                // TODO error
-            }
-            if (hasMoveFlag !== otherInfo.hasMoveFlag) {
-                // TODO error
-            }
-            if (dropFnName !== otherInfo.dropFnName) {
-                // TODO error
-            }
-            if (lifetimesSet.size !== otherInfo.lifetimesSet.size) {
-                // TODO error
-            }
-            for (const lifetime of lifetimesSet.values()) {
-                if (!otherInfo.lifetimesSet.has(lifetime)) {
-                    // TODO error
-                }
-            }
-        }
-
-        let dropFn: FunctionJp | undefined = undefined;
-        if (dropFnName !== undefined) {
-            dropFn = Query.search("function", { name: dropFnName }).first() as FunctionJp | undefined;
-            if (dropFn === undefined) {
-                // TODO error
-                throw new Error("TODO ERROR");
-            }
-            if (dropFn.params.length !== 1) {
-                // TODO error
-            }
-
-            // TODO check if parameter is a reference to the struct
-        }
-
-        const metaRegionVars = Array.from(lifetimesSet).map(
-            (name) => new MetaRegionVariable(name),
-        );
-
-        const bounds = lifetimes
-            .filter((p) => p.bound !== undefined)
-            .map((p) => new MetaRegionVariableBound(p.name, p.bound!));
-
-        const fields = new Map<string, MetaTy>();
-        for (const $field of $struct.fields) {
-            const metaRegionVarAssignments = LifetimeAssignmentPragma
-                .parse(CoralPragma.parse($field.pragmas))
-                .map((p): [LfPath, string] => [p.lhs, p.rhs]);
-            const fieldTy = this.#parseMetaType($field.name, $field.type, lifetimesSet, metaRegionVarAssignments);
-
-            fields.set($field.name, fieldTy);
-        }
-
-
-
-        
-
-        // TODO infer COPY or MOVE HERE
-        const semantics = Ty.Semantics.MOVE;
-
-
-
-
-
-        
-
-        return new StructDef(
-            $struct,
-            isComplete,
-            semantics,
-            fields,
-            metaRegionVars,
-            bounds,
-            dropFn,
-        );
-    }
-
-    #parseMetaType(
-        name: string,
-        $type: Type,
-        metaRegionVars: Set<string>,
-        metaRegionVarAssignments: [LfPath, string][],
-        isConst = false,
-        isRestrict = false,
-    ): MetaTy {
-        // TODO check metaRegionVars
-        if ($type instanceof QualType) {
-            if ($type.qualifiers.includes("const")) {
-                isConst = true;
-            }
-            if ($type.qualifiers.includes("restrict")) {
-                isRestrict = true;
-            }
-            $type = $type.unqualifiedType;
-        }
-
-        if ($type instanceof BuiltinType) {
-            if (metaRegionVarAssignments.length > 0) {
-                // TODO error
-            }
-            return new BuiltinTy($type.builtinKind, $type, isConst);
-        } else if ($type instanceof PointerType) {
-            const innerLfs = metaRegionVarAssignments
-                .filter(([lfPath, _]) => !(lfPath instanceof LfPathVarRef))
-                .map(
-                    ([lfPath, regionVar]): [LfPath, string] => {
-                        if (lfPath instanceof LfPathDeref) {
-                            return [(lfPath as LfPathDeref).inner, regionVar];
-                        } else if (lfPath instanceof LfPathMemberAccess) {
-                            const lfPathInner = lfPath.inner;
-                            if (!(lfPathInner instanceof LfPathDeref)) {
-                                // TODO error
-                                throw new Error("TODO ERROR");
-                            }
-                            return [new LfPathMemberAccess(lfPathInner.inner, lfPath.member), regionVar]
-                        }
-                        throw new Error("Unhandled LfPath");
-                    }
-                        
-                );
-            const inner = this.#parseMetaType(name, $type.pointee, metaRegionVars, innerLfs);
-            if (inner.isConst && isRestrict) {
-                throw new Error("Cannot have a restrict pointer to a const type");
-            }
-            const outer = metaRegionVarAssignments
-                .filter(([lfPath, _]) => lfPath instanceof LfPathVarRef);
-            if (outer.length > 1) {
-                // TODO error
-            }
-            if (outer.length === 0) {
-                // TODO error
-            }
-            if ((outer[0][0] as LfPathVarRef).identifier !== name) {
-                // TODO error
-            }
-            return new MetaRefTy(
-                inner.isConst ? BorrowKind.SHARED : BorrowKind.MUTABLE,
-                inner,
-                $type,
-                new MetaRegionVariable(outer[0][1]),
-                isConst,
-            );
-        } else if ($type instanceof TypedefType) {
-            return this.#parseMetaType(name, $type.underlyingType, metaRegionVars, metaRegionVarAssignments, isConst, isRestrict);
-        } else if ($type instanceof ElaboratedType) {
-            return this.#parseMetaType(name, $type.namedType, metaRegionVars, metaRegionVarAssignments, isConst, isRestrict);
-        } else if ($type instanceof ParenType) {
-            return this.#parseMetaType(name, $type.innerType, metaRegionVars, metaRegionVarAssignments, isConst, isRestrict);
-        } else if ($type instanceof TagType) {
-            const $decl = $type.decl;
-            if ($decl instanceof RecordJp) {
-                if (metaRegionVarAssignments.some(([lfPath, _]) => !(lfPath instanceof LfPathMemberAccess))) {
-                    // TODO error
-                }
-
-                const regionVarMap = new Map<string, MetaRegionVariable>();
-
-                for (const [lfPath, regionVar] of metaRegionVarAssignments) {
-                    const memberAccess = lfPath as LfPathMemberAccess;
-                    const memberAccessInner = memberAccess.inner;
-                    if (memberAccessInner instanceof LfPathVarRef) {
-                        if (memberAccessInner.identifier !== name) {
-                            // TODO error
-                        }
-                    } else {
-                        // TODO error
-                    }
-
-                    regionVarMap.set(memberAccess.member, new MetaRegionVariable(regionVar));
-                }
-
-                return new MetaStructTy($decl, regionVarMap, isConst);
-            } else if ($decl instanceof EnumDecl) {
-                if (metaRegionVarAssignments.length > 0) {
-                    // TODO error
-                }
                 return new BuiltinTy(`enum ${$decl.name}`, $decl, isConst);
             } else {
                 // TypedefNameDecl;
@@ -636,8 +409,12 @@ export default class GraphAnnotator implements GraphTransformation {
                 throw new Error("Unhandled parseLvalue unary op: " + $expr.operator);
             }
         } else if ($expr instanceof MemberAccess) {
-            // TODO
-            throw new Error("Unimplemented parseLvalue MemberAccess");
+            let inner = this.#parseLvalue($expr.base);
+            if ($expr.arrow) {
+                inner = new PathDeref($expr, inner);
+            }
+
+            return new PathMemberAccess($expr, inner, $expr.name);
         } else {
             throw new Error("Unhandled parseLvalue: " + $expr.joinPointType);
         }

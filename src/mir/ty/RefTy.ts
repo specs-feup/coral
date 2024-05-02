@@ -62,7 +62,6 @@ export default class RefTy extends Ty {
     }
 
     override get nestedRegionVars(): RegionVariable[] {
-        // TODO maybe this should be this.referent.nestedRegionVars
-        return this.regionVars.concat(this.referent.regionVars);
+        return this.regionVars.concat(this.referent.nestedRegionVars);
     }
 }

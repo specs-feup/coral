@@ -6,7 +6,6 @@ import { Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
 export default class MoveBehindReferenceError extends CoralError {
     constructor(
         $invalidUse: Joinpoint,
-        $declaration: Vardecl,
         access: Access,
     ) {
         super(
@@ -16,7 +15,7 @@ export default class MoveBehindReferenceError extends CoralError {
             )
                 .code(
                     $invalidUse,
-                    `move occurs because '${access.path.toString()}' has type '${$declaration.type.code}', which does not have 'Copy' semantics`,
+                    `move occurs because '${access.path.toString()}' has type '${access.path.ty.name}', which does not have 'Copy' semantics`,
                 )
                 .toString(),
         );

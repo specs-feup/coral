@@ -1,28 +1,44 @@
 import { Joinpoint } from "clava-js/api/Joinpoints.js";
 import Path from "coral/mir/path/Path";
+import StructTy from "coral/mir/ty/StructTy";
 import Ty from "coral/mir/ty/Ty";
 
-// TODO
+
 /**
  * A member access, such as `x.y`.
  */
 export default class PathMemberAccess extends Path {
     $jp: Joinpoint;
     inner: Path;
+    fieldName: string;
+    innerTy: StructTy;
 
-    constructor($jp: Joinpoint, inner: Path) {
+    constructor($jp: Joinpoint, inner: Path, fieldName: string) {
         super();
 
         this.$jp = $jp;
         this.inner = inner;
+        this.fieldName = fieldName;
+
+        if (inner.ty instanceof StructTy) {
+            this.innerTy = inner.ty;
+        } else {
+            throw new Error(
+                "Cannot member-access in non-struct type " + inner.ty.toString(),
+            );
+        }
     }
 
     override toString(): string {
-        throw new Error("PathMemberAccess toString() not implemented");
+        return `(${this.inner.toString()}).${this.fieldName}`;
     }
 
     override equals(other: Path): boolean {
-        throw new Error("PathMemberAccess equals() not implemented");
+        return (
+            other instanceof PathMemberAccess &&
+            this.inner.equals(other.inner) &&
+            this.fieldName === other.fieldName
+        );
     }
 
     override get prefixes(): Path[] {
@@ -38,6 +54,13 @@ export default class PathMemberAccess extends Path {
     }
 
     override get ty(): Ty {
-        throw new Error("TODO: PathMemberAccess retrieveTy() not implemented");
+        const ty = this.innerTy.fields.get(this.fieldName);
+        if (ty === undefined) {
+            throw new Error(
+                `Field ${this.fieldName} not found in struct ${this.innerTy.name}`,
+            );
+        }
+
+        return ty;
     }
 }

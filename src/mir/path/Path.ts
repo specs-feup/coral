@@ -1,3 +1,4 @@
+import { Joinpoint } from "clava-js/api/Joinpoints.js";
 import Ty from "coral/mir/ty/Ty";
 
 /**
@@ -13,4 +14,5 @@ export default abstract class Path {
      * Retrieve the type of the value at this path.
      */
     abstract get ty(): Ty;
+    abstract get $jp(): Joinpoint;
 }

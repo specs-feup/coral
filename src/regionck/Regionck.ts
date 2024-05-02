@@ -3,16 +3,19 @@ import Ty from "coral/mir/ty/Ty";
 import OutlivesConstraint from "coral/regionck/OutlivesConstraint";
 import RegionVariable from "coral/regionck/RegionVariable";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
+import StructDefsMap from "coral/regionck/StructDefsMap";
 
 export default class Regionck {
     functionEntry: FunctionEntryNode.Class;
     constraints: OutlivesConstraint[];
+    structDefs: StructDefsMap;
     #regionVars: RegionVariable[];
     #symbolTable: Map<string, Ty>;
 
-    constructor(functionEntry: FunctionEntryNode.Class) {
+    constructor(functionEntry: FunctionEntryNode.Class, structDefs: StructDefsMap) {
         this.constraints = [];
         this.#regionVars = [];
+        this.structDefs = structDefs;
         this.#symbolTable = new Map();
         this.functionEntry = functionEntry;
     }

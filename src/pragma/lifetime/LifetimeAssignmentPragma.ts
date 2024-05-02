@@ -10,7 +10,7 @@ export default class LifetimeAssignmentPragma {
 
     // Check if the token is a valid C identifier
     static isIdentifier(s: string): boolean {
-        return /^\[a-zA-Z_][a-zA-Z_0-9]*$/.test(s);
+        return /^[a-zA-Z_][a-zA-Z_0-9]*$/.test(s);
     }
 
     lhs: LfPath;

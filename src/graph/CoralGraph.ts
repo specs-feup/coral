@@ -11,7 +11,9 @@ import ScopeStartNode from "clava-flow/flow/node/instruction/ScopeStartNode";
 import VarDeclarationNode from "clava-flow/flow/node/instruction/VarDeclarationNode";
 import BaseGraph from "clava-flow/graph/BaseGraph";
 import Graph, { GraphBuilder, GraphTypeGuard } from "clava-flow/graph/Graph";
+import { FileJp, Joinpoint } from "clava-js/api/Joinpoints.js";
 import Regionck from "coral/regionck/Regionck";
+import StructDefsMap from "coral/regionck/StructDefsMap";
 
 
 namespace CoralGraph {
@@ -21,11 +23,26 @@ namespace CoralGraph {
     > extends FlowGraph.Class<D, S> {
         getRegionck(functionEntry: FunctionEntryNode.Class): Regionck {
             let regionck = this.scratchData.coral.functions.get(functionEntry.jp.name);
+
+            let $file: Joinpoint = functionEntry.jp;
+            while (!($file instanceof FileJp)) {
+                $file = $file.parent;
+            }
+
             if (regionck === undefined) {
-                regionck = new Regionck(functionEntry);
+                regionck = new Regionck(functionEntry, this.getStructDefsMap($file));
                 this.scratchData.coral.functions.set(functionEntry.jp.name, regionck);
             }
             return regionck;
+        }
+
+        getStructDefsMap(file: FileJp): StructDefsMap {
+            let structDefs = this.scratchData.coral.files.get(file.astId);
+            if (structDefs === undefined) {
+                structDefs = new StructDefsMap(file);
+                this.scratchData.coral.files.set(file.astId, structDefs);
+            }
+            return structDefs;
         }
     }
 
@@ -54,6 +71,7 @@ namespace CoralGraph {
                 ...super.buildScratchData(scratchData),
                 coral: {
                     functions: new Map<string, Regionck>(),
+                    files: new Map<string, StructDefsMap>(),
                 },
             };
         }
@@ -67,6 +85,8 @@ namespace CoralGraph {
 
         isScratchDataCompatible(sData: BaseGraph.ScratchData): sData is ScratchData {
             if (!FlowGraph.TypeGuard.isScratchDataCompatible(sData)) return false;
+            const data = sData as ScratchData;
+            if (data.coral === undefined) return false;
             return true;
         },
     };
@@ -76,6 +96,7 @@ namespace CoralGraph {
     export interface ScratchData extends FlowGraph.ScratchData {
         coral: {
             functions: Map<string, Regionck>;
+            files: Map<string, StructDefsMap>;
         };
     }
 }

@@ -17,7 +17,6 @@ export default class CoralPragma {
         [this.name, ...this.tokens] = $jp.content
             .split(/(\s|\.|=|\*|->|\(|\)|:)/)
             .filter((token) => token.trim().length > 0);
-        console.log([this.name, ...this.tokens]);
     }
 
     static parse(pragmas: Pragma[]): CoralPragma[] {

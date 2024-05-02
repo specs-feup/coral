@@ -36,11 +36,17 @@ export default class MetaRefTy implements MetaTy {
         }
     }
 
-    toTy(): Ty {
+    toTy(regionVarMap: Map<string, RegionVariable>): Ty {
+        const regionVar = regionVarMap.get(this.metaRegionVar.name);
+        if (regionVar === undefined) {
+            throw new Error(`Region variable ${this.metaRegionVar.name} not found in map`);
+        }
+
         return new RefTy(
             this.borrowKind,
-            this.referent.toTy(),
-            this.metaRegionVar.regionVar,
+            this.referent.toTy(regionVarMap),
+            this.$jp,
+            regionVar,
             this.isConst,
         );
     }
