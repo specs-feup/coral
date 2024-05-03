@@ -1,3 +1,4 @@
+import LifetimePragmaParseError from "coral/error/pragma/parse/LifetimePragmaParseError";
 import CoralPragma from "coral/pragma/CoralPragma";
 
 export default class LifetimeBoundPragma {
@@ -15,24 +16,33 @@ export default class LifetimeBoundPragma {
 
     constructor(pragma: CoralPragma) {
         this.pragma = pragma;
+        const tokens = pragma.tokens;
+        let idx = 0;
         
-        if (pragma.tokens.length === 3) {
-            if (pragma.tokens[1] !== ":") {
-                // TODO error
-            }
-            if (!LifetimeBoundPragma.isLifetimeIdentifier(pragma.tokens[2])) {
-                // TODO error
-            }
-            this.bound = pragma.tokens[2];
-        } else if (pragma.tokens.length !== 1) {
-            // TODO error
+        if (tokens.at(idx) === undefined) {
+            throw new LifetimePragmaParseError(pragma, "Expected lifetime identifier");
+        }
+        if (!LifetimeBoundPragma.isLifetimeIdentifier(tokens[0])) {
+            throw new LifetimePragmaParseError(pragma, `Expected lifetime identifier, found '${pragma.tokens[idx]}'`);
+        }
+        this.name = tokens[idx];
+        
+        idx++;
+        if (tokens.at(idx) === undefined) {
+            return;
+        }
+        if (tokens[idx] !== ":") {
+            throw new LifetimePragmaParseError(pragma, `Expected ':', found '${pragma.tokens[idx]}'`);
         }
 
-        if (!LifetimeBoundPragma.isLifetimeIdentifier(pragma.tokens[0])) {
-            // TODO error
+        idx++;
+        if (tokens.at(idx) === undefined) {
+            throw new LifetimePragmaParseError(pragma, "Expected lifetime identifier after ':'");
         }
-
-        this.name = pragma.tokens[0];
+        if (!LifetimeBoundPragma.isLifetimeIdentifier(tokens[idx])) {
+            throw new LifetimePragmaParseError(pragma, `Expected lifetime identifier, found '${pragma.tokens[idx]}'`);
+        }
+        this.bound = pragma.tokens[idx];
     }
 
     static parse(pragmas: CoralPragma[]): LifetimeBoundPragma[] {

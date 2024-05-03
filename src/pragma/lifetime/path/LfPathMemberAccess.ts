@@ -11,4 +11,8 @@ export default class LfPathMemberAccess extends LfPath {
         this.inner = inner;
         this.member = member;
     }
+
+    toString(): string {
+        return `${this.inner.toString()}.${this.member}`;
+    }
 }

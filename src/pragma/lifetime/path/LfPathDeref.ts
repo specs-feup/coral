@@ -8,4 +8,8 @@ export default class LfPathDeref extends LfPath {
         super();
         this.inner = inner;
     }
+
+    toString(): string {
+        return `(*${this.inner.toString()})`;
+    }
 }

@@ -1,4 +1,15 @@
-import { BuiltinType, ElaboratedType, EnumDecl, FileJp, FunctionJp, ParenType, PointerType, QualType, RecordJp, TagType, Type, TypedefType } from "clava-js/api/Joinpoints.js";
+import { BuiltinType, ElaboratedType, EnumDecl, Field, FileJp, FunctionJp, Joinpoint, ParenType, PointerType, QualType, RecordJp, TagType, Type, TypedefType } from "clava-js/api/Joinpoints.js";
+import DropPragmaError from "coral/error/pragma/DropPragmaError";
+import IncompatibleSemanticsPragmasError from "coral/error/pragma/IncompatibleSemanticsPragmasError";
+import MultipleDropPragmasError from "coral/error/pragma/MultipleDropPragmasError";
+import DropPragmaParseError from "coral/error/pragma/parse/DropPragmaParseError";
+import LifetimePragmaParseError from "coral/error/pragma/parse/LifetimePragmaParseError";
+import IncompatibleStructDeclsError from "coral/error/struct/IncompatibleStructDeclsError";
+import InvalidDropFunctionError from "coral/error/struct/InvalidDropFunctionError";
+import LifetimeExpectedError from "coral/error/struct/LifetimeExpectedError";
+import LifetimeReassignmentError from "coral/error/struct/LifetimeReassignmentError";
+import StructCannotBeCopyError from "coral/error/struct/StructCannotBeCopyError";
+import UnexpectedLifetimeAssignmentError from "coral/error/struct/UnexpectedLifetimeAssignmentError";
 import BorrowKind from "coral/mir/ty/BorrowKind";
 import BuiltinTy from "coral/mir/ty/BuiltinTy";
 import Ty from "coral/mir/ty/Ty";
@@ -55,21 +66,25 @@ export default class StructDefsMap {
         const isComplete = $struct.fields.length > 0;
 
         const pragmas = CoralPragma.parse($struct.pragmas);
-        const hasCopyFlag = pragmas.some((p) => p.name === "copy");
-        const hasMoveFlag = pragmas.some((p) => p.name === "move");
-        if (hasCopyFlag && hasMoveFlag) {
-            // TODO error
+        const copyFlag = pragmas.find((p) => p.name === "copy");
+        const moveFlag = pragmas.find((p) => p.name === "move");
+        if (copyFlag !== undefined && moveFlag !== undefined) {
+            throw new IncompatibleSemanticsPragmasError(copyFlag, moveFlag);
         }
         const dropFnPragmas = pragmas.filter((p) => p.name === "drop");
 
-        let dropFnName: string | undefined = undefined;
+        let dropFnPragma: CoralPragma | undefined = undefined;
         if (dropFnPragmas.length === 1) {
-            if (dropFnPragmas[0].tokens.length !== 1) {
-                // TODO error
+            dropFnPragma = dropFnPragmas[0];
+            const tokens = dropFnPragma.tokens;
+            if (tokens.length === 0) {
+                throw new DropPragmaParseError(dropFnPragma, "Expected a token with the function name");
             }
-            dropFnName = dropFnPragmas[0].tokens[0];
+            if (tokens.length > 1) {
+                throw new DropPragmaParseError(dropFnPragma, `Unexpected token '${tokens[1]}'`);
+            }
         } else if (dropFnPragmas.length > 1) {
-            // TODO error
+            throw new MultipleDropPragmasError(dropFnPragmas[0], dropFnPragmas[1]);
         }
 
         const lifetimes = LifetimeBoundPragma.parse(pragmas);
@@ -77,9 +92,9 @@ export default class StructDefsMap {
 
         return {
             isComplete,
-            hasCopyFlag,
-            hasMoveFlag,
-            dropFnName,
+            copyFlag,
+            moveFlag,
+            dropFnPragma,
             lifetimes,
             lifetimesSet,
         };
@@ -88,48 +103,81 @@ export default class StructDefsMap {
     #parseStruct($struct: RecordJp): StructDef {
         const {
             isComplete,
-            hasCopyFlag,
-            hasMoveFlag,
-            dropFnName,
+            copyFlag,
+            moveFlag,
+            dropFnPragma,
             lifetimes,
             lifetimesSet,
         } = this.#parseIncompleteStruct($struct);
 
+        const hasCopyFlag = copyFlag !== undefined;
+        const hasMoveFlag = moveFlag !== undefined;
+        const dropFnName = dropFnPragma?.tokens[0];
+
         for (const $other of Query.searchFrom(this.#$file, "record", { name: $struct.name })) {
             const otherInfo = this.#parseIncompleteStruct($other as RecordJp);
-            if (hasCopyFlag !== otherInfo.hasCopyFlag) {
-                // TODO error
+
+            if (hasCopyFlag !== (otherInfo.copyFlag !== undefined)) {
+                throw new IncompatibleStructDeclsError(
+                    $struct,
+                    copyFlag,
+                    "struct marked as 'copy' here",
+                    $other as RecordJp,
+                    otherInfo.copyFlag,
+                    "struct marked as 'copy' here",
+                    "no 'copy' mark is present",
+                );
             }
-            if (hasMoveFlag !== otherInfo.hasMoveFlag) {
-                // TODO error
+            if (hasMoveFlag !== (otherInfo.moveFlag !== undefined)) {
+                throw new IncompatibleStructDeclsError(
+                    $struct,
+                    moveFlag,
+                    "struct marked as 'move' here",
+                    $other as RecordJp,
+                    otherInfo.moveFlag,
+                    "struct marked as 'move' here",
+                    "no 'move' mark is present",
+                );
             }
-            if (dropFnName !== otherInfo.dropFnName) {
-                // TODO error
+            if (dropFnName !== otherInfo.dropFnPragma?.tokens[0]) {
+                throw new IncompatibleStructDeclsError(
+                    $struct,
+                    dropFnPragma,
+                    `drop function '${dropFnName}' assigned here`,
+                    $other as RecordJp,
+                    otherInfo.dropFnPragma,
+                    `drop function '${otherInfo.dropFnPragma?.tokens[0]}' assigned here`,
+                    "no drop function assigned",
+                );
             }
-            if (lifetimesSet.size !== otherInfo.lifetimesSet.size) {
-                // TODO error
-            }
-            for (const lifetime of lifetimesSet.values()) {
-                if (!otherInfo.lifetimesSet.has(lifetime)) {
-                    // TODO error
-                }
-            }
+
+            this.#assertLfsInOther($struct, lifetimes, $other as RecordJp, otherInfo.lifetimes);
+            this.#assertLfsInOther($other as RecordJp, otherInfo.lifetimes, $struct, lifetimes);
         }
 
-        let dropFn: FunctionJp | undefined = undefined;
+        let $dropFn: FunctionJp | undefined = undefined;
         if (dropFnName !== undefined) {
-            dropFn = Query.searchFrom(this.#$file, "function", { name: dropFnName }).first() as
+            $dropFn = Query.searchFrom(this.#$file, "function", { name: dropFnName }).first() as
                 | FunctionJp
                 | undefined;
-            if (dropFn === undefined) {
-                // TODO error
-                throw new Error("TODO ERROR");
+            if ($dropFn === undefined) {
+                throw new DropPragmaParseError(dropFnPragma!, `'${dropFnName}' is not a function`);
             }
-            if (dropFn.params.length !== 1) {
-                // TODO error
+            if ($dropFn.params.length !== 1) {
+                throw new InvalidDropFunctionError(dropFnPragma!, $dropFn, `one parameter expected, got ${$dropFn.params.length}`);
             }
-
-            // TODO check if parameter is a reference to the struct
+            if ($dropFn.returnType.code !== "void") {
+                throw new InvalidDropFunctionError(dropFnPragma!, $dropFn, `return type should be 'void', got '${$dropFn.returnType.code}'`);
+            }
+            const $paramTy = $dropFn.params[0].type.desugarAll;
+            const expected = `struct ${$struct.type.code} *`;
+            if (!($paramTy instanceof PointerType && $paramTy.code === expected)) {
+                throw new InvalidDropFunctionError(
+                    dropFnPragma!,
+                    $dropFn,
+                    `parameter type should be '${expected}', got '${$paramTy.code}'`,
+                );
+            }
         }
 
         const metaRegionVars = Array.from(lifetimesSet).map(
@@ -144,8 +192,9 @@ export default class StructDefsMap {
         for (const $field of $struct.fields) {
             const metaRegionVarAssignments = LifetimeAssignmentPragma.parse(
                 CoralPragma.parse($field.pragmas),
-            ).map((p): [LfPath, string] => [p.lhs, p.rhs]);
+            ).map((p): [LfPath, string, LifetimeAssignmentPragma] => [p.lhs, p.rhs, p]);
             const fieldTy = this.#parseMetaType(
+                $field,
                 $field.name,
                 $field.type,
                 lifetimesSet,
@@ -156,18 +205,20 @@ export default class StructDefsMap {
         }
 
         let semantics = Ty.Semantics.MOVE;
-        let mayBeCopy = dropFn === undefined;
+        let mayBeCopy = $dropFn === undefined;
 
         if (isComplete) {
-            for (const metaTy of fields.values()) {
+            let $moveFieldExample: Field | undefined = undefined;
+            for (const [fieldName, metaTy] of fields.entries()) {
                 if (metaTy.semantics !== Ty.Semantics.COPY) {
                     mayBeCopy = false;
+                    $moveFieldExample = $struct.fields.find(f => f.name === fieldName)!;
                     break;
                 }
             }
 
             if (hasCopyFlag && !mayBeCopy) {
-                // TODO error
+                throw new StructCannotBeCopyError(copyFlag!, dropFnPragma, $moveFieldExample);
             }
 
             if (mayBeCopy && !hasMoveFlag) {
@@ -178,7 +229,7 @@ export default class StructDefsMap {
                 if (mayBeCopy) {
                     semantics = Ty.Semantics.COPY;
                 } else {
-                    // TODO error
+                    throw new StructCannotBeCopyError(copyFlag!, dropFnPragma);
                 }
             }
         }
@@ -190,15 +241,54 @@ export default class StructDefsMap {
             fields,
             metaRegionVars,
             bounds,
-            dropFn,
+            $dropFn,
         );
     }
 
+    // Checks if all `lifetimes` are also in `otherLifetimes`
+    #assertLfsInOther(
+        $struct: RecordJp,
+        lifetimes: LifetimeBoundPragma[],
+        $other: RecordJp,
+        otherLifetimes: LifetimeBoundPragma[]
+    ) {
+        for (const lifetimePragma of lifetimes) {
+            otherLifetimes = otherLifetimes.filter(
+                (p) => p.name === lifetimePragma.name,
+            );
+            const isBoundCompatible = otherLifetimes.some(
+                (p) =>
+                    lifetimePragma.bound === undefined ||
+                    p.bound === lifetimePragma.bound,
+            );
+
+            if (!isBoundCompatible) {
+                const thisStructMessage =
+                    lifetimePragma.bound === undefined
+                        ? `lifetime '${lifetimePragma.name}' assigned here`
+                        : `lifetime '${lifetimePragma.name}' assigned here, bound to '${lifetimePragma.bound}'`;
+
+                const otherStructMessage = `lifetime '${lifetimePragma.name}' assigned here but without '${lifetimePragma.bound} bound`;
+
+                throw new IncompatibleStructDeclsError(
+                    $struct,
+                    lifetimePragma.pragma,
+                    thisStructMessage,
+                    $other as RecordJp,
+                    otherLifetimes[0].pragma,
+                    otherStructMessage,
+                    `lifetime '${lifetimePragma.name}' not assigned`,
+                );
+            }
+        }
+    }
+
     #parseMetaType(
+        $field: Field,
         name: string,
         $type: Type,
         metaRegionVars: Set<string>,
-        metaRegionVarAssignments: [LfPath, string][],
+        metaRegionVarAssignments: [LfPath, string, LifetimeAssignmentPragma][],
         isConst = false,
         isRestrict = false,
     ): MetaTy {
@@ -215,29 +305,30 @@ export default class StructDefsMap {
 
         if ($type instanceof BuiltinType) {
             if (metaRegionVarAssignments.length > 0) {
-                // TODO error
+                throw new UnexpectedLifetimeAssignmentError(metaRegionVarAssignments[0][2]);
             }
             return new BuiltinTy($type.builtinKind, $type, isConst);
         } else if ($type instanceof PointerType) {
             const innerLfs = metaRegionVarAssignments
-                .filter(([lfPath, _]) => !(lfPath instanceof LfPathVarRef))
-                .map(([lfPath, regionVar]): [LfPath, string] => {
+                .filter(([lfPath]) => !(lfPath instanceof LfPathVarRef))
+                .map(([lfPath, regionVar, pragma]): [LfPath, string, LifetimeAssignmentPragma] => {
                     if (lfPath instanceof LfPathDeref) {
-                        return [(lfPath as LfPathDeref).inner, regionVar];
+                        return [(lfPath as LfPathDeref).inner, regionVar, pragma];
                     } else if (lfPath instanceof LfPathMemberAccess) {
                         const lfPathInner = lfPath.inner;
                         if (!(lfPathInner instanceof LfPathDeref)) {
-                            // TODO error
-                            throw new Error("TODO ERROR");
+                            throw new UnexpectedLifetimeAssignmentError(pragma);
                         }
                         return [
                             new LfPathMemberAccess(lfPathInner.inner, lfPath.member),
                             regionVar,
+                            pragma
                         ];
                     }
                     throw new Error("Unhandled LfPath");
                 });
             const inner = this.#parseMetaType(
+                $field,
                 name,
                 $type.pointee,
                 metaRegionVars,
@@ -247,16 +338,16 @@ export default class StructDefsMap {
                 throw new Error("Cannot have a restrict pointer to a const type");
             }
             const outer = metaRegionVarAssignments.filter(
-                ([lfPath, _]) => lfPath instanceof LfPathVarRef,
+                ([lfPath]) => lfPath instanceof LfPathVarRef,
             );
             if (outer.length > 1) {
-                // TODO error
+                throw new LifetimeReassignmentError(outer[0][2], outer[0][2]);
             }
             if (outer.length === 0) {
-                // TODO error
+                throw new LifetimeExpectedError($field);
             }
             if ((outer[0][0] as LfPathVarRef).identifier !== name) {
-                // TODO error
+                throw new UnexpectedLifetimeAssignmentError(outer[0][2]);
             }
             return new MetaRefTy(
                 inner.isConst ? BorrowKind.SHARED : BorrowKind.MUTABLE,
@@ -267,6 +358,7 @@ export default class StructDefsMap {
             );
         } else if ($type instanceof TypedefType) {
             return this.#parseMetaType(
+                $field,
                 name,
                 $type.underlyingType,
                 metaRegionVars,
@@ -276,6 +368,7 @@ export default class StructDefsMap {
             );
         } else if ($type instanceof ElaboratedType) {
             return this.#parseMetaType(
+                $field,
                 name,
                 $type.namedType,
                 metaRegionVars,
@@ -285,6 +378,7 @@ export default class StructDefsMap {
             );
         } else if ($type instanceof ParenType) {
             return this.#parseMetaType(
+                $field,
                 name,
                 $type.innerType,
                 metaRegionVars,
@@ -295,25 +389,26 @@ export default class StructDefsMap {
         } else if ($type instanceof TagType) {
             const $decl = $type.decl;
             if ($decl instanceof RecordJp) {
-                if (
-                    metaRegionVarAssignments.some(
-                        ([lfPath, _]) => !(lfPath instanceof LfPathMemberAccess),
-                    )
-                ) {
-                    // TODO error
+                const invalidMetaRegionVarAssignment = metaRegionVarAssignments.find(
+                    ([lfPath]) => !(lfPath instanceof LfPathMemberAccess),
+                );
+                if (invalidMetaRegionVarAssignment !== undefined) {
+                    throw new UnexpectedLifetimeAssignmentError(
+                        invalidMetaRegionVarAssignment[2],
+                    );
                 }
 
                 const regionVarMap = new Map<string, MetaRegionVariable>();
 
-                for (const [lfPath, regionVar] of metaRegionVarAssignments) {
+                for (const [lfPath, regionVar, pragma] of metaRegionVarAssignments) {
                     const memberAccess = lfPath as LfPathMemberAccess;
                     const memberAccessInner = memberAccess.inner;
                     if (memberAccessInner instanceof LfPathVarRef) {
                         if (memberAccessInner.identifier !== name) {
-                            // TODO error
+                            throw new UnexpectedLifetimeAssignmentError(pragma);
                         }
                     } else {
-                        // TODO error
+                        throw new UnexpectedLifetimeAssignmentError(pragma);
                     }
 
                     regionVarMap.set(
@@ -325,7 +420,7 @@ export default class StructDefsMap {
                 return new MetaStructTy($decl, regionVarMap, this, isConst);
             } else if ($decl instanceof EnumDecl) {
                 if (metaRegionVarAssignments.length > 0) {
-                    // TODO error
+                    throw new UnexpectedLifetimeAssignmentError(metaRegionVarAssignments[0][2]);
                 }
                 return new BuiltinTy(`enum ${$decl.name}`, $decl, isConst);
             } else {

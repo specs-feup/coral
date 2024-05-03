@@ -7,4 +7,8 @@ export default class LfPathVarRef extends LfPath {
         super();
         this.identifier = identifier;
     }
+
+    toString(): string {
+        return this.identifier;
+    }
 }

@@ -1,3 +1,4 @@
+import LifetimePragmaParseError from "coral/error/pragma/parse/LifetimePragmaParseError";
 import CoralPragma from "coral/pragma/CoralPragma";
 import LifetimeBoundPragma from "coral/pragma/lifetime/LifetimeBoundPragma";
 import LfPath from "coral/pragma/lifetime/path/LfPath";
@@ -20,21 +21,32 @@ export default class LifetimeAssignmentPragma {
     constructor(pragma: CoralPragma) {
         this.pragma = pragma;
         let idx = 0;
-        [idx, this.lhs] = LifetimeAssignmentPragma.#parseLhs(pragma.tokens, idx);
-        if (pragma.tokens.at(idx) !== "=") {
-            // TODO error
+        [idx, this.lhs] = LifetimeAssignmentPragma.#parseLhs(pragma, idx);
+        
+        if (pragma.tokens.at(idx) === undefined) {
+            throw new LifetimePragmaParseError(pragma, "Expected '='");
         }
+        if (pragma.tokens.at(idx) !== "=") {
+            throw new LifetimePragmaParseError(pragma, `Expected '=', found '${pragma.tokens[idx]}'`);
+        }
+        
         idx++;
-        if (pragma.tokens.length !== idx + 1) {
-            // TODO error
+        if (pragma.tokens.at(idx) === undefined) {
+            throw new LifetimePragmaParseError(pragma, "Expected lifetime identifier after '='");
         }
         if (!LifetimeBoundPragma.isLifetimeIdentifier(pragma.tokens[idx])) {
-            // TODO error
+            throw new LifetimePragmaParseError(pragma, `Expected lifetime identifier, found '${pragma.tokens[idx]}'`);
         }
         this.rhs = pragma.tokens[idx];
+        
+        idx++;
+        if (pragma.tokens.at(idx) !== undefined) {
+            throw new LifetimePragmaParseError(pragma, `Unexpected token '${pragma.tokens[idx]}'`);
+        }
     }
 
-    static #parseLhs(tokens: string[], idx: number): [number, LfPath] {
+    static #parseLhs(pragma: CoralPragma, idx: number): [number, LfPath] {
+        let tokens = pragma.tokens;
         let parens = 0;
         while (tokens.at(idx) === "(") {
             parens++;
@@ -45,32 +57,43 @@ export default class LifetimeAssignmentPragma {
         const first = tokens.at(idx);
         idx++;
         if (first === undefined) {
-            // TODO error
-            throw new Error();
+            throw new LifetimePragmaParseError(pragma, "Expected lifetime assignment");
         }
 
         let canMemberAccess = true;
         if (first === "*") {
             canMemberAccess = false;
-            result = this.#parseDeref(tokens, idx);
+            [idx, result] = this.#parseDeref(pragma, idx);
         } else if (LifetimeAssignmentPragma.isIdentifier(first)) {
             result = new LfPathVarRef(first);
         } else {
-            // TODO new error
-            throw new Error();
+            throw new LifetimePragmaParseError(pragma, `Expected identifier or '*', found '${first}'`);
+        }
+
+        if (parens === 0 && canMemberAccess) {
+            console.log(tokens.at(idx));
+            if (tokens.at(idx) === ".") {
+                idx++;
+                [idx, result] = this.#parseMemberAccess(pragma, idx, result as LfPathDeref | LfPathVarRef);
+            } else if (tokens.at(idx) === "->") {
+                idx++;
+                [idx, result] = this.#parseMemberAccess(pragma, idx, new LfPathDeref(result as LfPathDeref | LfPathVarRef));
+            }
         }
 
         while (parens > 0) {
             if (canMemberAccess && tokens.at(idx) === ".") {
                 idx++;
-                result = this.#parseMemberAccess(tokens, idx, result as LfPathDeref | LfPathVarRef);
+                [idx, result] = this.#parseMemberAccess(pragma, idx, result as LfPathDeref | LfPathVarRef);
                 break;
             } else if (canMemberAccess && tokens.at(idx) === "->") {
                 idx++;
-                result = this.#parseMemberAccess(tokens, idx, new LfPathDeref(result as LfPathDeref | LfPathVarRef));
+                [idx, result] = this.#parseMemberAccess(pragma, idx, new LfPathDeref(result as LfPathDeref | LfPathVarRef));
                 break;
+            } else if (tokens.at(idx) === undefined) {
+                throw new LifetimePragmaParseError(pragma, "Expected ')'");
             } else if (tokens.at(idx) !== ")") {
-                // TODO error
+                throw new LifetimePragmaParseError(pragma, `Expected ')', found '${tokens[idx]}'`);
             }
             canMemberAccess = true;
             parens--;
@@ -78,8 +101,10 @@ export default class LifetimeAssignmentPragma {
         }
 
         while (parens > 0) {
-            if (tokens.at(idx) !== ")") {
-                // TODO error
+            if (tokens.at(idx) === undefined) {
+                throw new LifetimePragmaParseError(pragma, "Expected ')'");
+            } else if (tokens.at(idx) !== ")") {
+                throw new LifetimePragmaParseError(pragma, `Expected ')', found '${tokens[idx]}'`);
             }
             parens--;
             idx++;
@@ -88,7 +113,8 @@ export default class LifetimeAssignmentPragma {
         return [idx, result];
     }
 
-    static #parseDeref(tokens: string[], idx: number): [number, LfPathDeref] {
+    static #parseDeref(pragma: CoralPragma, idx: number): [number, LfPathDeref] {
+        let tokens = pragma.tokens;
         let parens = 0;
         while (tokens.at(idx) === "(") {
             parens++;
@@ -99,23 +125,23 @@ export default class LifetimeAssignmentPragma {
         const first = tokens.at(idx);
         idx++;
         if (first === undefined) {
-            // TODO error
-            throw new Error();
+            throw new LifetimePragmaParseError(pragma, `Expected identifier or '*'`);
         }
 
         if (first === "*") {
-            [idx, result] = this.#parseDeref(tokens, idx);
+            [idx, result] = this.#parseDeref(pragma, idx);
             result = new LfPathDeref(result);
         } else if (LifetimeAssignmentPragma.isIdentifier(first)) {
             result = new LfPathDeref(new LfPathVarRef(first));
         } else {
-            // TODO new error
-            throw new Error();
+            throw new LifetimePragmaParseError(pragma, `Expected identifier or '*', found '${first}'`);
         }
 
         while (parens > 0) {
-            if (tokens.at(idx) !== ")") {
-                // TODO error
+            if (tokens.at(idx) === undefined) {
+                throw new LifetimePragmaParseError(pragma, "Expected ')'");
+            } else if (tokens.at(idx) !== ")") {
+                throw new LifetimePragmaParseError(pragma, `Expected ')', found '${tokens[idx]}'`);
             }
             parens--;
             idx++;
@@ -124,11 +150,14 @@ export default class LifetimeAssignmentPragma {
         return [idx, result]
     }
 
-    static #parseMemberAccess(tokens: string[], idx: number, inner: LfPathDeref | LfPathVarRef): [number, LfPathMemberAccess] {
+    static #parseMemberAccess(pragma: CoralPragma, idx: number, inner: LfPathDeref | LfPathVarRef): [number, LfPathMemberAccess] {
+        const tokens = pragma.tokens;
         const lfIdentifier = tokens.at(idx);
-        if (lfIdentifier === undefined || !LifetimeBoundPragma.isLifetimeIdentifier(lfIdentifier)) {
-            // TODO error
-            throw new Error();
+        if (lfIdentifier === undefined) {
+            throw new LifetimePragmaParseError(pragma, "Expected lifetime identifier");
+        }
+        if (!LifetimeBoundPragma.isLifetimeIdentifier(lfIdentifier)) {
+            throw new LifetimePragmaParseError(pragma, `Expected lifetime identifier, found '${lfIdentifier}'`);
         }
         idx++;
         

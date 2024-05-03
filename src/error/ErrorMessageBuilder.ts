@@ -1,25 +1,37 @@
-import { Joinpoint, Statement } from "clava-js/api/Joinpoints.js";
+import { Decl, Joinpoint, Pragma, RecordJp, Statement } from "clava-js/api/Joinpoints.js";
 
 class CodeLineHint {
     #jpCode: string;
     #description: string | undefined;
-    #line: number;
+    #line?: number;
 
-    constructor(jpCode: string, description: string | undefined, $line: number) {
+    constructor(jpCode: string, description: string | undefined, $line?: number) {
         this.#jpCode = jpCode;
         this.#description = description;
         this.#line = $line;
     }
 
     toString(linePaddingSize: number) {
-        const lineNum = (this.#line.toString() ?? "?").padStart(
-            linePaddingSize,
-            " ",
-        );
+        let error = "";
+        let currentLine = this.#line;
+        for (const jpCodeLine of this.#jpCode.replace("\r", "").split("\n")) {
+            if (jpCodeLine === "") {
+                continue;
+            }
 
-        let error = ` ${lineNum} |\t${this.#jpCode}\n`;
+            const lineNum = (currentLine?.toString() ?? "").padStart(linePaddingSize, " ");
+            error += ` ${lineNum} |\t${jpCodeLine}\n`;
+            if (currentLine !== undefined) {
+                currentLine++;
+            }
+        }
+
+        if (error === "") {
+            error += ` ${" ".repeat(linePaddingSize)} |\t\n`;
+        }
+
         if (this.#description !== undefined) {
-            error += ` ${" ".repeat(linePaddingSize)} |\t\t${this.#description}\n`;
+            error += ` ${" ".repeat(linePaddingSize)} |\t\t|> ${this.#description}\n`;
         }
 
         return error;
@@ -49,7 +61,7 @@ export default class ErrorMessageBuilder {
         }
         this.#lines.push($line_ref.line ?? 1);
         
-        while (!($jp instanceof Statement)) {
+        while (!($jp instanceof Statement || $jp instanceof Decl)) {
             $jp = $jp.parent;
         }
 
@@ -64,6 +76,16 @@ export default class ErrorMessageBuilder {
     ) {
         this.#lines.push(line);
         this.#body.push(new CodeLineHint(jpCode, description, line));
+        return this;
+    }
+
+    blankLine() {
+        this.#body.push(new CodeLineHint("", undefined));
+        return this;
+    }
+
+    ellipsis() {
+        this.#body.push(new CodeLineHint("...", undefined));
         return this;
     }
 

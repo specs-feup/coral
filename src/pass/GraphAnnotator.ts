@@ -85,7 +85,6 @@ export default class GraphAnnotator implements GraphTransformation {
     }
 
     #annotateFunction(functionEntry: FunctionEntryNode.Class) {
-        // TODO is static only inside function or should it be the same in every function?
         this.#regionck!.newRegionVar(RegionVariable.Kind.UNIVERSAL, "static");
 
         for (const node of functionEntry.reachableNodes) {
