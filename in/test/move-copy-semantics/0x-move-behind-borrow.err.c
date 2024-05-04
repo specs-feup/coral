@@ -1,9 +1,12 @@
 #pragma coral_test expect MoveBehindBorrowError
 
-struct NoCopy;
+#pragma coral move
+struct NoCopy {
+    int a;
+};
 
 int main() {
-    struct NoCopy a = NoCopy;
+    struct NoCopy a;
     struct NoCopy *restrict ref1 = &a;
     *ref1;
 

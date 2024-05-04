@@ -68,7 +68,7 @@ export default class ConstraintGenerator implements GraphTransformation {
             }
 
             // Lifetime constraints
-            for (const variable of coralNode.liveIn.keys()) {
+            for (const variable of coralNode.liveIn) {
                 const ty = this.#regionck!.getTy(variable);
                 if (ty === undefined) {
                     throw new Error(
@@ -139,10 +139,7 @@ export default class ConstraintGenerator implements GraphTransformation {
                 ),
                 successor,
             );
-            return;
-        }
-
-        if (ty1 instanceof StructTy && ty2 instanceof StructTy) {
+        } else if (ty1 instanceof StructTy && ty2 instanceof StructTy) {
             if (ty1.name != ty2.name) {
                 throw new Error(
                     `Cannot relate types ${ty1.toString()} and ${ty2.toString()}, different kinds or names`,
@@ -154,24 +151,18 @@ export default class ConstraintGenerator implements GraphTransformation {
                 );
             }
 
-            for (let i = 0; i < ty1.regionVars.length; i++) {
-                // TODO: May need to be changed to go parameter by paramenter, which would require changes to the StructTy
+            for (const [regionVarName, ty1RegionVar] of ty1.regionVarMap) {
+                const ty2RegionVar = ty2.regionVarMap.get(regionVarName)!;
                 this.#relateRegions(
-                    ty1.regionVars[i],
-                    ty2.regionVars[i],
+                    ty1RegionVar,
+                    ty2RegionVar,
                     Variance.xform(variance, Variance.IN),
                     successor,
                 );
             }
-
-            return;
+        } else if (!(ty1 instanceof BuiltinTy && ty2 instanceof BuiltinTy)) {
+            throw new Error(`Cannot relate types ${ty1.toString()} and ${ty2.toString()}`);
         }
-
-        if (ty1 instanceof BuiltinTy && ty2 instanceof BuiltinTy) {
-            return;
-        }
-
-        throw new Error(`Cannot relate types ${ty1.toString()} and ${ty2.toString()}`);
     }
 
     #relateRegions(

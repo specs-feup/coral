@@ -20,6 +20,8 @@ import ConstraintGenerator from "coral/pass/ConstraintGenerator";
 import InScopeLoansComputation from "coral/pass/InScopeLoansComputation";
 import RegionckErrorReporting from "coral/pass/RegionckErrorReporting";
 import MoveAnalyser from "coral/pass/MoveAnalyser";
+import Graph from "clava-flow/graph/Graph";
+import IncrementingIdGenerator from "clava-flow/graph/id/IncrementingIdGenerator";
 
 export default class CoralPipeline {
     #debug: boolean;
@@ -53,11 +55,14 @@ export default class CoralPipeline {
         }
 
         new CoralNormalizer().apply($root);
-
-        const graph = FlowGraph.generate($root)
+        
+        const baseGraph = Graph.create()
+            .setNodeIdGenerator(new IncrementingIdGenerator("node_"))
+            .setEdgeIdGenerator(new IncrementingIdGenerator("edge_"));
+        const graph = FlowGraph.generate($root, baseGraph)
             .init(new CoralGraph.Builder())
             .as(CoralGraph.Class)
-            .apply(new InferLiveness())
+            .apply(new InferLiveness()) // TODO liveness analysis does not handle structs correctly
             .apply(
                 new FilterFlowNodes(
                     (node) =>

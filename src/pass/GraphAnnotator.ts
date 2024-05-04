@@ -87,6 +87,11 @@ export default class GraphAnnotator implements GraphTransformation {
     #annotateFunction(functionEntry: FunctionEntryNode.Class) {
         this.#regionck!.newRegionVar(RegionVariable.Kind.UNIVERSAL, "static");
 
+        const coralPragmas = CoralPragma.parse(functionEntry.jp.pragmas);
+        const lifetimeBoundPragmas = LifetimeBoundPragma.parse(coralPragmas);
+        const lifetimeAssignmentPragmas = LifetimeAssignmentPragma.parse(coralPragmas);
+        // TODO
+
         for (const node of functionEntry.reachableNodes) {
             if (!node.is(LivenessNode.TypeGuard)) {
                 continue;

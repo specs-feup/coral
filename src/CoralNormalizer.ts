@@ -27,6 +27,7 @@ export default class CoralNormalizer extends Pass {
         //       a = (b + (c=d)) into c=d; a=b+c
         //       -> into *().
         //       [] into *(+)
+        //       Dereference inside an expression should be replaced with a temporary variable
 
         // for (const $stmt of Query.searchFrom($jp, "statement")) {
         //     new StatementDecomposer("__coral_tmp_", 0).decomposeAndReplace($stmt as Statement);

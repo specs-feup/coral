@@ -6,8 +6,6 @@ import { Pragma } from "clava-js/api/Joinpoints.js";
 
 import CoralPipeline from "coral/CoralPipeline";
 import CoralError from "coral/error/CoralError";
-import MutateWhileBorrowedError from "coral/error/borrow/MutateWhileBorrowedError";
-import UseWhileMutBorrowedError from "coral/error/borrow/UseWhileMutBorrowedError";
 
 interface TypeOf<T> {
     new (...args: never[]): T;
@@ -84,7 +82,7 @@ class CoralTester {
                     prefix + "+--> ",
                 );
             } else {
-                console.log(`${prefix}+--> ${name} (${subresults.result})`); // TODO maybe print more context
+                console.log(`${prefix}+--> ${name} (${subresults.result})`);
             }
         }
     }
@@ -107,7 +105,6 @@ class CoralTester {
         }
     }
 
-    // TODO possibly unify with CORAL pragma logic
     #getGlobalTestUtilsPragma(
         ...subcommands: string[]
     ): { raw: Pragma; content: string[] }[] {
@@ -138,23 +135,6 @@ class CoralTester {
         return matches;
     }
 
-    #getErrorClass(error: string): TypeOf<CoralError> {
-        // Reflection is avoided to prevent possible unintended vulnerabilities
-        // Instead, allowed errors are hardcoded
-        switch (error) {
-            case "CoralError":
-                return CoralError;
-            case "MutateWhileBorrowedError":
-                return MutateWhileBorrowedError;
-            case "UseWhileMutBorrowedError":
-                return UseWhileMutBorrowedError;
-            case "Error":
-                return Error;
-            default:
-                throw new Error("Unsupported error class: " + error);
-        }
-    }
-
     #runTest(
         path: string,
         isOkExpected: boolean = true,
@@ -180,13 +160,11 @@ class CoralTester {
 
             if (!isOkExpected) {
                 for (const $pragma of this.#getGlobalTestUtilsPragma("expect")) {
-                    result.expectedExceptions.push(
-                        this.#getErrorClass($pragma.content[1]),
-                    );
+                    result.expectedExceptions.push($pragma.content[1]);
                 }
 
                 if (result.expectedExceptions.length === 0) {
-                    result.expectedExceptions.push(CoralError);
+                    result.expectedExceptions.push("CoralError");
                 }
             }
 
@@ -203,7 +181,7 @@ class CoralTester {
                 result.actualException = e;
                 pass =
                     !isOkExpected &&
-                    result.expectedExceptions.some((error) => e instanceof error);
+                    result.expectedExceptions.some((error) => e.name === error);
                 if (!pass) {
                     if (this.#writeTo === undefined) {
                         console.log(e.stack);
@@ -214,6 +192,7 @@ class CoralTester {
                 }
             } else if (e instanceof Error) {
                 console.log(e.stack);
+                throw e;
             } else {
                 throw e;
             }
@@ -305,13 +284,17 @@ namespace CoralTester {
     export type TestResults = {
         type: "test";
         result: "Pass" | "Fail";
-        expectedExceptions: TypeOf<Error>[];
+        expectedExceptions: string[];
         actualException: Error | undefined;
     };
 }
 
-// TODO change context folder into some function that gives the root of the project
-const rootFolder = Clava.getData().getContextFolder();
+// TODO use getContextFolder() instead of Node functions
+//      for now, this is not possible in Clava-JS
+// const rootFolder = Clava.getData().getContextFolder();
+import path from "path";
+import { fileURLToPath } from "url";
+const rootFolder = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const testFolder = rootFolder + "/in/test";
 new CoralTester(testFolder, new CoralPipeline())
     .writeTo(rootFolder + "/out/woven_code/test")

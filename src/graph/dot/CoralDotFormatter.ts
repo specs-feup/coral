@@ -114,9 +114,9 @@ export default class CoralDotFormatter extends DotFormatter {
         if (coralNode) {
             label += `\n---`;
             if (node.is(FunctionExitNode.TypeGuard) || node.is(ScopeEndNode.TypeGuard)) {
-                label += `\n[${coralNode.jp.endLine}] `;
+                label += `\n${node.id} | line ${coralNode.jp.endLine} `;
             } else {
-                label += `\n[${coralNode.jp.line}] `;
+                label += `\n${node.id} | line ${coralNode.jp.line} `;
             }
 
             if (coralNode.loan) {

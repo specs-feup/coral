@@ -14,12 +14,12 @@ namespace CoralNode {
         D extends Data = Data,
         S extends ScratchData = ScratchData,
     > extends FlowNode.Class<D, S> {
-        get liveIn(): Set<Vardecl> {
-            return this.scratchData.liveness.liveIn;
+        get liveIn(): Vardecl[] {
+            return Array.from(this.scratchData.liveness.liveIn.values());
         }
 
-        get liveOut(): Set<Vardecl> {
-            return this.scratchData.liveness.liveOut;
+        get liveOut(): Vardecl[] {
+            return Array.from(this.scratchData.liveness.liveOut.values());
         }
 
         get accesses(): Access[] {
@@ -27,7 +27,9 @@ namespace CoralNode {
         }
 
         get assignments(): Access[] {
-            return this.scratchData.coral.accesses.filter((access) => access.mutability === Access.Mutability.WRITE);
+            return this.scratchData.coral.accesses.filter(
+                (access) => access.mutability === Access.Mutability.WRITE,
+            );
         }
 
         get inScopeLoans(): Set<Loan> {

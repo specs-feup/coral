@@ -18,17 +18,22 @@ export default class OutlivesConstraint {
     }
 
     toString(): string {
-        return `${this.sup.name}: ${this.sub.name} @ ${this.node.id}`;
+        return `[${this.node.id}] %${this.sup.name}: %${this.sub.name}`;
     }
 
     apply(): boolean {
         let changed = false;
 
-        const nodes = this.node.bfs(
-            (edge) => edge.is(ControlFlowEdge.TypeGuard)
-                && this.sub.points.has(edge.target.id)
-        );
-
+        let nodes;
+        if (this.sub.points.has(this.node.id)) {
+            nodes = this.node.bfs(
+                (edge) => edge.is(ControlFlowEdge.TypeGuard)
+                    && this.sub.points.has(edge.target.id)
+            );
+        } else {
+            nodes = []
+        }
+        
         for (const [node] of nodes) {
             const alreadyContains = this.sup.points.has(node.id);
             if (alreadyContains) {

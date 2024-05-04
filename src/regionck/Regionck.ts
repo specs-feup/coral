@@ -44,17 +44,17 @@ export default class Regionck {
     }
 
     debugInfo(): string {
-        let result = "\t|Regions:\n";
+        let result = "\t| Regions:\n";
         for (const region of this.#regionVars) {
             const points = Array.from(region.points).sort();
-            result += `\t|\t'${region.name}: {${points.join(", ")}}\n`;
+            result += `\t|\t%${region.name}: {${points.join(", ")}}\n`;
         }
 
-        result += "\nConstraints:\n";
+        result += "\t|\n\t| Constraints:\n";
         for (const constraint of this.constraints) {
             result += `\t|\t${constraint.toString()}\n`;
         }
 
-        return result + "\n\n";
+        return result + "\n";
     }
 }
