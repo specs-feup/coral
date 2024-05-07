@@ -9,6 +9,10 @@ export default class LfPathDeref extends LfPath {
         this.inner = inner;
     }
 
+    override get varName(): string {
+        return this.inner.varName;
+    }
+
     toString(): string {
         return `(*${this.inner.toString()})`;
     }

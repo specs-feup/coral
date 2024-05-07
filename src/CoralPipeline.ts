@@ -62,24 +62,26 @@ export default class CoralPipeline {
         const graph = FlowGraph.generate($root, baseGraph)
             .init(new CoralGraph.Builder())
             .as(CoralGraph.Class)
-            .apply(new InferLiveness()) // TODO liveness analysis does not handle structs correctly
             .apply(
                 new FilterFlowNodes(
                     (node) =>
-                        !node.is(EmptyStatementNode.TypeGuard) &&
-                        !node.is(BreakNode.TypeGuard) &&
-                        !node.is(ContinueNode.TypeGuard) &&
-                        !node.is(GotoLabelNode.TypeGuard) &&
-                        !node.is(GotoNode.TypeGuard) &&
-                        !node.is(CommentNode.TypeGuard) &&
-                        !node.is(PragmaNode.TypeGuard),
+                        // !node.is(EmptyStatementNode.TypeGuard) &&
+                        // !node.is(BreakNode.TypeGuard) &&
+                        // !node.is(ContinueNode.TypeGuard) &&
+                        // !node.is(GotoLabelNode.TypeGuard) &&
+                        // !node.is(GotoNode.TypeGuard) &&
+                        !node.is(CommentNode.TypeGuard) && !node.is(PragmaNode.TypeGuard),
                 ),
             )
             .apply(new GraphAnnotator())
+            .apply(new MoveAnalyser())
+            // TODO insert drops
+            .apply(new InferLiveness()) // TODO liveness analysis does not handle structs correctly
             .apply(new ConstraintGenerator(this.#debug))
             .apply(new InScopeLoansComputation())
             .apply(new RegionckErrorReporting())
-            .apply(new MoveAnalyser());
+            // TODO drop elaboration
+            ;
 
         if (this.#mirDotFile) {
             graph.toDotFile(new CoralDotFormatter(), this.#mirDotFile);

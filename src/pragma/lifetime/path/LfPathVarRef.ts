@@ -8,6 +8,10 @@ export default class LfPathVarRef extends LfPath {
         this.identifier = identifier;
     }
 
+    override get varName(): string {
+        return this.identifier;
+    }
+
     toString(): string {
         return this.identifier;
     }

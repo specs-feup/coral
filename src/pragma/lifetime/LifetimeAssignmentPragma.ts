@@ -71,7 +71,6 @@ export default class LifetimeAssignmentPragma {
         }
 
         if (parens === 0 && canMemberAccess) {
-            console.log(tokens.at(idx));
             if (tokens.at(idx) === ".") {
                 idx++;
                 [idx, result] = this.#parseMemberAccess(pragma, idx, result as LfPathDeref | LfPathVarRef);

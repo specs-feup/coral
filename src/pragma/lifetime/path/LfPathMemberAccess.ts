@@ -12,6 +12,10 @@ export default class LfPathMemberAccess extends LfPath {
         this.member = member;
     }
 
+    override get varName(): string {
+        return this.inner.varName;
+    }
+
     toString(): string {
         return `${this.inner.toString()}.${this.member}`;
     }

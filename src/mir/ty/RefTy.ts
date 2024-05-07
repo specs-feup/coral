@@ -28,9 +28,9 @@ export default class RefTy extends Ty {
     override get name(): string {
         switch (this.borrowKind) {
             case BorrowKind.MUTABLE:
-                return `&'${this.regionVar.name} mut`;
+                return `${this.regionVar.name}*`;
             case BorrowKind.SHARED:
-                return `&'${this.regionVar.name}`;
+                return `const ${this.regionVar.name}*`;
         }
     }
 

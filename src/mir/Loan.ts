@@ -35,7 +35,7 @@ export default class Loan {
     }
 
     toString(): string {
-        return `${this.borrowKind == BorrowKind.MUTABLE ? "&mut" : "&"}'${this.regionVar.name} ${this.loanedPath.toString()}`;
+        return `${this.borrowKind === BorrowKind.MUTABLE ? "&mut" : "&const"}${this.regionVar.name} ${this.loanedPath.toString()}`;
     }
 
     get borrowKind(): BorrowKind {

@@ -1,6 +1,3 @@
-import Pass from "lara-js/api/lara/pass/Pass.js";
-import cytoscape from "lara-js/api/libs/cytoscape-3.26.0.js";
-import CfgNodeType from "clava-js/api/clava/graphs/cfg/CfgNodeType.js";
 
 import MutateWhileBorrowedError from "coral/error/borrow/MutateWhileBorrowedError";
 import UseWhileMutBorrowedError from "coral/error/borrow/UseWhileMutBorrowedError";
@@ -9,7 +6,6 @@ import Loan from "coral/mir/Loan";
 import Access from "coral/mir/Access";
 import BorrowKind from "coral/mir/ty/BorrowKind";
 import { Joinpoint } from "clava-js/api/Joinpoints.js";
-import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
 import MutableBorrowWhileBorrowedError from "coral/error/borrow/MutableBorrowWhileBorrowedError";
 import { GraphTransformation } from "clava-flow/graph/Graph";
 import BaseGraph from "clava-flow/graph/BaseGraph";
@@ -94,7 +90,7 @@ export default class RegionckErrorReporting implements GraphTransformation {
         }
     }
 
-    #findNextUse(node: CoralNode.Class, loan: Loan): Joinpoint {
+    #findNextUse(node: CoralNode.Class, loan: Loan): Joinpoint | undefined {
         for (const [vNode, path] of node.bfs((e) => e.is(ControlFlowEdge.TypeGuard))) {
             if (path.length == 0) continue;
             const previousNode = path[path.length - 1].source;
@@ -108,6 +104,6 @@ export default class RegionckErrorReporting implements GraphTransformation {
             }
         }
 
-        throw new Error("findNextUse: Could not find next use");
+        return undefined;
     }
 }

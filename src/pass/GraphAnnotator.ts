@@ -1,3 +1,4 @@
+import FlowNode from "clava-flow/flow/node/FlowNode";
 import ConditionNode from "clava-flow/flow/node/condition/ConditionNode";
 import ExpressionNode from "clava-flow/flow/node/instruction/ExpressionNode";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
@@ -11,7 +12,6 @@ import BaseGraph from "clava-flow/graph/BaseGraph";
 import { GraphTransformation } from "clava-flow/graph/Graph";
 import {
     BinaryOp,
-    Body,
     BuiltinType,
     Call,
     ElaboratedType,
@@ -29,6 +29,7 @@ import {
     PointerType,
     QualType,
     RecordJp,
+    ReturnStmt,
     Scope,
     TagType,
     Type,
@@ -37,9 +38,10 @@ import {
     Vardecl,
     Varref,
 } from "clava-js/api/Joinpoints.js";
+import LifetimeReassignmentError from "coral/error/struct/LifetimeReassignmentError";
+import UnexpectedLifetimeAssignmentError from "coral/error/struct/UnexpectedLifetimeAssignmentError";
 import CoralGraph from "coral/graph/CoralGraph";
 import CoralNode from "coral/graph/CoralNode";
-import FnLifetimes from "coral/lifetimes/FnLifetimes";
 import Access from "coral/mir/Access";
 import Loan from "coral/mir/Loan";
 import Path from "coral/mir/path/Path";
@@ -51,10 +53,6 @@ import BuiltinTy from "coral/mir/ty/BuiltinTy";
 import RefTy from "coral/mir/ty/RefTy";
 import StructTy from "coral/mir/ty/StructTy";
 import Ty from "coral/mir/ty/Ty";
-import MetaRefTy from "coral/mir/ty/meta/MetaRefTy";
-import MetaStructTy from "coral/mir/ty/meta/MetaStructTy";
-import MetaTy from "coral/mir/ty/meta/MetaTy";
-import StructDef from "coral/mir/ty/meta/StructDef";
 import CoralPragma from "coral/pragma/CoralPragma";
 import LifetimeBoundPragma from "coral/pragma/LifetimeBoundPragma";
 import LifetimeAssignmentPragma from "coral/pragma/lifetime/LifetimeAssignmentPragma";
@@ -62,8 +60,6 @@ import LfPath from "coral/pragma/lifetime/path/LfPath";
 import LfPathDeref from "coral/pragma/lifetime/path/LfPathDeref";
 import LfPathMemberAccess from "coral/pragma/lifetime/path/LfPathMemberAccess";
 import LfPathVarRef from "coral/pragma/lifetime/path/LfPathVarRef";
-import MetaRegionVariable from "coral/regionck/MetaRegionVariable";
-import MetaRegionVariableBound from "coral/regionck/MetaRegionVariableBound";
 import RegionVariable from "coral/regionck/RegionVariable";
 import Regionck from "coral/regionck/Regionck";
 import Query from "lara-js/api/weaver/Query.js";
@@ -85,16 +81,15 @@ export default class GraphAnnotator implements GraphTransformation {
     }
 
     #annotateFunction(functionEntry: FunctionEntryNode.Class) {
-        this.#regionck!.newRegionVar(RegionVariable.Kind.UNIVERSAL, "static");
-
-        const coralPragmas = CoralPragma.parse(functionEntry.jp.pragmas);
-        const lifetimeBoundPragmas = LifetimeBoundPragma.parse(coralPragmas);
-        const lifetimeAssignmentPragmas = LifetimeAssignmentPragma.parse(coralPragmas);
-        // TODO
+        this.#annotateFunctionSignature(functionEntry.jp);
 
         for (const node of functionEntry.reachableNodes) {
-            if (!node.is(LivenessNode.TypeGuard)) {
+            if (!node.is(FlowNode.TypeGuard)) {
                 continue;
+            }
+
+            if (!node.is(LivenessNode.TypeGuard)) {
+                node.init(new LivenessNode.Builder());
             }
 
             const coralNode = node.init(new CoralNode.Builder()).as(CoralNode.Class);
@@ -107,6 +102,9 @@ export default class GraphAnnotator implements GraphTransformation {
                 this.#annotateScope(coralNode, scopeEndNode.jp, "end");
             } else if (node.is(VarDeclarationNode.TypeGuard)) {
                 const varDeclarationNode = node.as(VarDeclarationNode.Class);
+                if (varDeclarationNode.jp instanceof Param) {
+                    continue;
+                }
                 this.#annotateVarDecl(coralNode, varDeclarationNode.jp);
             } else if (node.is(ExpressionNode.TypeGuard)) {
                 const expressionNode = node.as(ExpressionNode.Class);
@@ -126,6 +124,79 @@ export default class GraphAnnotator implements GraphTransformation {
                     this.#annotateExpr(coralNode, ($jp.cond as ExprStmt).expr);
                 }
             }
+        }
+    }
+
+    #annotateFunctionSignature($jp: FunctionJp) {
+        const coralPragmas = CoralPragma.parse($jp.pragmas);
+        
+        // Static lifetime
+        this.#regionck!.newRegionVar(RegionVariable.Kind.UNIVERSAL, "%static");
+
+        // Lifetime Bounds
+        const potentialBoundPragmas = coralPragmas.filter(
+            (p) =>
+                p.name === LifetimeAssignmentPragma.keyword &&
+                p.tokens.some((token) => token === "="),
+        );
+        const lifetimeBoundPragmas = LifetimeBoundPragma.parse(potentialBoundPragmas);
+        for (const lifetimeBoundPragma of lifetimeBoundPragmas) {
+            if (lifetimeBoundPragma.bound === undefined) {
+                continue;
+            }
+            this.#regionck!.bounds.push(lifetimeBoundPragma);
+        }
+        
+        // Other lifetimes
+        const potentialAssignmentPragmas = coralPragmas.filter(
+            (p) =>
+                p.name === LifetimeAssignmentPragma.keyword &&
+                p.tokens.some((token) => token !== "="),
+        );
+        const lifetimeAssignmentPragmas = LifetimeAssignmentPragma.parse(
+            potentialAssignmentPragmas,
+        );
+        let lifetimeAssignments = new Map<
+            string,
+            [LfPath, RegionVariable, LifetimeAssignmentPragma][]
+            >();
+        let lifetimes = new Map<string, RegionVariable>();
+        for (const lifetimeAssignmentPragma of lifetimeAssignmentPragmas) {
+            const lfPath = lifetimeAssignmentPragma.lhs;
+            let regionVar = lifetimes.get(lifetimeAssignmentPragma.rhs);
+            if (regionVar === undefined) {
+                regionVar = this.#regionck!.newRegionVar(
+                    RegionVariable.Kind.UNIVERSAL,
+                    lifetimeAssignmentPragma.rhs,
+                );
+                lifetimes.set(lifetimeAssignmentPragma.rhs, regionVar);
+            }
+            
+            if (lifetimeAssignments.has(lfPath.varName)) {
+                lifetimeAssignments.get(lfPath.varName)!.push([lfPath, regionVar, lifetimeAssignmentPragma]);
+            } else {
+                lifetimeAssignments.set(lfPath.varName, [
+                    [lfPath, regionVar, lifetimeAssignmentPragma],
+                ]);
+            }
+        }
+
+        // Return type
+        const returnTy = this.#parseType(
+            $jp.returnType,
+            lifetimeAssignments.get("return"),
+            RegionVariable.Kind.UNIVERSAL,
+        );
+        this.#regionck!.registerReturnTy(returnTy);
+
+        // Params
+        for (const $param of $jp.params) {
+            const ty = this.#parseType(
+                $param.type,
+                lifetimeAssignments.get($param.name),
+                RegionVariable.Kind.UNIVERSAL,
+            );
+            this.#regionck!.registerTy($param, ty);
         }
     }
 
@@ -174,18 +245,6 @@ export default class GraphAnnotator implements GraphTransformation {
     #annotateVarDecl(node: CoralNode.Class, $vardecl: Vardecl) {
         const ty = this.#parseType($vardecl.type);
         this.#regionck!.registerTy($vardecl, ty);
-
-        // if ($vardecl instanceof Param) {
-        //     // Annotate param universal regions
-        //     regiock.fnLifetimes = new FnLifetimes(functionEntry.jp);
-
-        //     const ty = this.#parseType($vardecl.type);
-
-        //     // TODO: Retrieve lifetimes from fnLifetimes
-        //     // & Create multiple regionVars if needed
-
-        //     const regionVar = regionck.newRegionVar(RegionVariable.Kind.EXISTENTIAL);
-        // }
 
         if ($vardecl.hasInit) {
             this.#annotateExpr(node, $vardecl.init);
@@ -273,6 +332,8 @@ export default class GraphAnnotator implements GraphTransformation {
             leftTy = this.#parseLvalue($parent.left).ty;
         } else if ($parent instanceof Vardecl) {
             leftTy = this.#regionck!.getTy($parent);
+        } else if ($parent instanceof ReturnStmt) {
+            leftTy = this.#regionck!.getReturnTy();
         } else {
             // Assuming the weakest borrow is ok for `ref1;` but is not sound for `*(&a) = 5;`
             // Loan could be assumed to be the weakest borrow, but there is the risk that that is not sound.
@@ -285,11 +346,13 @@ export default class GraphAnnotator implements GraphTransformation {
             );
         }
 
+        let loanedPath: Path | undefined;
         if ($expr instanceof UnaryOp && $expr.operator === "&") {
-            $expr = $expr.operand;
+            loanedPath = this.#parseLvalue($expr.operand);
+        } else {
+            loanedPath = new PathDeref($expr, this.#parseLvalue($expr));
         }
 
-        const loanedPath = this.#parseLvalue($expr);
         const regionVar = this.#regionck!.newRegionVar(RegionVariable.Kind.EXISTENTIAL);
 
         node.loan = new Loan(node, regionVar, reborrow, leftTy, loanedPath, ty);
@@ -330,7 +393,8 @@ export default class GraphAnnotator implements GraphTransformation {
 
     #parseType(
         $type: Type,
-        regionVar?: RegionVariable,
+        lifetimeAssignments: [LfPath, RegionVariable, LifetimeAssignmentPragma][] = [],
+        regionType: RegionVariable.Kind = RegionVariable.Kind.EXISTENTIAL,
         isConst = false,
         isRestrict = false,
     ): Ty {
@@ -345,39 +409,124 @@ export default class GraphAnnotator implements GraphTransformation {
         }
 
         if ($type instanceof BuiltinType) {
+            if (lifetimeAssignments.length > 0) {
+                throw new UnexpectedLifetimeAssignmentError(lifetimeAssignments[0][2]);
+            }
             return new BuiltinTy($type.builtinKind, $type, isConst);
         } else if ($type instanceof PointerType) {
-            const inner = this.#parseType($type.pointee, regionVar);
+            const innerLfs = lifetimeAssignments
+                .filter(([lfPath]) => !(lfPath instanceof LfPathVarRef))
+                .map(
+                    ([lfPath, regionVar, pragma]): [
+                        LfPath,
+                        RegionVariable,
+                        LifetimeAssignmentPragma,
+                    ] => {
+                        if (lfPath instanceof LfPathDeref) {
+                            return [(lfPath as LfPathDeref).inner, regionVar, pragma];
+                        } else if (lfPath instanceof LfPathMemberAccess) {
+                            const lfPathInner = lfPath.inner;
+                            if (!(lfPathInner instanceof LfPathDeref)) {
+                                throw new UnexpectedLifetimeAssignmentError(pragma);
+                            }
+                            return [
+                                new LfPathMemberAccess(lfPathInner.inner, lfPath.member),
+                                regionVar,
+                                pragma,
+                            ];
+                        }
+                        throw new Error("Unhandled LfPath");
+                    },
+                );
+            const inner = this.#parseType($type.pointee, innerLfs, regionType);
             if (inner.isConst && isRestrict) {
                 throw new Error("Cannot have a restrict pointer to a const type");
+            }
+            const outer = lifetimeAssignments.filter(
+                ([lfPath]) => lfPath instanceof LfPathVarRef,
+            );
+            if (outer.length > 1) {
+                throw new LifetimeReassignmentError(outer[0][2], outer[0][2]);
+            }
+            let regionVar: RegionVariable;
+            if (outer.length === 0) {
+                regionVar = this.#regionck!.newRegionVar(regionType);
+            } else {
+                regionVar = outer[0][1];
             }
             return new RefTy(
                 inner.isConst ? BorrowKind.SHARED : BorrowKind.MUTABLE,
                 inner,
                 $type,
-                regionVar
-                    ? regionVar
-                    : this.#regionck!.newRegionVar(RegionVariable.Kind.EXISTENTIAL),
+                regionVar,
                 isConst,
             );
         } else if ($type instanceof TypedefType) {
-            return this.#parseType($type.underlyingType, regionVar, isConst, isRestrict);
+            return this.#parseType(
+                $type.underlyingType,
+                lifetimeAssignments,
+                regionType,
+                isConst,
+                isRestrict,
+            );
         } else if ($type instanceof ElaboratedType) {
-            return this.#parseType($type.namedType, regionVar, isConst, isRestrict);
+            return this.#parseType(
+                $type.namedType,
+                lifetimeAssignments,
+                regionType,
+                isConst,
+                isRestrict,
+            );
         } else if ($type instanceof ParenType) {
-            return this.#parseType($type.innerType, regionVar, isConst, isRestrict);
+            return this.#parseType(
+                $type.innerType,
+                lifetimeAssignments,
+                regionType,
+                isConst,
+                isRestrict,
+            );
         } else if ($type instanceof TagType) {
             const $decl = $type.decl;
             if ($decl instanceof RecordJp) {
+                const invalidMetaRegionVarAssignment = lifetimeAssignments.find(
+                    ([lfPath]) => !(lfPath instanceof LfPathMemberAccess),
+                );
+                if (invalidMetaRegionVarAssignment !== undefined) {
+                    throw new UnexpectedLifetimeAssignmentError(
+                        invalidMetaRegionVarAssignment[2],
+                    );
+                }
+
                 const structDef = this.#regionck!.structDefs.get($decl);
 
                 const regionVars = new Map<string, RegionVariable>();
+
+                for (const [lfPath, regionVar, pragma] of lifetimeAssignments) {
+                    const memberAccess = lfPath as LfPathMemberAccess;
+                    const memberAccessInner = memberAccess.inner;
+                    if (!(memberAccessInner instanceof LfPathVarRef)) {
+                        throw new UnexpectedLifetimeAssignmentError(pragma);
+                    }
+
+                    regionVars.set(memberAccess.member, regionVar);
+                }
+
                 for (const metaRegionVar of structDef.metaRegionVars) {
-                    regionVars.set(metaRegionVar.name, this.#regionck!.newRegionVar(RegionVariable.Kind.EXISTENTIAL));
+                    if (!regionVars.has(metaRegionVar.name)) {
+                        regionVars.set(
+                            metaRegionVar.name,
+                            this.#regionck!.newRegionVar(regionType),
+                        );
+                    }
                 }
 
                 return new StructTy(structDef, regionVars, isConst);
             } else if ($decl instanceof EnumDecl) {
+                if (lifetimeAssignments.length > 0) {
+                    throw new UnexpectedLifetimeAssignmentError(
+                        lifetimeAssignments[0][2],
+                    );
+                }
                 return new BuiltinTy(`enum ${$decl.name}`, $decl, isConst);
             } else {
                 // TypedefNameDecl;

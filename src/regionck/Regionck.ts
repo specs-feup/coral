@@ -4,16 +4,22 @@ import OutlivesConstraint from "coral/regionck/OutlivesConstraint";
 import RegionVariable from "coral/regionck/RegionVariable";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
 import StructDefsMap from "coral/regionck/StructDefsMap";
+import LifetimeBoundPragma from "coral/pragma/lifetime/LifetimeBoundPragma";
 
 export default class Regionck {
     functionEntry: FunctionEntryNode.Class;
+    // List of constraints that must be satisfied based on the regionck analysis.
     constraints: OutlivesConstraint[];
+    // List of meta region variable constraints that can be set via pragmas by the user.
+    bounds: LifetimeBoundPragma[];
     structDefs: StructDefsMap;
     #regionVars: RegionVariable[];
     #symbolTable: Map<string, Ty>;
+    #returnTy?: Ty;
 
     constructor(functionEntry: FunctionEntryNode.Class, structDefs: StructDefsMap) {
         this.constraints = [];
+        this.bounds = [];
         this.#regionVars = [];
         this.structDefs = structDefs;
         this.#symbolTable = new Map();
@@ -28,13 +34,25 @@ export default class Regionck {
         this.#symbolTable.set($varDecl.astId, ty);
     }
 
+    registerReturnTy(ty: Ty): void {
+        this.#returnTy = ty;
+    }
+
+    getReturnTy(): Ty | undefined {
+        return this.#returnTy;
+    }
+
     newRegionVar(kind: RegionVariable.Kind, name?: string): RegionVariable {
         const id = this.#regionVars.length;
-        const regionVar = new RegionVariable(
-            id.toString(),
-            kind,
-            name ? name : id.toString(),
-        );
+        if (name === undefined) {
+            if (kind === RegionVariable.Kind.UNIVERSAL) {
+                name = `%${id}_U`;
+            } else {
+                name = `%${id}`;
+            }
+        }
+
+        const regionVar = new RegionVariable(id.toString(), kind, name);
         this.#regionVars.push(regionVar);
         return regionVar;
     }
@@ -47,7 +65,7 @@ export default class Regionck {
         let result = "\t| Regions:\n";
         for (const region of this.#regionVars) {
             const points = Array.from(region.points).sort();
-            result += `\t|\t%${region.name}: {${points.join(", ")}}\n`;
+            result += `\t|\t${region.name}: {${points.join(", ")}}\n`;
         }
 
         result += "\t|\n\t| Constraints:\n";

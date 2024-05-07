@@ -18,10 +18,36 @@ export default class OutlivesConstraint {
     }
 
     toString(): string {
-        return `[${this.node.id}] %${this.sup.name}: %${this.sub.name}`;
+        return `[${this.node.id}] ${this.sup.name}: ${this.sub.name}`;
     }
 
     apply(): boolean {
+        if (this.sub.kind === RegionVariable.Kind.EXISTENTIAL) {
+            return this.applyExistential();
+        } else {
+            return this.applyUniversal();
+        }
+    }
+
+    applyUniversal(): boolean {
+        let changed = false;
+        if (this.sup.kind !== RegionVariable.Kind.UNIVERSAL) {
+            changed = true;
+            this.sup.kind = RegionVariable.Kind.UNIVERSAL;
+        }
+
+        for (const point of this.sub.points) {
+            if (this.sup.points.has(point)) {
+                continue;
+            }
+            this.sup.points.add(point);
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    applyExistential(): boolean {
         let changed = false;
 
         let nodes;
