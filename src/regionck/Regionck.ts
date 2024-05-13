@@ -60,6 +60,10 @@ export default class Regionck {
         return regionVar;
     }
 
+    get staticRegionVar(): RegionVariable {
+        return this.#regionVars.find((r) => r.name === "%static")!;
+    }
+
     get universalRegionVars(): RegionVariable[] {
         return this.#regionVars.filter((r) => r.kind === RegionVariable.Kind.UNIVERSAL);
     }

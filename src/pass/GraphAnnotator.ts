@@ -133,7 +133,7 @@ export default class GraphAnnotator implements GraphTransformation {
         const coralPragmas = CoralPragma.parse($jp.pragmas);
         
         // Static lifetime
-        this.#regionck!.newRegionVar(RegionVariable.Kind.UNIVERSAL, "%static");
+        const staticRegionVar = this.#regionck!.newRegionVar(RegionVariable.Kind.UNIVERSAL, "%static");
 
         // Lifetime Bounds
         const potentialBoundPragmas = coralPragmas.filter(
@@ -163,6 +163,7 @@ export default class GraphAnnotator implements GraphTransformation {
             [LfPath, RegionVariable, LifetimeAssignmentPragma][]
             >();
         let lifetimes = new Map<string, RegionVariable>();
+        lifetimes.set("%static", staticRegionVar);
         for (const lifetimeAssignmentPragma of lifetimeAssignmentPragmas) {
             const lfPath = lifetimeAssignmentPragma.lhs;
             let regionVar = lifetimes.get(lifetimeAssignmentPragma.rhs);
@@ -414,6 +415,7 @@ export default class GraphAnnotator implements GraphTransformation {
             [LfPath, RegionVariable, LifetimeAssignmentPragma][]
         >();
         let lifetimes = new Map<string, RegionVariable>();
+        lifetimes.set("%static", this.#regionck!.staticRegionVar);
         for (const lifetimeAssignmentPragma of lifetimeAssignmentPragmas) {
             const lfPath = lifetimeAssignmentPragma.lhs;
             let regionVar = lifetimes.get(lifetimeAssignmentPragma.rhs);
