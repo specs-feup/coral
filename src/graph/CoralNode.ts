@@ -6,6 +6,7 @@ import BaseNode from "clava-flow/graph/BaseNode";
 import { NodeBuilder, NodeTypeGuard } from "clava-flow/graph/Node";
 import { Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
 import Access from "coral/mir/Access";
+import FunctionCall from "coral/mir/FunctionCall";
 import Loan from "coral/mir/Loan";
 import MoveTable from "coral/mir/MoveTable";
 
@@ -56,12 +57,12 @@ namespace CoralNode {
             this.scratchData.coral.varsLeavingScope = vars;
         }
 
-        get loan(): Loan | undefined {
-            return this.scratchData.coral.loan;
+        get loans(): Loan[] {
+            return this.scratchData.coral.loans;
         }
 
-        set loan(loan: Loan | undefined) {
-            this.scratchData.coral.loan = loan;
+        set loans(loans: Loan[]) {
+            this.scratchData.coral.loans = loans;
         }
 
         get moveTable(): MoveTable {
@@ -70,6 +71,10 @@ namespace CoralNode {
 
         set moveTable(moveTable: MoveTable) {
             this.scratchData.coral.moveTable = moveTable;
+        }
+
+        get fnCalls(): FunctionCall[] {
+            return this.scratchData.coral.fnCall;
         }
 
         override get jp(): Joinpoint {
@@ -110,6 +115,8 @@ namespace CoralNode {
                     varsEnteringScope: [],
                     varsLeavingScope: [],
                     moveTable: new MoveTable(),
+                    fnCall: [],
+                    loans: [],
                 }
             };
         }
@@ -140,9 +147,10 @@ namespace CoralNode {
         coral: {
             inScopeLoans: Set<Loan>;
             accesses: Access[];
+            fnCall: FunctionCall[];
             varsEnteringScope: Vardecl[];
             varsLeavingScope: Vardecl[];
-            loan?: Loan;
+            loans: Loan[];
             moveTable: MoveTable;
         };
         $jp: Joinpoint;

@@ -119,8 +119,8 @@ export default class CoralDotFormatter extends DotFormatter {
                 label += `\n${node.id} | line ${coralNode.jp.line} `;
             }
 
-            if (coralNode.loan) {
-                label += `\nLoan(${coralNode.loan?.toString()})`;
+            for (const loan of coralNode.loans) {
+                label += `\nLoan(${loan.toString()})`;
             }
             
             for (const access of coralNode.accesses) {

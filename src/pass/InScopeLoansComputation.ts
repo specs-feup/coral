@@ -14,6 +14,12 @@ import CoralNode from "coral/graph/CoralNode";
 
 
 export default class InScopeLoansComputation implements GraphTransformation {
+    #targetFunction: FunctionEntryNode.Class;
+
+    constructor(targetFunction: FunctionEntryNode.Class) {
+        this.#targetFunction = targetFunction;
+    }
+
     apply(graph: BaseGraph.Class): void {
         if (!graph.is(CoralGraph.TypeGuard)) {
             throw new Error("InScopeLoansComputation can only be applied to CoralGraphs");
@@ -21,9 +27,7 @@ export default class InScopeLoansComputation implements GraphTransformation {
 
         const coralGraph = graph.as(CoralGraph.Class);
 
-        for (const functionEntry of coralGraph.functions) {
-            this.#processFunction(functionEntry);
-        }
+        this.#processFunction(this.#targetFunction);
     }
 
     #processFunction(functionEntry: FunctionEntryNode.Class) {
@@ -61,8 +65,8 @@ export default class InScopeLoansComputation implements GraphTransformation {
                 }
 
                 // Gen from new loan
-                if (inCoralNode.loan) {
-                    inner.add(inCoralNode.loan);
+                for (const loan of inCoralNode.loans) {
+                    inner.add(loan);
                 }
 
                 // Union of all incoming edges
@@ -106,68 +110,4 @@ export default class InScopeLoansComputation implements GraphTransformation {
             }
         }
     }
-
-    // TODO why does this exist?
-    static #inScopeLoansTransferFn = (node: cytoscape.NodeSingular) => {
-        const scratch = node.scratch("_coral");
-        const toAdd: Set<Loan> = new Set();
-        const toKill: Set<Loan> = new Set();
-
-        // Union of all incoming edges
-        const inScopeLoans: Set<Loan> = new Set();
-        for (const inNode of node.incomers().nodes()) {
-            for (const loan of inNode.scratch("_coral").inScopeLoans) {
-                inScopeLoans.add(loan);
-            }
-        }
-
-        // Loans going out of scope
-        for (const loan of inScopeLoans) {
-            if (!loan.regionVar.points.has(node.id())) {
-                toKill.add(loan);
-            }
-        }
-
-        // New loan
-        if (scratch.loan) {
-            toAdd.add(scratch.loan);
-        }
-
-        // Check assignment paths
-        const assignments = (scratch.accesses as Access[]).filter(
-            (a) => a.mutability === Access.Mutability.WRITE,
-        );
-        for (const assignment of assignments) {
-            const prefixes = assignment.path.prefixes;
-            for (const loan of inScopeLoans) {
-                if (prefixes.some((prefix) => loan.loanedPath.equals(prefix))) {
-                    toKill.add(loan);
-                }
-            }
-        }
-
-        // Modify in-scope loans and check for changes
-        for (const loan of toKill) {
-            inScopeLoans.delete(loan);
-        }
-        for (const loan of toAdd) {
-            inScopeLoans.add(loan);
-        }
-
-        let changed = false;
-        if (inScopeLoans.size !== scratch.inScopeLoans.size) {
-            changed = true;
-        } else {
-            for (const loan of scratch.inScopeLoans) {
-                if (!inScopeLoans.has(loan)) {
-                    changed = true;
-                    break;
-                }
-            }
-        }
-
-        scratch.inScopeLoans = inScopeLoans;
-
-        return changed;
-    };
 }

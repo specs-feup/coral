@@ -14,9 +14,20 @@ import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNod
 import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
 import CoralNode from "coral/graph/CoralNode";
 import DanglingReferenceError from "coral/error/borrow/DanglingReferenceError";
+import RegionVariable from "coral/regionck/RegionVariable";
+import LifetimeBoundPragma from "coral/pragma/lifetime/LifetimeBoundPragma";
+import OutlivesConstraint from "coral/regionck/OutlivesConstraint";
+import Regionck from "coral/regionck/Regionck";
+import MissingLifetimeBoundError from "coral/error/borrow/MissingLifetimeBoundError";
 
     
 export default class RegionckErrorReporting implements GraphTransformation {
+    #shouldCheckUniversalRegions: boolean;
+    
+    constructor(checkUniversalRegions: boolean = true) {
+        this.#shouldCheckUniversalRegions = checkUniversalRegions;
+    }
+
     apply(graph: BaseGraph.Class): void {
         if (!graph.is(CoralGraph.TypeGuard)) {
             throw new Error("RegionckErrorReporting can only be applied to CoralGraphs");
@@ -25,11 +36,46 @@ export default class RegionckErrorReporting implements GraphTransformation {
         const coralGraph = graph.as(CoralGraph.Class);
 
         for (const functionEntry of coralGraph.functions) {
-            this.#processFunction(functionEntry);
+            this.#checkAccessViolations(functionEntry);
+            if (this.#shouldCheckUniversalRegions) {
+                this.#checkUniversalRegions(coralGraph.getRegionck(functionEntry));
+            }
         }
     }
 
-    #processFunction(functionEntry: FunctionEntryNode.Class) {
+    #checkUniversalRegions(regionck: Regionck) {
+        for (const region of regionck.universalRegionVars) {
+            if (!isNaN(Number(region.name.slice(1)))) {
+                continue;
+            }
+
+            const ends = Array
+                .from(region.points)
+                .filter((point) => point.startsWith("end("))
+                .map((point) => point.slice(4, -1));
+            
+            for (const end of ends) {
+                if (region.name === end) {
+                    continue;
+                }
+                
+                const hasBound = regionck.bounds.some(b => b.name === region.name && b.bound === end);
+
+                if (!hasBound) {
+                    const relevantConstraint = regionck.constraints.find(
+                        c => c.sup.name === region.name
+                            && c.addedEnds.has(`end(${end})`)
+                    );
+                    if (!relevantConstraint) {
+                        throw new Error("No relevant constraint found");
+                    }
+                    throw new MissingLifetimeBoundError(region, end, relevantConstraint, regionck.functionEntry.jp);
+                }
+            }
+        }
+    }
+
+    #checkAccessViolations(functionEntry: FunctionEntryNode.Class) {
         for (const node of functionEntry.reachableNodes) {
             if (!node.is(CoralNode.TypeGuard)) {
                 continue;

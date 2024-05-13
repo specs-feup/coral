@@ -1,4 +1,5 @@
 import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
+import { Joinpoint } from "clava-js/api/Joinpoints.js";
 import CoralNode from "coral/graph/CoralNode";
 import RegionVariable from "coral/regionck/RegionVariable";
 
@@ -10,11 +11,22 @@ export default class OutlivesConstraint {
     sup: RegionVariable;
     sub: RegionVariable;
     node: CoralNode.Class;
+    // "end()" points added to the sup region variable due to this constraint.
+    // This is relevant for producing error messages for universal region variables.
+    addedEnds: Set<string>;
+    $jp: Joinpoint;
 
-    constructor(sup: RegionVariable, sub: RegionVariable, node: CoralNode.Class) {
+    constructor(
+        sup: RegionVariable,
+        sub: RegionVariable,
+        node: CoralNode.Class,
+        $jp: Joinpoint,
+    ) {
         this.sup = sup;
         this.sub = sub;
         this.node = node;
+        this.addedEnds = new Set();
+        this.$jp = $jp;
     }
 
     toString(): string {
@@ -41,6 +53,7 @@ export default class OutlivesConstraint {
                 continue;
             }
             this.sup.points.add(point);
+            this.addedEnds.add(point);
             changed = true;
         }
 
@@ -53,13 +66,14 @@ export default class OutlivesConstraint {
         let nodes;
         if (this.sub.points.has(this.node.id)) {
             nodes = this.node.bfs(
-                (edge) => edge.is(ControlFlowEdge.TypeGuard)
-                    && this.sub.points.has(edge.target.id)
+                (edge) =>
+                    edge.is(ControlFlowEdge.TypeGuard) &&
+                    this.sub.points.has(edge.target.id),
             );
         } else {
-            nodes = []
+            nodes = [];
         }
-        
+
         for (const [node] of nodes) {
             const alreadyContains = this.sup.points.has(node.id);
             if (alreadyContains) {

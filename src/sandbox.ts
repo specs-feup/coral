@@ -12,6 +12,7 @@ console.log(Query.root().dump);
 
 const pipeline = new CoralPipeline()
     .debug()
+    .inferFunctionLifetimes()
     .writeMirToDotFile("out/woven_code/sandbox/mir.dot")
     .writeLivenessToDotFile("out/woven_code/sandbox/liveness.dot");
 

@@ -1,35 +1,31 @@
 import Query from "lara-js/api/weaver/Query.js";
-import { FileJp, FunctionJp, Joinpoint, Program } from "clava-js/api/Joinpoints.js";
+import { FileJp, FunctionJp, Program } from "clava-js/api/Joinpoints.js";
 
 import CoralNormalizer from "coral/CoralNormalizer";
-import CoralAnalyser from "coral/CoralAnalyser";
 import FlowGraph from "clava-flow/flow/FlowGraph";
 import CoralDotFormatter from "coral/graph/dot/CoralDotFormatter";
 import CoralGraph from "coral/graph/CoralGraph";
 import InferLiveness from "clava-flow/flow/transformation/liveness/InferLiveness";
 import FilterFlowNodes from "clava-flow/flow/transformation/FilterFlowNodes";
-import EmptyStatementNode from "clava-flow/flow/node/instruction/EmptyStatementNode";
-import BreakNode from "clava-flow/flow/node/instruction/BreakNode";
-import ContinueNode from "clava-flow/flow/node/instruction/ContinueNode";
-import GotoLabelNode from "clava-flow/flow/node/instruction/GotoLabelNode";
-import GotoNode from "clava-flow/flow/node/instruction/GotoNode";
 import CommentNode from "clava-flow/flow/node/instruction/CommentNode";
 import PragmaNode from "clava-flow/flow/node/instruction/PragmaNode";
 import GraphAnnotator from "coral/pass/GraphAnnotator";
-import ConstraintGenerator from "coral/pass/ConstraintGenerator";
-import InScopeLoansComputation from "coral/pass/InScopeLoansComputation";
-import RegionckErrorReporting from "coral/pass/RegionckErrorReporting";
 import MoveAnalyser from "coral/pass/MoveAnalyser";
 import Graph from "clava-flow/graph/Graph";
 import IncrementingIdGenerator from "clava-flow/graph/id/IncrementingIdGenerator";
+import RegionckPipeline from "coral/pass/RegionckPipeline";
+import InferLifetimeBounds from "coral/pass/InferLifetimeBounds";
 
 export default class CoralPipeline {
     #debug: boolean;
+    #inferFunctionLifetimes: boolean;
+    #iterationLimit?: number;
     #mirDotFile: string | undefined;
     #livenessDotFile: string | undefined;
 
     constructor() {
         this.#debug = false;
+        this.#inferFunctionLifetimes = false;
         this.#mirDotFile = undefined;
         this.#livenessDotFile = undefined;
     }
@@ -44,6 +40,12 @@ export default class CoralPipeline {
         return this;
     }
 
+    inferFunctionLifetimes(iterationLimit = undefined): CoralPipeline {
+        this.#inferFunctionLifetimes = true;
+        this.#iterationLimit = iterationLimit;
+        return this;
+    }
+
     debug(): CoralPipeline {
         this.#debug = true;
         return this;
@@ -55,7 +57,7 @@ export default class CoralPipeline {
         }
 
         new CoralNormalizer().apply($root);
-        
+
         const baseGraph = Graph.create()
             .setNodeIdGenerator(new IncrementingIdGenerator("node_"))
             .setEdgeIdGenerator(new IncrementingIdGenerator("edge_"));
@@ -77,69 +79,13 @@ export default class CoralPipeline {
             .apply(new MoveAnalyser())
             // TODO insert drops
             .apply(new InferLiveness()) // TODO liveness analysis does not handle structs correctly
-            .apply(new ConstraintGenerator(this.#debug))
-            .apply(new InScopeLoansComputation())
-            .apply(new RegionckErrorReporting())
+            .apply(new InferLifetimeBounds(this.#inferFunctionLifetimes, this.#iterationLimit))
+            .apply(new RegionckPipeline(this.#debug))
             // TODO drop elaboration
             ;
-
+        
         if (this.#mirDotFile) {
             graph.toDotFile(new CoralDotFormatter(), this.#mirDotFile);
         }
     }
 }
-
-// class LivenessDotFormatter extends DotFormatter {
-//     constructor(liveness: LivenessAnalysis) {
-//         super();
-
-//         this.setEdgeLabelFormatter((edge) => {
-//             const from = edge.source().id();
-//             return Array.from(liveness.liveOut.get(from) ?? []).join(" ");
-//         });
-//     }
-// }
-
-
-// class MirDotFormatter extends DotFormatter {
-//     constructor() {
-//         super();
-
-//         this.setNodeLabelFormatter((node) => {
-//             return `[${node.id()}] ${node.data().toString()}`;
-//         });
-
-//         this.setEdgeLabelFormatter((edge) => {
-//             const sections = new Map();
-
-//             const from = edge.source();
-//             const scratch = from.scratch("_coral");
-
-//             if (scratch.loan !== undefined) {
-//                 sections.set("Loan", scratch.loan.toString() + "\n");
-//             }
-
-//             if (scratch.inScopeLoans.size > 0) {
-//                 let str = "";
-//                 for (const loan of scratch.inScopeLoans.keys()) {
-//                     str += loan.toString() + "\n";
-//                 }
-//                 sections.set("In-scope loans", str + "\n");
-//             }
-
-//             if (scratch.accesses.length > 0) {
-//                 sections.set(
-//                     "Accesses",
-//                     (scratch.accesses as Access[]).map((a) => a.toString()).join("\n") +
-//                         "\n",
-//                 );
-//             }
-
-//             let ret = "";
-//             for (const [key, value] of sections) {
-//                 ret += `${key}:\n${value}\n`;
-//             }
-//             return ret;
-//         });
-//     }
-// }

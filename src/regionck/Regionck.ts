@@ -5,6 +5,7 @@ import RegionVariable from "coral/regionck/RegionVariable";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
 import StructDefsMap from "coral/regionck/StructDefsMap";
 import LifetimeBoundPragma from "coral/pragma/lifetime/LifetimeBoundPragma";
+import InferLifetimeBounds from "coral/pass/InferLifetimeBounds";
 
 export default class Regionck {
     functionEntry: FunctionEntryNode.Class;
@@ -16,6 +17,7 @@ export default class Regionck {
     #regionVars: RegionVariable[];
     #symbolTable: Map<string, Ty>;
     #returnTy?: Ty;
+    inferLifetimeBoundsState: InferLifetimeBounds.FunctionState;
 
     constructor(functionEntry: FunctionEntryNode.Class, structDefs: StructDefsMap) {
         this.constraints = [];
@@ -24,6 +26,7 @@ export default class Regionck {
         this.structDefs = structDefs;
         this.#symbolTable = new Map();
         this.functionEntry = functionEntry;
+        this.inferLifetimeBoundsState = InferLifetimeBounds.FunctionState.IGNORE;
     }
 
     getTy($varDecl: Vardecl): Ty | undefined {
@@ -59,6 +62,14 @@ export default class Regionck {
 
     get universalRegionVars(): RegionVariable[] {
         return this.#regionVars.filter((r) => r.kind === RegionVariable.Kind.UNIVERSAL);
+    }
+
+    reset(): void {
+        this.constraints = [];
+        for (const region of this.#regionVars) {
+            region.points.clear();
+            region.kind = region.actualKind;
+        }
     }
 
     debugInfo(): string {
