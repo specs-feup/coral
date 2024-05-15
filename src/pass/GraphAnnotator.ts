@@ -56,7 +56,7 @@ import StructTy from "coral/mir/ty/StructTy";
 import Ty from "coral/mir/ty/Ty";
 import InferLifetimeBounds from "coral/pass/InferLifetimeBounds";
 import CoralPragma from "coral/pragma/CoralPragma";
-import LifetimeBoundPragma from "coral/pragma/LifetimeBoundPragma";
+import LifetimeBoundPragma from "coral/pragma/lifetime/LifetimeBoundPragma";
 import LifetimeAssignmentPragma from "coral/pragma/lifetime/LifetimeAssignmentPragma";
 import LfPath from "coral/pragma/lifetime/path/LfPath";
 import LfPathDeref from "coral/pragma/lifetime/path/LfPathDeref";

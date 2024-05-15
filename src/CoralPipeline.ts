@@ -1,7 +1,7 @@
 import Query from "lara-js/api/weaver/Query.js";
-import { FileJp, FunctionJp, Program } from "clava-js/api/Joinpoints.js";
+import { FileJp, FunctionJp, Program, Scope, Statement } from "clava-js/api/Joinpoints.js";
 
-import CoralNormalizer from "coral/CoralNormalizer";
+import CoralNormalizer from "coral/normalize/CoralNormalizer";
 import FlowGraph from "clava-flow/flow/FlowGraph";
 import CoralDotFormatter from "coral/graph/dot/CoralDotFormatter";
 import CoralGraph from "coral/graph/CoralGraph";
@@ -15,6 +15,8 @@ import Graph from "clava-flow/graph/Graph";
 import IncrementingIdGenerator from "clava-flow/graph/id/IncrementingIdGenerator";
 import RegionckPipeline from "coral/pass/RegionckPipeline";
 import InferLifetimeBounds from "coral/pass/InferLifetimeBounds";
+import SimplifyAssignments from "coral/normalize/pass/SimplifyAssignments";
+import AddAssignmentsToCallsAndBorrows from "coral/normalize/pass/AddAssignmentsToCallsAndBorrows";
 
 export default class CoralPipeline {
     #debug: boolean;

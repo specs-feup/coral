@@ -1,9 +1,7 @@
-import { BuiltinType, ElaboratedType, EnumDecl, Field, FileJp, FunctionJp, Joinpoint, ParenType, PointerType, QualType, RecordJp, TagType, Type, TypedefType } from "clava-js/api/Joinpoints.js";
-import DropPragmaError from "coral/error/pragma/DropPragmaError";
+import { BuiltinType, ElaboratedType, EnumDecl, Field, FileJp, FunctionJp, ParenType, PointerType, QualType, RecordJp, TagType, Type, TypedefType } from "clava-js/api/Joinpoints.js";
 import IncompatibleSemanticsPragmasError from "coral/error/pragma/IncompatibleSemanticsPragmasError";
 import MultipleDropPragmasError from "coral/error/pragma/MultipleDropPragmasError";
 import DropPragmaParseError from "coral/error/pragma/parse/DropPragmaParseError";
-import LifetimePragmaParseError from "coral/error/pragma/parse/LifetimePragmaParseError";
 import IncompatibleStructDeclsError from "coral/error/struct/IncompatibleStructDeclsError";
 import InvalidDropFunctionError from "coral/error/struct/InvalidDropFunctionError";
 import LifetimeExpectedError from "coral/error/struct/LifetimeExpectedError";
