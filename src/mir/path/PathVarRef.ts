@@ -41,4 +41,8 @@ export default class PathVarRef extends Path {
         }
         return this.$jp.vardecl;
     }
+
+    override get innerVardecl(): Vardecl {
+        return this.$vardecl;
+    }
 }

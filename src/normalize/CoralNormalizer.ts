@@ -22,7 +22,7 @@ class CoralNormalizer {
     apply($jp: Joinpoint): this {
         return this
             .#applyPass($jp, new ConvertForLoopToWhile(this.labelCounter))
-            // .#applyPass($jp, new SplitVarDecls()) // TODO not working
+            .#applyPass($jp, new SplitVarDecls())
             .#applyPass($jp, new SimplifyAssignments())
             .#applyPass($jp, new AddAssignmentsToCallsAndBorrows(this.tempVarCounter))
             .#applyPass($jp, new SplitExpressions(this.tempVarCounter));

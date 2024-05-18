@@ -279,23 +279,23 @@ export default class GraphAnnotator implements GraphTransformation {
         }
     }
 
-    #annotateExpr(node: CoralNode.Class, $expr: Expression | undefined) {
+    #annotateExpr(node: CoralNode.Class, $expr: Expression | undefined): Ty | undefined {
         if ($expr === undefined || $expr instanceof Literal) {
             return;
         }
 
         if ($expr instanceof BinaryOp) {
-            this.#annotateBinaryOp(node, $expr);
+            return this.#annotateBinaryOp(node, $expr);
         } else if ($expr instanceof UnaryOp) {
-            this.#annotateUnaryOp(node, $expr);
+            return this.#annotateUnaryOp(node, $expr);
         } else if ($expr instanceof Call) {
-            this.#annotateFunctionCall(node, $expr);
+            return this.#annotateFunctionCall(node, $expr);
         } else if ($expr instanceof Varref) {
-            this.#annotateReadAccess(node, $expr);
+            return this.#annotateReadAccess(node, $expr);
         } else if ($expr instanceof ParenExpr) {
-            this.#annotateExpr(node, $expr.subExpr);
+            return this.#annotateExpr(node, $expr.subExpr);
         } else if ($expr instanceof MemberAccess) {
-            this.#annotateReadAccess(node, $expr);
+            return this.#annotateReadAccess(node, $expr);
         } else {
             // TODO Unhandled:
             // UnaryExprOrType
@@ -320,6 +320,8 @@ export default class GraphAnnotator implements GraphTransformation {
             this.#annotateExpr(node, $binaryOp.left);
             this.#annotateExpr(node, $binaryOp.right);
         }
+
+        return undefined;
     }
 
     #annotateUnaryOp(node: CoralNode.Class, $unaryOp: UnaryOp) {
@@ -327,11 +329,12 @@ export default class GraphAnnotator implements GraphTransformation {
             const reborrow =
                 Query.searchFrom($unaryOp, "unaryOp", { operator: "*" }).get() !==
                 undefined;
-            this.#annotateReference(node, $unaryOp, reborrow);
+            return this.#annotateReference(node, $unaryOp, reborrow);
         } else if ($unaryOp.operator === "*") {
-            this.#annotateReadAccess(node, $unaryOp);
+            return this.#annotateReadAccess(node, $unaryOp);
         } else {
             this.#annotateExpr(node, $unaryOp.operand);
+            return undefined;
         }
     }
 
@@ -387,7 +390,9 @@ export default class GraphAnnotator implements GraphTransformation {
 
         const regionVar = this.#regionck!.newRegionVar(RegionVariable.Kind.EXISTENTIAL);
 
-        node.loans.push(new Loan(node, regionVar, reborrow, leftTy, loanedPath, ty));
+        const loan = new Loan(node, regionVar, reborrow, leftTy, loanedPath, ty);
+
+        node.loans.push(loan);
 
         node.accesses.push(
             new Access(
@@ -396,6 +401,8 @@ export default class GraphAnnotator implements GraphTransformation {
                 Access.Depth.DEEP,
             ),
         );
+        
+        return loan.loanedRefTy;
     }
 
     #annotateFunctionCall(node: CoralNode.Class, $call: Call) {
@@ -479,6 +486,8 @@ export default class GraphAnnotator implements GraphTransformation {
         for (const $expr of $call.args) {
             this.#annotateExpr(node, $expr);
         }
+
+        return returnTy;
     }
 
     #annotateReadAccess(node: CoralNode.Class, $expr: Varref | UnaryOp | MemberAccess) {
@@ -491,6 +500,8 @@ export default class GraphAnnotator implements GraphTransformation {
                 new Access(path, Access.Mutability.READ, Access.Depth.DEEP),
             );
         }
+
+        return path.ty;
     }
 
     #parseType(
@@ -663,6 +674,7 @@ export default class GraphAnnotator implements GraphTransformation {
             }
             const name = `%tmp${i}`;
             takenLifetimeNames.add(name);
+            // TODO only insert if there is flag for it
             this.#regionck!.functionEntry.jp.insertBefore(
                 `#pragma coral lf ${newPragmaLhs} = ${name}`,
             );

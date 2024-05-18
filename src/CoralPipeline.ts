@@ -17,6 +17,8 @@ import RegionckPipeline from "coral/pass/RegionckPipeline";
 import InferLifetimeBounds from "coral/pass/InferLifetimeBounds";
 import SimplifyAssignments from "coral/normalize/pass/SimplifyAssignments";
 import AddAssignmentsToCallsAndBorrows from "coral/normalize/pass/AddAssignmentsToCallsAndBorrows";
+import AddDrops from "coral/pass/AddDrops";
+import CustomLivenessComputation from "coral/pass/CustomLivenessComputation";
 
 export default class CoralPipeline {
     #debug: boolean;
@@ -58,7 +60,7 @@ export default class CoralPipeline {
             $root = Query.root() as Program;
         }
 
-        new CoralNormalizer().apply($root);
+        // new CoralNormalizer().apply($root);
 
         const baseGraph = Graph.create()
             .setNodeIdGenerator(new IncrementingIdGenerator("node_"))
@@ -74,13 +76,14 @@ export default class CoralPipeline {
                         // !node.is(ContinueNode.TypeGuard) &&
                         // !node.is(GotoLabelNode.TypeGuard) &&
                         // !node.is(GotoNode.TypeGuard) &&
-                        !node.is(CommentNode.TypeGuard) && !node.is(PragmaNode.TypeGuard),
+                        !node.is(CommentNode.TypeGuard) &&
+                        !node.is(PragmaNode.TypeGuard)
                 ),
             )
             .apply(new GraphAnnotator())
             .apply(new MoveAnalyser())
-            // TODO insert drops
-            .apply(new InferLiveness()) // TODO liveness analysis does not handle structs correctly
+            .apply(new AddDrops())
+            .apply(new InferLiveness().customComputeDefsAndUses(CustomLivenessComputation.computeDefsAndUses)) // TODO liveness analysis does not handle structs correctly
             .apply(new InferLifetimeBounds(this.#inferFunctionLifetimes, this.#iterationLimit))
             .apply(new RegionckPipeline(this.#debug))
             // TODO drop elaboration

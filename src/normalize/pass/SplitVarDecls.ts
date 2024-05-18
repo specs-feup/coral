@@ -17,6 +17,7 @@ export default class SplitVarDecls implements CoralNormalizer.Pass {
 
         for (const $vardecl of $jp.decls) {
             if ($vardecl instanceof Vardecl) {
+                $vardecl.detach();
                 $jp.insertBefore($vardecl);
             }
         }

@@ -1,4 +1,4 @@
-import { Joinpoint } from "clava-js/api/Joinpoints.js";
+import { Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
 
 import Path from "coral/mir/path/Path";
 import Ty from "coral/mir/ty/Ty";
@@ -59,5 +59,9 @@ export default class PathDeref extends Path {
 
     override get ty(): Ty {
         return this.innerTy.referent;
+    }
+
+    override get innerVardecl(): Vardecl {
+        return this.inner.innerVardecl;
     }
 }

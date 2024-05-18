@@ -12,6 +12,7 @@ import {
     Loop,
     MemberAccess,
     ParenExpr,
+    PointerType,
     ReturnStmt,
     Statement,
     Switch,
@@ -64,7 +65,7 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
             if ($jp.kind === "while") {
                 const label = ClavaJoinPoints.labelDecl(this.#getLabelName());
                 $jp.insertBefore(ClavaJoinPoints.labelStmt(label));
-                this.#splitInner($jp, ($jp.cond as ExprStmt).expr);
+                this.#splitNonLvalue($jp, ($jp.cond as ExprStmt).expr);
 
                 $jp.body.insertEnd(ClavaJoinPoints.gotoStmt(label));
                 for (const $continueJp of Query.searchFrom($jp, "continue")) {
@@ -83,7 +84,7 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
                 $jp.body.insertEnd($condGenerator);
                 const label = ClavaJoinPoints.labelDecl(this.#getLabelName());
                 $condGenerator.insertBefore(ClavaJoinPoints.labelStmt(label));
-                this.#splitInner($condGenerator, ($jp.cond as ExprStmt).expr);
+                this.#splitNonLvalue($condGenerator, ($jp.cond as ExprStmt).expr);
 
                 for (const $continueJp of Query.searchFrom($jp, "continue")) {
                     const $continue = $continueJp as Continue;
@@ -98,7 +99,7 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
                 }
             }
         } else if ($jp instanceof ReturnStmt) {
-            this.#splitInner($jp, $jp.returnExpr);
+            this.#splitNonLvalue($jp, $jp.returnExpr);
         } else if ($jp instanceof DeclStmt) {
             for (const $vardecl of $jp.decls) {
                 if ($vardecl instanceof Vardecl && $vardecl.hasInit) {
@@ -156,6 +157,36 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
             this.#splitNonLvalue($targetStmt, $expr.base);
         } else if ($expr instanceof UnaryOp) {
             this.#splitNonLvalue($targetStmt, $expr.operand);
+            if (
+                $expr.kind === "post_inc" ||
+                $expr.kind === "post_dec" ||
+                $expr.kind === "pre_inc" ||
+                $expr.kind === "pre_dec"
+            ) {
+                const operator = ($expr.kind === "post_inc" || $expr.kind === "pre_inc") ? "+" : "-";
+                const $vardecl = ClavaJoinPoints.varDecl(
+                    this.#getTempVarName(),
+                    $expr.operand,
+                );
+                const $assign = ClavaJoinPoints.exprStmt(
+                    ClavaJoinPoints.assign(
+                        $expr.operand,
+                        ClavaJoinPoints.binaryOp(
+                            operator,
+                            ClavaJoinPoints.varRef($vardecl),
+                            ClavaJoinPoints.integerLiteral(1),
+                        ),
+                    ),
+                );
+                $targetStmt.insertBefore($vardecl);
+                $targetStmt.insertBefore($assign);
+
+                const $newExpr =
+                    ($expr.kind === "post_inc" || $expr.kind === "post_dec")
+                        ? ClavaJoinPoints.varRef($vardecl)
+                        : $expr.operand;
+                $expr.replaceWith($newExpr);
+            }
         } else if ($expr instanceof BinaryOp) {
             if ($expr.isAssignment) {
                 const $varref = this.#split($targetStmt, $expr.right);
@@ -182,6 +213,15 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
                 this.#getTempVarName(),
                 $expr.trueExpr.type,
             );
+
+            if (this.#canBeConst($expr)) {
+                const $vardeclType = $resultVardecl.type.desugarAll.copy();
+                if ($vardeclType instanceof PointerType) {
+                    $vardeclType.pointee = $vardeclType.pointee.asConst();
+                    $resultVardecl.type = $vardeclType;
+                }
+            }
+
             $targetStmt.insertBefore($resultVardecl);
             const $resultVarref = ClavaJoinPoints.varRef($resultVardecl);
 
@@ -243,6 +283,17 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
         if ($expr.parent !== undefined) {
             const varName = this.#getTempVarName();
             const $vardecl = ClavaJoinPoints.varDecl(varName, $expr);
+
+            if ($expr instanceof UnaryOp && $expr.operator === "&") {
+                if (this.#canBeConst($expr)) {
+                    const $vardeclType = $vardecl.type.desugarAll.copy();
+                    if ($vardeclType instanceof PointerType) {
+                        $vardeclType.pointee = $vardeclType.pointee.asConst();
+                        $vardecl.type = $vardeclType;
+                    }
+                }
+            }
+
             $targetStmt.insertBefore($vardecl);
             const $varref = ClavaJoinPoints.varRef($vardecl);
             $expr.replaceWith($varref);
@@ -268,5 +319,34 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
         } else {
             return false;
         }
+    }
+
+    #canBeConst($expr: Expression): boolean {
+        const $parent = $expr.parent;
+
+        if ($parent instanceof ParenExpr) {
+            return this.#canBeConst($parent);
+        } else if ($parent instanceof Call) {
+            const argIdx = $parent.args.findIndex(($arg) => $arg.astId === $expr.astId);
+            const $leftTy = $parent.function.params[argIdx].type.desugarAll;
+            if ($leftTy instanceof PointerType && $leftTy.pointee.constant) {
+                return true;
+            }
+        } else if ($parent instanceof BinaryOp && $parent.isAssignment) {
+            const $leftTy = $parent.left.type.desugarAll;
+            if ($leftTy instanceof PointerType && $leftTy.pointee.constant) {
+                return true;
+            }
+        } else if ($parent instanceof TernaryOp) {
+            if ($parent.trueExpr.astId === $expr.astId || $parent.falseExpr.astId === $expr.astId) {
+                return this.#canBeConst($parent);
+            }
+        } else if ($parent instanceof Vardecl) {
+            const $leftTy = $parent.type.desugarAll;
+            if ($leftTy instanceof PointerType && $leftTy.pointee.constant) {
+                return true;
+            }
+        }
+        return false;
     }
 }

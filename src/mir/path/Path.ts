@@ -1,4 +1,4 @@
-import { Joinpoint } from "clava-js/api/Joinpoints.js";
+import { Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
 import Ty from "coral/mir/ty/Ty";
 
 /**
@@ -15,4 +15,5 @@ export default abstract class Path {
      */
     abstract get ty(): Ty;
     abstract get $jp(): Joinpoint;
+    abstract get innerVardecl(): Vardecl;
 }

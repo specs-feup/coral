@@ -1,4 +1,4 @@
-import { Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
+import { BinaryOp, FunctionJp, Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
 import MoveBehindReferenceError from "coral/error/move/MoveBehindReferenceError";
 import UseBeforeInitError from "coral/error/move/UseBeforeInitError";
 import UseWhileMovedError from "coral/error/move/UseWhileMovedError";
@@ -116,6 +116,46 @@ class MoveTable {
         }
     }
 
+    checkDrop(access: Access): [MoveTable.DropKind, MoveTable.StateHolder?] {
+        const path = access.path;
+        const holder = this.#pathToStateHolder(path);
+        const $vardecl = this.#pathToVardecl(path);
+
+        if (holder === undefined) {
+            throw new Error("State holder not found");
+        }
+
+        let currentState: MoveTable.StateHolder;
+        switch (access.mutability) {
+            case Access.Mutability.READ:
+                if (access.isMove) {
+                    currentState = holder.copy();
+                    holder.state = MoveTable.State.MOVED;
+                    holder.exampleMoveAccess = access;
+                    
+                    let $parent = access.path.$jp.parent;
+                    while (true) {
+                        if ($parent instanceof FunctionJp) {
+                            return [MoveTable.DropKind.DROP_AFTER, currentState];
+                        } else if ($parent instanceof Vardecl || ($parent instanceof BinaryOp && $parent.isAssignment)) {
+                            break;
+                        }
+                    }
+                }
+                break;
+            case Access.Mutability.WRITE:
+                currentState = holder.copy();
+                holder.state = MoveTable.State.VALID;
+                return [MoveTable.DropKind.DROP_BEFORE, currentState];
+            case Access.Mutability.STORAGE_DEAD:
+                currentState = holder.copy();
+                this.#states.delete($vardecl.astId);
+                return [MoveTable.DropKind.DROP_BEFORE, currentState];
+        }
+
+        return [MoveTable.DropKind.NO_DROP, holder];
+    }
+
     #pathToVardecl(path: Path): Vardecl {
         if (path instanceof PathVarRef) {
             return path.$vardecl;
@@ -188,6 +228,12 @@ class MoveTable {
 }
 
 namespace MoveTable {
+    export enum DropKind {
+        DROP_BEFORE = "drop before",
+        DROP_AFTER = "drop after",
+        NO_DROP = "no drop",
+    }
+
     export enum State {
         UNINIT = "uninitialized",
         VALID = "valid",

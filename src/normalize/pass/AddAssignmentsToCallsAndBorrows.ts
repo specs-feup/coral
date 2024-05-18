@@ -5,6 +5,7 @@ import {
     Expression,
     Joinpoint,
     ParenExpr,
+    PointerType,
     Statement,
 } from "clava-js/api/Joinpoints.js";
 import ClavaJoinPoints from "clava-js/api/clava/ClavaJoinPoints.js";
@@ -76,6 +77,11 @@ export default class AddAssignmentsToCallsAndBorrows implements CoralNormalizer.
         if ($expr.type.isPointer) {
             const varName = this.#getTempVarName();
             const $vardecl = ClavaJoinPoints.varDecl(varName, $targetStmt.expr);
+            const $vardeclType = $vardecl.type.desugarAll.copy();
+            if ($vardeclType instanceof PointerType) {
+                $vardeclType.pointee = $vardeclType.pointee.asConst();
+                $vardecl.type = $vardeclType;
+            }
             $targetStmt.replaceWith($vardecl);
 
             return true;

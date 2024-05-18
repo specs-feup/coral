@@ -23,6 +23,7 @@ import GotoNode from "clava-flow/flow/node/instruction/GotoNode";
 import CoralNode from "coral/graph/CoralNode";
 import { Case, If, Loop } from "clava-js/api/Joinpoints.js";
 import MoveTable from "coral/mir/MoveTable";
+import DropNode from "coral/graph/DropNode";
 
 export default class CoralDotFormatter extends DotFormatter {
     override formatNode(node: BaseNode.Class): DotFormatter.Node {
@@ -65,11 +66,17 @@ export default class CoralDotFormatter extends DotFormatter {
             if (coralNode !== undefined) {
                 label += coralNode.varsEnteringScope.map(($v) => $v.name).join(", ");
             }
+            if (node.as(ScopeStartNode.Class).scopeKind === ScopeStartNode.Kind.BROKEN_FLOW) {
+                style = "dashed";
+            }
         } else if (node.is(ScopeEndNode.TypeGuard)) {
             if (coralNode !== undefined) {
                 label += coralNode.varsLeavingScope.map(($v) => $v.name).join(", ");
             }
             label += `}`;
+            if (node.as(ScopeEndNode.Class).scopeKind === ScopeEndNode.Kind.BROKEN_FLOW) {
+                style = "dashed";
+            }
         } else if (node.is(EmptyStatementNode.TypeGuard)) {
             label += `Empty Statement`;
         } else if (node.is(ExpressionNode.TypeGuard)) {
@@ -100,6 +107,8 @@ export default class CoralDotFormatter extends DotFormatter {
         } else if (node.is(GotoNode.TypeGuard)) {
             const gotoNode = node.as(GotoNode.Class);
             label += `Goto:\n${gotoNode.jp.label.name}`;
+        } else if (node.is(DropNode.TypeGuard)) {
+            label += `DROP(&${node.as(DropNode.Class).accesses[0].path})`;
         } else if (node.is(UnknownInstructionNode.TypeGuard)) {
             const unknownInstructionNode = node.as(UnknownInstructionNode.Class);
             if (unknownInstructionNode.jp !== undefined) {
