@@ -46,7 +46,7 @@ export default class ErrorMessageBuilder {
 
     constructor(message: string, $line_ref: Joinpoint) {
         this.#message = message;
-        this.#$main_line_ref = $line_ref;
+        this.#$main_line_ref = $line_ref.originNode;
         this.#body = [];
         this.#lines = [];
     }
@@ -65,7 +65,7 @@ export default class ErrorMessageBuilder {
             $jp = $jp.parent;
         }
 
-        this.#body.push(new CodeLineHint($jp.code, description, $line_ref.line));
+        this.#body.push(new CodeLineHint($jp.originNode.code, description, $line_ref.originNode.line));
         return this;
     }
 

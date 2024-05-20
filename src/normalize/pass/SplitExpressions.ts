@@ -80,11 +80,26 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
                     ($continueJp as Continue).replaceWith(ClavaJoinPoints.gotoStmt(label));
                 }
             } else if ($jp.kind === "dowhile") {
-                const $condGenerator = ClavaJoinPoints.emptyStmt();
+                const $condGenerator = $jp.cond.copy() as Statement;
                 $jp.body.insertEnd($condGenerator);
                 const label = ClavaJoinPoints.labelDecl(this.#getLabelName());
                 $condGenerator.insertBefore(ClavaJoinPoints.labelStmt(label));
                 this.#splitNonLvalue($condGenerator, ($jp.cond as ExprStmt).expr);
+                
+                // `while` cannot use variables declared inside the `do` scope
+                const $vardecl = ClavaJoinPoints.varDeclNoInit(this.#getTempVarName(), ($jp.cond as ExprStmt).expr.type);
+                $jp.insertBefore($vardecl);
+                $condGenerator.insertBefore(
+                    ClavaJoinPoints.exprStmt(
+                        ClavaJoinPoints.assign(
+                            ClavaJoinPoints.varRef($vardecl),
+                            ($jp.cond as ExprStmt).expr,
+                        ),
+                    ),
+                );
+                $condGenerator.detach();
+                ($jp.cond as ExprStmt).expr.replaceWith(ClavaJoinPoints.varRef($vardecl));
+                
 
                 for (const $continueJp of Query.searchFrom($jp, "continue")) {
                     const $continue = $continueJp as Continue;

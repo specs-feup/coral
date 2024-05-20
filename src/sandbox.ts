@@ -7,6 +7,9 @@ import CoralError from "coral/error/CoralError";
 import CoralPipeline from "coral/CoralPipeline";
 import { Joinpoint, Vardecl, Varref } from "clava-js/api/Joinpoints.js";
 import CoralPragma from "coral/pragma/CoralPragma";
+import Clava from "clava-js/api/clava/Clava.js";
+
+Clava.pushAst();
 
 console.log(Query.root().dump);
 

@@ -11,18 +11,16 @@ export default class UnexpectedLifetimeAssignmentError extends CoralError {
     ) {
         const $struct = lfAssign.pragma.$jp.target.parent;
 
-        const startLine = $struct.line;
-        const fieldLine = lfAssign.pragma.$jp.parent.line;
-        const endLine = $struct.endLine;
-
-        
+        const startLine = $struct.originNode.line;
+        const fieldLine = lfAssign.pragma.$jp.parent.originNode.line;
+        const endLine = $struct.originNode.endLine;
 
         const builder = new ErrorMessageBuilder(
             "Lifetime assignment is invalid.",
             lfAssign.pragma.$jp.parent,
         );
 
-        builder.codeString($struct.code.trim().split("\n")[0], undefined, startLine);
+        builder.codeString($struct.originNode.code.trim().split("\n")[0], undefined, startLine);
         if (startLine + 1 < fieldLine) {
             builder.ellipsis();
         }

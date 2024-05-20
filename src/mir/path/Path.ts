@@ -1,4 +1,4 @@
-import { Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
+import { Expression, Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
 import Ty from "coral/mir/ty/Ty";
 
 /**
@@ -7,6 +7,7 @@ import Ty from "coral/mir/ty/Ty";
 export default abstract class Path {
     abstract toString(): string;
     abstract equals(other: Path): boolean;
+    abstract contains(other: Path): boolean;
     abstract get prefixes(): Path[];
     abstract get shallowPrefixes(): Path[];
     abstract get supportingPrefixes(): Path[];
@@ -14,6 +15,6 @@ export default abstract class Path {
      * Retrieve the type of the value at this path.
      */
     abstract get ty(): Ty;
-    abstract get $jp(): Joinpoint;
+    abstract get $jp(): Expression;
     abstract get innerVardecl(): Vardecl;
 }

@@ -15,9 +15,9 @@ export default class MissingLifetimeBoundError extends CoralError {
             relevantConstraint.$jp,
         )
             .codeString(
-                $fn.code.split("\n")[0],
+                $fn.originNode.code.split("\n")[0],
                 `consider adding '#pragma coral lf ${region.name}: ${requiredBound}'`,
-                $fn.line,
+                $fn.originNode.line,
             )
             .code(
                 relevantConstraint.$jp,

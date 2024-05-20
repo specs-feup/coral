@@ -9,21 +9,21 @@ export default class LifetimeReassignmentError extends CoralError {
     constructor(lfFirstAssign: LifetimeAssignmentPragma, lfSecondAssign: LifetimeAssignmentPragma) {
         const $struct = lfFirstAssign.pragma.$jp.target.parent;
 
-        const startLine = $struct.line;
+        const startLine = $struct.originNode.line;
         let firstAssignLine = lfFirstAssign.pragma.$jp.parent.line;
         let secondAssignLine = lfSecondAssign.pragma.$jp.parent.line;
         if (firstAssignLine > secondAssignLine) {
             [lfFirstAssign, lfSecondAssign] = [lfSecondAssign, lfFirstAssign];
             [firstAssignLine, secondAssignLine] = [secondAssignLine, firstAssignLine];
         }
-        const endLine = $struct.endLine;
+        const endLine = $struct.originNode.endLine;
 
         const builder = new ErrorMessageBuilder(
             "Lifetimes cannot be reassigned.",
             lfSecondAssign.pragma.$jp.parent,
         );
 
-        builder.codeString($struct.code.trim().split("\n")[0], undefined, startLine);
+        builder.codeString($struct.originNode.code.trim().split("\n")[0], undefined, startLine);
         if (startLine + 1 < firstAssignLine) {
             builder.ellipsis();
         }

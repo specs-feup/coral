@@ -17,7 +17,7 @@ export default class DanglingReferenceError extends CoralError {
             .codeString(
                 "}",
                 `'${access.path.toString()}' dropped here while still borrowed`,
-                $scopeEnd.endLine,
+                $scopeEnd.originNode.endLine,
         );
 
         if ($nextUse) {

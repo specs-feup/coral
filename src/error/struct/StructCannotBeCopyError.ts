@@ -24,11 +24,11 @@ export default class StructCannotBeCopyError extends CoralError {
         }
 
         if ($moveFieldExample !== undefined && dropFnPragma === undefined) {
-            const startLine = copyFlag.$jp.target.line;
-            const fieldLine = $moveFieldExample.line;
-            const endLine = copyFlag.$jp.target.endLine;
+            const startLine = copyFlag.$jp.target.originNode.line;
+            const fieldLine = $moveFieldExample.originNode.line;
+            const endLine = copyFlag.$jp.target.originNode.endLine;
 
-            builder.codeString(copyFlag.$jp.target.code.trim().split("\n")[0], undefined, startLine);
+            builder.codeString(copyFlag.$jp.target.originNode.code.trim().split("\n")[0], undefined, startLine);
             if (startLine + 1 < fieldLine) {
                 builder.ellipsis()
             }

@@ -23,6 +23,53 @@ namespace DropNode {
         get dropInsertLocation(): DropInsertLocation {
             return this.data.coral.dropInsertLocation;
         }
+
+        get elaborated(): boolean {
+            return this.data.coral.elaborated;
+        }
+
+        insertDropCallBefore($call: string): void {
+            let targetNode: FlowNode.Class = this;
+            while (
+                targetNode.is(DropNode.TypeGuard) &&
+                !targetNode.as(DropNode.Class).elaborated
+            ) {
+                const nextNodes = targetNode.nextNodes;
+                if (nextNodes.length !== 1) {
+                    throw new Error(
+                        "Drop nodes with insertBefore must have exactly one successor",
+                    );
+                }
+                targetNode = nextNodes[0];
+            }
+            if (targetNode.jp === undefined) {
+                throw new Error("Target node must have a joinpoint");
+            }
+            this.scratchData.$jp = targetNode.jp.insertBefore($call);
+            this.data.coral.elaborated = true;
+        }
+
+        insertDropCallAfter($call: string): void {
+            let targetNode: FlowNode.Class = this;
+            while (
+                targetNode.is(DropNode.TypeGuard) &&
+                !targetNode.as(DropNode.Class).elaborated
+            ) {
+                const previousNodes = targetNode.previousNodes;
+                if (previousNodes.length !== 1) {
+                    throw new Error(
+                        "Drop nodes with insertAfter must have exactly one predecessor",
+                    );
+                }
+                targetNode = previousNodes[0];
+            }
+            if (targetNode.jp === undefined) {
+                throw new Error("Target node must have a joinpoint");
+            }
+            
+            this.scratchData.$jp = targetNode.jp.insertAfter($call);
+            this.data.coral.elaborated = true;
+        }
     }
 
     export class Builder
@@ -44,6 +91,7 @@ namespace DropNode {
                 coral: {
                     dropIsConditional: this.#isConditional,
                     dropInsertLocation: this.#insertLocation,
+                    elaborated: false,
                 }
             };
         }
@@ -77,6 +125,7 @@ namespace DropNode {
         coral: {
             dropIsConditional: boolean;
             dropInsertLocation: DropInsertLocation;
+            elaborated: boolean;
         }
     }
 

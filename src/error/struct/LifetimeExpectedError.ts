@@ -11,16 +11,16 @@ export default class LifetimeExpectedError extends CoralError {
     ) {
         const $struct = $field.parent;
 
-        const startLine = $struct.line;
-        const fieldLine = $field.line;
-        const endLine = $struct.endLine;
+        const startLine = $struct.originNode.line;
+        const fieldLine = $field.originNode.line;
+        const endLine = $struct.originNode.endLine;
 
         const builder = new ErrorMessageBuilder(
             "Expected lifetime.",
             $field,
         );
 
-        builder.codeString($struct.code.trim().split("\n")[0], undefined, startLine);
+        builder.codeString($struct.originNode.code.trim().split("\n")[0], undefined, startLine);
         if (startLine + 1 < fieldLine) {
             builder.ellipsis();
         }

@@ -19,7 +19,7 @@ export default class InvalidDropFunctionError extends CoralError {
                 .code(dropFnPragma.$jp.target)
                 .blankLine()
                 .blankLine()
-                .codeString($function.code.split("\n")[0], message, $function.line)
+                .codeString($function.originNode.code.split("\n")[0], message, $function.line)
                 .toString()
         );
         this.name = this.constructor.name;

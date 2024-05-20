@@ -1,4 +1,4 @@
-import { Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
+import { Expression, Joinpoint, UnaryOp, Vardecl } from "clava-js/api/Joinpoints.js";
 
 import Path from "coral/mir/path/Path";
 import Ty from "coral/mir/ty/Ty";
@@ -9,7 +9,7 @@ import BorrowKind from "coral/mir/ty/BorrowKind";
  * A dereference of a path, such as `*x`.
  */
 export default class PathDeref extends Path {
-    $jp: Joinpoint;
+    $jp: UnaryOp;
     /**
      * The path being dereferenced. For example, in `*x`, this would be `x`.
      */
@@ -19,7 +19,7 @@ export default class PathDeref extends Path {
      */
     innerTy: RefTy;
 
-    constructor($jp: Joinpoint, inner: Path) {
+    constructor($jp: UnaryOp, inner: Path) {
         super();
         this.$jp = $jp;
         this.inner = inner;
@@ -39,6 +39,10 @@ export default class PathDeref extends Path {
 
     override equals(other: Path): boolean {
         return other instanceof PathDeref && this.inner.equals(other.inner);
+    }
+
+    override contains(other: Path): boolean {
+        return this.equals(other) || this.inner.contains(other);
     }
 
     override get prefixes(): Path[] {

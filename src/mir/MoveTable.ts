@@ -1,4 +1,4 @@
-import { BinaryOp, FunctionJp, Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
+import { BinaryOp, ExprStmt, FunctionJp, Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
 import MoveBehindReferenceError from "coral/error/move/MoveBehindReferenceError";
 import UseBeforeInitError from "coral/error/move/UseBeforeInitError";
 import UseWhileMovedError from "coral/error/move/UseWhileMovedError";
@@ -140,6 +140,8 @@ class MoveTable {
                         } else if ($parent instanceof Vardecl || ($parent instanceof BinaryOp && $parent.isAssignment)) {
                             break;
                         }
+                        
+                        $parent = $parent.parent;
                     }
                 }
                 break;

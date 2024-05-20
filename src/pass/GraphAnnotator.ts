@@ -65,6 +65,7 @@ import LfPathVarRef from "coral/pragma/lifetime/path/LfPathVarRef";
 import RegionVariable from "coral/regionck/RegionVariable";
 import Regionck from "coral/regionck/Regionck";
 import Query from "lara-js/api/weaver/Query.js";
+import ClavaJoinPoints from "clava-js/api/clava/ClavaJoinPoints.js";
 
 export default class GraphAnnotator implements GraphTransformation {
     #regionck?: Regionck;
@@ -385,7 +386,8 @@ export default class GraphAnnotator implements GraphTransformation {
         if ($expr instanceof UnaryOp && $expr.operator === "&") {
             loanedPath = this.#parseLvalue($expr.operand);
         } else {
-            loanedPath = new PathDeref($expr, this.#parseLvalue($expr));
+            const $loanedPathJp = ClavaJoinPoints.unaryOp("*", $expr);
+            loanedPath = new PathDeref($loanedPathJp, this.#parseLvalue($expr));
         }
 
         const regionVar = this.#regionck!.newRegionVar(RegionVariable.Kind.EXISTENTIAL);
@@ -706,7 +708,8 @@ export default class GraphAnnotator implements GraphTransformation {
         } else if ($expr instanceof MemberAccess) {
             let inner = this.#parseLvalue($expr.base);
             if ($expr.arrow) {
-                inner = new PathDeref($expr, inner);
+                const $innerJp = ClavaJoinPoints.unaryOp("*", $expr.base);
+                inner = new PathDeref($innerJp, inner);
             }
 
             return new PathMemberAccess($expr, inner, $expr.name);

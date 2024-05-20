@@ -1,4 +1,4 @@
-import { Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
+import { Expression, Joinpoint, MemberAccess, Vardecl } from "clava-js/api/Joinpoints.js";
 import Path from "coral/mir/path/Path";
 import StructTy from "coral/mir/ty/StructTy";
 import Ty from "coral/mir/ty/Ty";
@@ -8,12 +8,12 @@ import Ty from "coral/mir/ty/Ty";
  * A member access, such as `x.y`.
  */
 export default class PathMemberAccess extends Path {
-    $jp: Joinpoint;
+    $jp: MemberAccess;
     inner: Path;
     fieldName: string;
     innerTy: StructTy;
 
-    constructor($jp: Joinpoint, inner: Path, fieldName: string) {
+    constructor($jp: MemberAccess, inner: Path, fieldName: string) {
         super();
 
         this.$jp = $jp;
@@ -39,6 +39,10 @@ export default class PathMemberAccess extends Path {
             this.inner.equals(other.inner) &&
             this.fieldName === other.fieldName
         );
+    }
+
+    override contains(other: Path): boolean {	
+        return this.equals(other) || this.inner.contains(other);	
     }
 
     override get prefixes(): Path[] {
