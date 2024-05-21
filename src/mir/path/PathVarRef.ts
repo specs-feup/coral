@@ -44,9 +44,6 @@ export default class PathVarRef extends Path {
     }
 
     get $vardecl(): Vardecl {
-        if (this.$jp instanceof Vardecl) {
-            return this.$jp;
-        }
         return this.$jp.vardecl;
     }
 

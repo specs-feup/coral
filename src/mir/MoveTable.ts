@@ -1,4 +1,6 @@
 import { BinaryOp, ExprStmt, FunctionJp, Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
+import MergeInconsistentStructError from "coral/error/drop/MergeInconsistentStructError";
+import WriteFieldOfPotentiallyDroppedTypeError from "coral/error/drop/WriteFieldOfPotentiallyDroppedTypeError";
 import MoveBehindReferenceError from "coral/error/move/MoveBehindReferenceError";
 import UseBeforeInitError from "coral/error/move/UseBeforeInitError";
 import UseWhileMovedError from "coral/error/move/UseWhileMovedError";
@@ -95,6 +97,7 @@ class MoveTable {
                         state === MoveTable.State.MOVED ||
                         state === MoveTable.State.MAYBE_MOVED
                     ) {
+                        console.log(state);
                         throw new UseWhileMovedError(
                             path.$jp,
                             $vardecl,
@@ -147,6 +150,38 @@ class MoveTable {
                 break;
             case Access.Mutability.WRITE:
                 currentState = holder.copy();
+
+                if (!this.#hasDeref(path)) {
+                    let parent = holder.parent;
+                    let parentPath: Path | undefined = path;
+                    if (path instanceof PathMemberAccess) {
+                        parentPath = path.inner;
+                    }
+                    let outerWithDropFunction: MoveTable.FieldStates | undefined;
+                    let outerWithDropFunctionPath: Path | undefined;
+                    while (parent !== undefined) {
+                        if (parent instanceof MoveTable.FieldStates && parent.hasDropFunction) {
+                            outerWithDropFunction = parent;
+                            outerWithDropFunctionPath = parentPath;
+                        }
+                        parent = parent.parent;
+                        if (parentPath instanceof PathMemberAccess) {
+                            parentPath = parentPath.inner;
+                        } else {
+                            parentPath = undefined;
+                        }
+                    }
+                    if (
+                        outerWithDropFunction !== undefined
+                        && (
+                            outerWithDropFunction.dropState === MoveTable.State.MAYBE_MOVED
+                            || outerWithDropFunction.dropState === MoveTable.State.MAYBE_UNINIT
+                        )
+                    ) {
+                        throw new WriteFieldOfPotentiallyDroppedTypeError(outerWithDropFunctionPath!, access, outerWithDropFunction.exampleMoveAccess!);
+                    }
+                }
+                
                 holder.state = MoveTable.State.VALID;
                 return [MoveTable.DropKind.DROP_BEFORE, currentState];
             case Access.Mutability.STORAGE_DEAD:
@@ -213,7 +248,18 @@ class MoveTable {
 
     static merge(tables: MoveTable[]) {
         const result = new MoveTable();
+        if (tables.length > 1) {
+            console.log("MERGE")
+        }
         for (const table of tables) {
+            if (tables.length > 1) {
+                console.log("===========")
+                console.log("valid", table.getVarNames(MoveTable.State.VALID));
+                console.log("moved", table.getVarNames(MoveTable.State.MOVED));
+                console.log("maybe moved", table.getVarNames(MoveTable.State.MAYBE_MOVED));
+                console.log("uninit", table.getVarNames(MoveTable.State.UNINIT));
+                console.log("maybe uninit", table.getVarNames(MoveTable.State.MAYBE_UNINIT));
+            }
             for (const [key, value] of table.#states) {
                 const currentValue = result.#states.get(key);
                 if (currentValue === undefined) {
@@ -222,7 +268,14 @@ class MoveTable {
                     continue;
                 }
 
-                currentValue.mergeWith(value);
+                try {
+                    currentValue.mergeWith(value);
+                } catch (e) {
+                    if (e instanceof MergeInconsistentStructError.Stub) {
+                        e.vardecl = table.#vardecls.get(key);
+                    }
+                    throw e;
+                }   
             }
         }
         return result;
@@ -250,11 +303,7 @@ namespace MoveTable {
             ty: Ty,
             initialState: MoveTable.State = MoveTable.State.UNINIT,
         ): StateHolder {
-            if (
-                ty instanceof StructTy &&
-                ty.isComplete &&
-                ty.dropFunction === undefined
-            ) {
+            if (ty instanceof StructTy && ty.isComplete) {
                 const states = new Map<string, StateHolder>();
                 for (const [field, fieldTy] of ty.fields.entries()) {
                     states.set(
@@ -262,12 +311,31 @@ namespace MoveTable {
                         StateHolder.create($vardecl, fieldTy, initialState),
                     );
                 }
-                return new FieldStates(states);
+                return new FieldStates(
+                    states,
+                    initialState,
+                    ty.dropFunction !== undefined,
+                );
             } else {
                 return new SingleState(initialState);
             }
         }
 
+        get field(): string | undefined {
+            if (this.parent === undefined || !(this.parent instanceof FieldStates)) {
+                return undefined;
+            }
+
+            for (const [key, value] of this.parent.substates) {
+                if (value === this) {
+                    return key;
+                }
+            }
+        }
+
+        abstract set parent(parent: StateHolder);
+        abstract get parent(): StateHolder | undefined;
+        abstract propagateValid(): void;
         abstract getVarNames(state: MoveTable.State): string[];
         abstract set state(state: MoveTable.State);
         abstract get state(): MoveTable.State;
@@ -281,10 +349,19 @@ namespace MoveTable {
     export class SingleState extends StateHolder {
         #state: State;
         #exampleMoveAccess?: Access;
+        parent: StateHolder | undefined;
 
-        constructor(state: State) {
+        constructor(state: State, parent?: StateHolder) {
             super();
             this.#state = state;
+            this.parent = parent;
+        }
+
+        propagateValid(): void {
+            this.#state = MoveTable.State.VALID;
+            if (this.parent !== undefined) {
+                this.parent.propagateValid();
+            }
         }
 
         getVarNames(state: MoveTable.State): string[] {
@@ -293,6 +370,9 @@ namespace MoveTable {
 
         set state(state: MoveTable.State) {
             this.#state = state;
+            if (this.parent !== undefined && state === MoveTable.State.VALID) {
+                this.parent.propagateValid();
+            }
         }
         
         get state(): MoveTable.State {
@@ -364,7 +444,7 @@ namespace MoveTable {
         }
 
         copy(): StateHolder {
-            const result = new SingleState(this.#state);
+            const result = new SingleState(this.#state, this.parent);
             if (
                 this.#state === MoveTable.State.MOVED ||
                 this.#state === MoveTable.State.MAYBE_MOVED
@@ -376,15 +456,36 @@ namespace MoveTable {
     }
 
     export class FieldStates extends StateHolder {
-        #states: Map<string, StateHolder>;
+        substates: Map<string, StateHolder>;
+        hasDropFunction: boolean;
+        #state: State;
+        parent: StateHolder | undefined;
 
-        constructor(states: Map<string, StateHolder>) {
+        constructor(
+            states: Map<string, StateHolder>,
+            initialState: State,
+            hasDropFunction: boolean,
+            parent?: StateHolder,
+        ) {
             super();
-            this.#states = states;
+            this.substates = states;
+            for (const state of states.values()) {
+                state.parent = this;
+            }
+            this.hasDropFunction = hasDropFunction;
+            this.#state = initialState;
+            this.parent = parent;
+        }
+
+        propagateValid(): void {
+            this.#state = MoveTable.State.VALID;
+            if (this.parent !== undefined) {
+                this.parent.propagateValid();
+            }
         }
 
         get(field: string): StateHolder {
-            const state = this.#states.get(field);
+            const state = this.substates.get(field);
             if (state === undefined) {
                 throw new Error(`Field ${field} not found`);
             }
@@ -393,21 +494,31 @@ namespace MoveTable {
 
         getVarNames(state: MoveTable.State): string[] {
             let result: string[] = [];
-            for (const [field, holder] of this.#states) {
-                result = result.concat(holder.getVarNames(state).map(inner => `.${field}${inner}`));
+            if (this.hasDropFunction && this.#state === state) {
+                result.push("");
+            }
+
+            for (const [field, holder] of this.substates) {
+                result = result.concat(
+                    holder.getVarNames(state).map((inner) => `.${field}${inner}`),
+                );
             }
             return result;
         }
 
         set state(state: MoveTable.State) {
-            for (const holder of this.#states.values()) {
+            this.#state = state;
+            for (const holder of this.substates.values()) {
                 holder.state = state;
+            }
+            if (this.parent !== undefined && state === MoveTable.State.VALID) {
+                this.parent.propagateValid();
             }
         }
 
         get state(): MoveTable.State {
             let result: MoveTable.State | undefined;
-            for (const holder of this.#states.values()) {
+            for (const holder of this.substates.values()) {
                 if (result === undefined) {
                     result = holder.state;
                     continue;
@@ -415,7 +526,10 @@ namespace MoveTable {
 
                 switch (holder.state) {
                     case MoveTable.State.UNINIT:
-                        if (result !== MoveTable.State.MOVED && result !== MoveTable.State.MAYBE_MOVED) {
+                        if (
+                            result !== MoveTable.State.MOVED &&
+                            result !== MoveTable.State.MAYBE_MOVED
+                        ) {
                             result = MoveTable.State.UNINIT;
                         }
                         break;
@@ -439,14 +553,51 @@ namespace MoveTable {
             return result!;
         }
 
+        get dropState(): MoveTable.State {
+            return this.#state;
+        }
+
+        isConsistentState(): boolean {
+            for (const holder of this.substates.values()) {
+                let realState: MoveTable.State;
+                if (holder instanceof SingleState) {
+                    realState = holder.state;
+                } else if (holder instanceof FieldStates) {
+                    if (!holder.isConsistentState()) {
+                        return false;
+                    }
+
+                    realState = holder.#state;
+                } else {
+                    throw new Error("Unexpected state holder");
+                }
+
+                if (this.#state === realState) {
+                    continue;
+                }
+
+                if (realState === MoveTable.State.VALID) {
+                    if (
+                        this.#state === MoveTable.State.MAYBE_MOVED ||
+                        this.#state === MoveTable.State.MAYBE_UNINIT
+                    ) {
+                        continue;
+                    }
+                }
+
+                return false;
+            }
+            return true;
+        }
+
         set exampleMoveAccess(access: Access) {
-            for (const holder of this.#states.values()) {
+            for (const holder of this.substates.values()) {
                 holder.exampleMoveAccess = access;
             }
         }
 
         get exampleMoveAccess(): Access | undefined {
-            for (const holder of this.#states.values()) {
+            for (const holder of this.substates.values()) {
                 if (holder.exampleMoveAccess !== undefined) {
                     return holder.exampleMoveAccess;
                 }
@@ -456,9 +607,16 @@ namespace MoveTable {
 
         mergeWith(other: StateHolder): void {
             if (other instanceof FieldStates) {
-                for (const [key, value] of other.#states) {
-                    value.mergeWith(this.#states.get(key)!);
+                if (this.hasDropFunction) {
+                    if (!this.isConsistentState() || !other.isConsistentState()) {
+                        throw new MergeInconsistentStructError.Stub(this);
+                    }
                 }
+                for (const [key, value] of other.substates) {
+                    this.substates.get(key)!.mergeWith(value);
+                }
+                this.#state = this.state;
+                other.#state = other.state;
             } else {
                 throw new Error("Cannot merge FieldStates with SingleState");
             }
@@ -466,12 +624,16 @@ namespace MoveTable {
 
         equals(other: StateHolder): boolean {
             if (other instanceof FieldStates) {
-                if (this.#states.size !== other.#states.size) {
+                if (this.hasDropFunction && this.#state !== other.#state) {
                     return false;
                 }
 
-                for (const [key, value] of this.#states) {
-                    if (!other.#states.get(key)?.equals(value)) {
+                if (this.substates.size !== other.substates.size) {
+                    return false;
+                }
+
+                for (const [key, value] of this.substates) {
+                    if (!other.substates.get(key)?.equals(value)) {
                         return false;
                     }
                 }
@@ -483,10 +645,15 @@ namespace MoveTable {
 
         copy(): StateHolder {
             const states = new Map<string, StateHolder>();
-            for (const [key, value] of this.#states) {
+            for (const [key, value] of this.substates) {
                 states.set(key, value.copy());
             }
-            return new FieldStates(states);
+            return new FieldStates(
+                states,
+                this.#state,
+                this.hasDropFunction,
+                this.parent,
+            );
         }
     }
 }

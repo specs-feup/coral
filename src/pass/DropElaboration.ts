@@ -2,7 +2,7 @@ import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
 import BaseGraph from "clava-flow/graph/BaseGraph";
 import { GraphTransformation } from "clava-flow/graph/Graph";
-import { Joinpoint, Vardecl, Varref } from "clava-js/api/Joinpoints.js";
+import { Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
 import ClavaJoinPoints from "clava-js/api/clava/ClavaJoinPoints.js";
 import CoralGraph from "coral/graph/CoralGraph";
 import CoralNode from "coral/graph/CoralNode";
@@ -126,7 +126,10 @@ class DropElaboration implements GraphTransformation {
             ClavaJoinPoints.integerLiteral(path.innerVardecl.hasInit ? "1" : "0"),
         );
 
-        path.innerVardecl.insertAfter($dropFlagDecl);
+        for (const $jp of Query.searchFrom(functionEntry.jp, "vardecl", { name: path.innerVardecl.name })) {
+            const $vardecl = $jp as Vardecl;
+            $vardecl.insertAfter($dropFlagDecl);
+        }
 
         for (const [node] of functionEntry.bfs((e) => e.is(ControlFlowEdge.TypeGuard))) {
             if (!node.is(CoralNode.TypeGuard)) {

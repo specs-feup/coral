@@ -9,6 +9,7 @@ import BaseGraph from "clava-flow/graph/BaseGraph";
 import { GraphTransformation } from "clava-flow/graph/Graph";
 import { MemberAccess, Vardecl } from "clava-js/api/Joinpoints.js";
 import ClavaJoinPoints from "clava-js/api/clava/ClavaJoinPoints.js";
+import DropInconsistentStructError from "coral/error/drop/DropInconsistentStructError";
 import CoralGraph from "coral/graph/CoralGraph";
 import CoralNode from "coral/graph/CoralNode";
 import DropNode from "coral/graph/DropNode";
@@ -131,11 +132,26 @@ export default class AddDrops implements GraphTransformation {
                 throw new Error("Expected path to be a struct.");
             }
 
-            for (const field of path.ty.fields.keys()) {
-                const subStateHolder = stateHolder.get(field);
-                const $subPathJp = path.$jp as MemberAccess; //TODO// ClavaJoinPoints.memberAccess(path.$jp, field);
-                const subPath = new PathMemberAccess($subPathJp, path, field);
-                this.#handleDrop(coralNode, subPath, dropLocation, subStateHolder);
+            if (path.ty.dropFunction !== undefined) {
+                if (!stateHolder.isConsistentState()) {
+                    throw new DropInconsistentStructError(coralNode.jp, path, path.ty.dropFunction);
+                }
+
+                if (stateHolder.dropState === MoveTable.State.VALID) {
+                    this.#addDrops(coralNode, path, dropLocation, false);
+                } else if (
+                    stateHolder.dropState === MoveTable.State.MAYBE_MOVED ||
+                    stateHolder.dropState === MoveTable.State.MAYBE_UNINIT
+                ) {
+                    this.#addDrops(coralNode, path, dropLocation, true);
+                }
+            } else {
+                for (const field of path.ty.fields.keys()) {
+                    const subStateHolder = stateHolder.get(field);
+                    const $subPathJp = path.$jp as MemberAccess; //TODO// ClavaJoinPoints.memberAccess(path.$jp, field);
+                    const subPath = new PathMemberAccess($subPathJp, path, field);
+                    this.#handleDrop(coralNode, subPath, dropLocation, subStateHolder);
+                }
             }
         } else {
             throw new Error("Unexpected state holder.");
@@ -158,8 +174,6 @@ export default class AddDrops implements GraphTransformation {
 
         if (path.ty.dropFunction !== undefined) {
             this.#addDrop(coralNode, path, dropLocation, maybe);
-        } else {
-            throw new Error("Trying to handle drop of incomplete type.");
         }
 
         if (dropLocation === DropNode.DropInsertLocation.BEFORE_TARGET) {

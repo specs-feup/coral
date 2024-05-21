@@ -2,10 +2,14 @@ import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
 import BaseGraph from "clava-flow/graph/BaseGraph";
 import { GraphTransformation } from "clava-flow/graph/Graph";
-import { Vardecl } from "clava-js/api/Joinpoints.js";
+import { MemberAccess, Vardecl } from "clava-js/api/Joinpoints.js";
+import MergeInconsistentStructError from "coral/error/drop/MergeInconsistentStructError";
 import CoralGraph from "coral/graph/CoralGraph";
 import CoralNode from "coral/graph/CoralNode";
 import MoveTable from "coral/mir/MoveTable";
+import Path from "coral/mir/path/Path";
+import PathMemberAccess from "coral/mir/path/PathMemberAccess";
+import PathVarRef from "coral/mir/path/PathVarRef";
 import Regionck from "coral/regionck/Regionck";
 
 export default class MoveAnalyser implements GraphTransformation {
@@ -46,17 +50,39 @@ export default class MoveAnalyser implements GraphTransformation {
                         MoveTable.State.VALID,
                     );
                 } else {
-                    coralNode.moveTable = MoveTable.merge(
-                        node.incomers
-                            .filter((e) => e.is(ControlFlowEdge.TypeGuard))
-                            .map((e) => e.source)
-                            .map((n) => {
-                                if (!n.is(CoralNode.TypeGuard)) {
-                                    throw new Error("Expected node to be a CoralNode.");
-                                }
-                                return n.as(CoralNode.Class).moveTable;
-                            }),
-                    );
+                    try {
+                        coralNode.moveTable = MoveTable.merge(
+                            node.incomers
+                                .filter((e) => e.is(ControlFlowEdge.TypeGuard))
+                                .map((e) => e.source)
+                                .map((n) => {
+                                    if (!n.is(CoralNode.TypeGuard)) {
+                                        throw new Error("Expected node to be a CoralNode.");
+                                    }
+                                    return n.as(CoralNode.Class).moveTable;
+                                }),
+                        );
+                    } catch (e) {
+                        if (!(e instanceof MergeInconsistentStructError.Stub)) {
+                            throw e;
+                        }
+
+                        let path: Path = new PathVarRef(e.vardecl!, regionck.getTy(e.vardecl!)!);
+                        let fields = [];
+                        let holder: MoveTable.StateHolder | undefined = e.holder;
+                        while (holder !== undefined) {
+                            if (holder.field !== undefined) {
+                                fields.push(holder.field);
+                            }
+                            holder = holder.parent;
+                        }
+                        fields = fields.reverse();
+                        for (const field of fields) {
+                            path = new PathMemberAccess(path.$jp as MemberAccess, path, field);
+                        }
+                        
+                        throw new MergeInconsistentStructError(coralNode.jp, path);
+                    }
                 }
                 
                 this.#enterVars(coralNode.varsEnteringScope, coralNode.moveTable, regionck);
