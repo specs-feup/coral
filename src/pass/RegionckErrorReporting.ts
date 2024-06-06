@@ -1,4 +1,3 @@
-
 import MutateWhileBorrowedError from "coral/error/borrow/MutateWhileBorrowedError";
 import UseWhileMutBorrowedError from "coral/error/borrow/UseWhileMutBorrowedError";
 import MoveWhileBorrowedError from "coral/error/move/MoveWhileBorrowedError";
@@ -14,9 +13,6 @@ import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNod
 import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
 import CoralNode from "coral/graph/CoralNode";
 import DanglingReferenceError from "coral/error/borrow/DanglingReferenceError";
-import RegionVariable from "coral/regionck/RegionVariable";
-import LifetimeBoundPragma from "coral/pragma/lifetime/LifetimeBoundPragma";
-import OutlivesConstraint from "coral/regionck/OutlivesConstraint";
 import Regionck from "coral/regionck/Regionck";
 import MissingLifetimeBoundError from "coral/error/borrow/MissingLifetimeBoundError";
 

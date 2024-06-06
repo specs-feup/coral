@@ -97,7 +97,6 @@ class MoveTable {
                         state === MoveTable.State.MOVED ||
                         state === MoveTable.State.MAYBE_MOVED
                     ) {
-                        console.log(state);
                         throw new UseWhileMovedError(
                             path.$jp,
                             $vardecl,
@@ -248,18 +247,8 @@ class MoveTable {
 
     static merge(tables: MoveTable[]) {
         const result = new MoveTable();
-        if (tables.length > 1) {
-            console.log("MERGE")
-        }
+
         for (const table of tables) {
-            if (tables.length > 1) {
-                console.log("===========")
-                console.log("valid", table.getVarNames(MoveTable.State.VALID));
-                console.log("moved", table.getVarNames(MoveTable.State.MOVED));
-                console.log("maybe moved", table.getVarNames(MoveTable.State.MAYBE_MOVED));
-                console.log("uninit", table.getVarNames(MoveTable.State.UNINIT));
-                console.log("maybe uninit", table.getVarNames(MoveTable.State.MAYBE_UNINIT));
-            }
             for (const [key, value] of table.#states) {
                 const currentValue = result.#states.get(key);
                 if (currentValue === undefined) {

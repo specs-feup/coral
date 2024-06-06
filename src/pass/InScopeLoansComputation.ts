@@ -1,10 +1,5 @@
-import Pass from "lara-js/api/lara/pass/Pass.js";
-import cytoscape from "lara-js/api/libs/cytoscape-3.26.0.js";
-import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
-import { Joinpoint } from "clava-js/api/Joinpoints.js";
 
 import Loan from "coral/mir/Loan";
-import Access from "coral/mir/Access";
 import { GraphTransformation } from "clava-flow/graph/Graph";
 import CoralGraph from "coral/graph/CoralGraph";
 import BaseGraph from "clava-flow/graph/BaseGraph";

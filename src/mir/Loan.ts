@@ -13,7 +13,6 @@ export default class Loan {
     reborrow: boolean;
     leftTy: RefTy;
     loanedPath: Path;
-    loanedTy: Ty;
     loanedRefTy: RefTy;
 
     constructor(
@@ -22,16 +21,13 @@ export default class Loan {
         reborrow: boolean,
         leftTy: RefTy,
         loanedPath: Path,
-        loanedTy?: Ty,
     ) {
         this.node = node;
         this.regionVar = regionVar;
         this.reborrow = reborrow;
         this.leftTy = leftTy;
         this.loanedPath = loanedPath;
-
-        this.loanedTy = loanedTy ?? loanedPath.ty;
-        this.loanedRefTy = new RefTy(this.borrowKind, this.loanedTy, this.leftTy.$jp, this.regionVar);
+        this.loanedRefTy = new RefTy(this.borrowKind, this.loanedPath.ty, this.leftTy.$jp, this.regionVar);
     }
 
     toString(): string {

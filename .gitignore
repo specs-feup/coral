@@ -8,3 +8,5 @@ enum_integer_type.txt
 is_temporary.txt
 omp.txt
 types_with_templates.txt
+in/challenges
+in/challenges_include

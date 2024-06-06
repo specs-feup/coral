@@ -84,10 +84,12 @@ export default class LifetimeAssignmentPragma {
             if (canMemberAccess && tokens.at(idx) === ".") {
                 idx++;
                 [idx, result] = this.#parseMemberAccess(pragma, idx, result as LfPathDeref | LfPathVarRef);
+                canMemberAccess = false;
                 break;
             } else if (canMemberAccess && tokens.at(idx) === "->") {
                 idx++;
                 [idx, result] = this.#parseMemberAccess(pragma, idx, new LfPathDeref(result as LfPathDeref | LfPathVarRef));
+                canMemberAccess = false;
                 break;
             } else if (tokens.at(idx) === undefined) {
                 throw new LifetimePragmaParseError(pragma, "Expected ')'");
@@ -97,6 +99,18 @@ export default class LifetimeAssignmentPragma {
             canMemberAccess = true;
             parens--;
             idx++;
+        }
+
+        if (canMemberAccess) {
+            if (tokens.at(idx) === ".") {
+                idx++;
+                [idx, result] = this.#parseMemberAccess(pragma, idx, result as LfPathDeref | LfPathVarRef);
+                canMemberAccess = false;
+            } else if (tokens.at(idx) === "->") {
+                idx++;
+                [idx, result] = this.#parseMemberAccess(pragma, idx, new LfPathDeref(result as LfPathDeref | LfPathVarRef));
+                canMemberAccess = false;
+            }
         }
 
         while (parens > 0) {

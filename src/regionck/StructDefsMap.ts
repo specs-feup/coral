@@ -52,7 +52,7 @@ export default class StructDefsMap {
             ?? $structs.at(0);
 
         if ($canonicalStruct === undefined) {
-            throw new Error("There should be at least one RecordJp, having id: " + $struct.astId);
+            throw new Error(`There should be at least one RecordJp '${$struct.name}', having id: ${$struct.astId}`);
         }
         
         const structDef = this.#parseStruct($canonicalStruct);
@@ -113,6 +113,11 @@ export default class StructDefsMap {
         const dropFnName = dropFnPragma?.tokens[0];
 
         for (const $other of Query.searchFrom(this.#$file, "record", { name: $struct.name })) {
+            console.log(($other as RecordJp).location, ($other as RecordJp).name);
+            if (($other as RecordJp).astId === $struct.astId) {
+                continue;
+            }
+            
             const otherInfo = this.#parseIncompleteStruct($other as RecordJp);
 
             if (hasCopyFlag !== (otherInfo.copyFlag !== undefined)) {

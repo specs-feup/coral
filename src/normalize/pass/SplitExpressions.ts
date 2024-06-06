@@ -13,10 +13,13 @@ import {
     MemberAccess,
     ParenExpr,
     PointerType,
+    QualType,
     ReturnStmt,
     Statement,
     Switch,
     TernaryOp,
+    Type,
+    UnaryExprOrType,
     UnaryOp,
     Vardecl,
     Varref,
@@ -170,6 +173,11 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
             this.#splitInner($targetStmt, $expr.subExpr);
         } else if ($expr instanceof MemberAccess) {
             this.#splitNonLvalue($targetStmt, $expr.base);
+        } else if ($expr instanceof UnaryExprOrType) {
+            const inner = $expr.children[0];
+            if ($expr.children.length > 0 && $expr.children[0] instanceof Expression) {
+                this.#splitNonLvalue($targetStmt, $expr.children[0]);
+            }
         } else if ($expr instanceof UnaryOp) {
             this.#splitNonLvalue($targetStmt, $expr.operand);
             if (
@@ -201,6 +209,9 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
                         ? ClavaJoinPoints.varRef($vardecl)
                         : $expr.operand;
                 $expr.replaceWith($newExpr);
+                return ($expr.kind === "post_inc" || $expr.kind === "post_dec")
+                    ? ClavaJoinPoints.varRef($vardecl)
+                    : $expr.operand;
             }
         } else if ($expr instanceof BinaryOp) {
             if ($expr.isAssignment) {
@@ -263,12 +274,14 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
 
             $targetStmt.insertBefore($ifStmt);
             $expr.replaceWith($resultVarref);
+
+            return ClavaJoinPoints.varRef($resultVardecl);
         } else if ($expr instanceof Call) {
             // Reborrows should be last
             // https://rustc-dev-guide.rust-lang.org/borrow_check/two_phase_borrows.html
             const lastArgs: Expression[] = [];
             for (const $arg of $expr.args) {
-                if (this.#isLvalue($arg)) {
+                if (this.#isLvalue($arg) && $arg.type.isPointer) {
                     lastArgs.push($arg);
                 } else {
                     this.#splitEverything($targetStmt, $arg);
@@ -299,9 +312,13 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
             const varName = this.#getTempVarName();
             const $vardecl = ClavaJoinPoints.varDecl(varName, $expr);
 
-            if ($expr instanceof UnaryOp && $expr.operator === "&") {
+            if (($expr instanceof UnaryOp && $expr.operator === "&") || $expr instanceof Varref) {
                 if (this.#canBeConst($expr)) {
-                    const $vardeclType = $vardecl.type.desugarAll.copy();
+                    let $vardeclType = $vardecl.type.desugarAll;
+                    while ($vardeclType instanceof QualType) {
+                        $vardeclType = $vardeclType.unqualifiedType;
+                    }
+                    $vardeclType = $vardeclType.copy() as Type;
                     if ($vardeclType instanceof PointerType) {
                         $vardeclType.pointee = $vardeclType.pointee.asConst();
                         $vardecl.type = $vardeclType;
@@ -343,6 +360,9 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
             return this.#canBeConst($parent);
         } else if ($parent instanceof Call) {
             const argIdx = $parent.args.findIndex(($arg) => $arg.astId === $expr.astId);
+            if (argIdx === -1 || $parent.function.params.length <= argIdx) {
+                return false;
+            }
             const $leftTy = $parent.function.params[argIdx].type.desugarAll;
             if ($leftTy instanceof PointerType && $leftTy.pointee.constant) {
                 return true;

@@ -41,6 +41,7 @@ class InferLifetimeBounds implements GraphTransformation {
             changed = false;
 
             for (const functionEntry of coralGraph.functions) {
+                console.log("Inferring lifetimes of function", functionEntry.jp.name);
                 const regionck = coralGraph.getRegionck(functionEntry);
 
                 if (

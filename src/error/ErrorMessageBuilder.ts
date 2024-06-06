@@ -62,6 +62,9 @@ export default class ErrorMessageBuilder {
         this.#lines.push($line_ref.line ?? 1);
         
         while (!($jp instanceof Statement || $jp instanceof Decl)) {
+            if ($jp.parent === undefined) {
+                break;
+            }
             $jp = $jp.parent;
         }
 

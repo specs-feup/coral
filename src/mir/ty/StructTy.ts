@@ -64,7 +64,7 @@ export default class StructTy extends Ty {
 
     override toString(): string {
         if (this.requiresLifetimes) {
-            return `${this.name}<${this.regionVars.join(", ")}>`;
+            return `${this.name}<${this.regionVars.map(r => r.name).join(", ")}>`;
         } else {
             return this.name;
         }

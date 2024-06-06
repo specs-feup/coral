@@ -1,6 +1,4 @@
-import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
 import FlowNode from "clava-flow/flow/node/FlowNode";
-import InstructionNode from "clava-flow/flow/node/instruction/InstructionNode";
 import LivenessNode from "clava-flow/flow/transformation/liveness/LivenessNode";
 import BaseNode from "clava-flow/graph/BaseNode";
 import { NodeBuilder, NodeTypeGuard } from "clava-flow/graph/Node";

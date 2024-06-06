@@ -12,7 +12,7 @@ export default class DanglingReferenceError extends CoralError {
             `'${access.path.toString()}' does not live long enough`,
             loan.node.jp,
         )
-            .code((access.path as PathVarRef).$jp, `'${access.path.toString()}' declared here`)
+            .code(access.path.innerVardecl, `'${access.path.toString()}' declared here`)
             .code(loan.node.jp, `borrowed value does not live long enough`)
             .codeString(
                 "}",

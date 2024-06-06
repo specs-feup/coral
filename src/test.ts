@@ -2,13 +2,39 @@ import Clava from "clava-js/api/clava/Clava.js";
 import Io from "lara-js/api/lara/Io.js";
 import Query from "lara-js/api/weaver/Query.js";
 import ClavaJoinPoints from "clava-js/api/clava/ClavaJoinPoints.js";
-import { Pragma } from "clava-js/api/Joinpoints.js";
+import { Call, FunctionJp, Joinpoint, Pragma } from "clava-js/api/Joinpoints.js";
 
 import CoralPipeline from "coral/CoralPipeline";
 import CoralError from "coral/error/CoralError";
 
-interface TypeOf<T> {
-    new (...args: never[]): T;
+function stringifyReplacer(key: unknown, value: unknown): unknown {
+    if (value instanceof Map) {
+        return {
+            dataType: "Map",
+
+            value: Array.from(value.entries()),
+        };
+    } else if (key === "buildError" || key === "actualException") {
+        if (value instanceof Error) {
+            return {
+                name: value.name,
+
+                message: value.message,
+            };
+        } else if (value !== undefined) {
+            return {
+                unknown: value,
+            };
+        } else {
+            return value;
+        }
+    } else if (value instanceof Call) {
+        return `${value.type.desugarAll.code} ${value.signature}`;
+    } else if (value instanceof FunctionJp) {
+        return `${value.type.desugarAll.code} ${value.signature}`;
+    } else {
+        return value;
+    }
 }
 
 class CoralTester {
@@ -88,6 +114,10 @@ class CoralTester {
     }
 
     #printResults(results: CoralTester.TestCaseResults) {
+        if (this.#writeTo !== undefined) {
+            Io.writeFile(this.#writeTo + "/stats.json", JSON.stringify(results, stringifyReplacer, 4));
+        }
+
         console.log("\n\n========== Test results: ==========");
         this.#printResultsTree(".", results);
     }
@@ -152,8 +182,13 @@ class CoralTester {
             result: "Pass",
             expectedExceptions: [],
             actualException: undefined,
+            runTime: 0,
         };
+
+        let initTime: number | undefined;
+        let endTime: number | undefined;
         let pass = isOkExpected;
+        let doublePush = false;
 
         try {
             Clava.rebuild();
@@ -168,7 +203,12 @@ class CoralTester {
                 }
             }
 
+            Clava.pushAst();
+            doublePush = true;
+            initTime = System.nanos();
             this.#pipeline.apply();
+            endTime = System.nanos();
+            
             if (this.#writeTo !== undefined) {
                 let writeTo = this.#writeTo + "/" + path;
                 if (singleFile) {
@@ -177,6 +217,9 @@ class CoralTester {
                 Clava.writeCode(writeTo);
             }
         } catch (e) {
+            if (endTime === undefined) {
+                endTime = System.nanos();
+            }
             if (e instanceof CoralError) {
                 result.actualException = e;
                 pass =
@@ -198,6 +241,15 @@ class CoralTester {
             }
         } finally {
             Clava.popAst();
+            if (doublePush) {
+                Clava.popAst();
+            }
+        }
+
+        if (initTime === undefined) {
+            result.runTime = 0;
+        } else {
+            result.runTime = endTime - initTime;
         }
 
         if (pass) {
@@ -286,6 +338,7 @@ namespace CoralTester {
         result: "Pass" | "Fail";
         expectedExceptions: string[];
         actualException: Error | undefined;
+        runTime: number;
     };
 }
 
@@ -294,9 +347,10 @@ namespace CoralTester {
 // const rootFolder = Clava.getData().getContextFolder();
 import path from "path";
 import { fileURLToPath } from "url";
+import System from "lara-js/api/lara/System.js";
 const rootFolder = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const testFolder = rootFolder + "/in/test";
-new CoralTester(testFolder, new CoralPipeline())
+new CoralTester(testFolder, new CoralPipeline().inferFunctionLifetimes())
     .writeTo(rootFolder + "/out/woven_code/test")
     .omitTree(CoralTester.Options.OmitTree.PASSED)
     .run();

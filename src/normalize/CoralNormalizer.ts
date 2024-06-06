@@ -4,6 +4,7 @@ import SimplifyAssignments from "coral/normalize/pass/SimplifyAssignments";
 import SplitExpressions from "coral/normalize/pass/SplitExpressions";
 import SplitVarDecls from "coral/normalize/pass/SplitVarDecls";
 import ConvertForLoopToWhile from "coral/normalize/pass/ConvertForLoopToWhile";
+import Query from "lara-js/api/weaver/Query.js";
 
 // TODO:
 //       [] into *(+)
@@ -29,7 +30,10 @@ class CoralNormalizer {
     }
 
     #applyPass($jp: Joinpoint, pass: CoralNormalizer.Pass): this {
-        pass.apply($jp);
+        for (const $fn of Query.searchFromInclusive($jp, "function")) {
+            pass.apply($fn as Joinpoint);    
+        }
+        
         if (pass.tempVarCounter !== undefined) {
             this.tempVarCounter = pass.tempVarCounter;
         }

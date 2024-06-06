@@ -1,15 +1,7 @@
-import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
 import FlowNode from "clava-flow/flow/node/FlowNode";
-import InstructionNode from "clava-flow/flow/node/instruction/InstructionNode";
-import LivenessNode from "clava-flow/flow/transformation/liveness/LivenessNode";
 import BaseNode from "clava-flow/graph/BaseNode";
 import { NodeBuilder, NodeTypeGuard } from "clava-flow/graph/Node";
-import { Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
 import CoralNode from "coral/graph/CoralNode";
-import Access from "coral/mir/Access";
-import FunctionCall from "coral/mir/FunctionCall";
-import Loan from "coral/mir/Loan";
-import MoveTable from "coral/mir/MoveTable";
 
 namespace DropNode {
     export class Class<

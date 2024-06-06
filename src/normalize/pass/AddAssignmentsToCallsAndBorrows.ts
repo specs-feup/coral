@@ -47,7 +47,7 @@ export default class AddAssignmentsToCallsAndBorrows implements CoralNormalizer.
         $expr: Expression = $targetStmt.expr,
     ): boolean {
         if ($expr instanceof Call) {
-            if ($expr.returnType.desugarAll.toString() === "void") {
+            if ($expr.returnType.desugarAll.code === "void") {
                 return false;
             }
 

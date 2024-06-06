@@ -14,6 +14,7 @@ import {
     BinaryOp,
     BuiltinType,
     Call,
+    Cast,
     ElaboratedType,
     EnumDecl,
     ExprStmt,
@@ -34,6 +35,7 @@ import {
     TagType,
     Type,
     TypedefType,
+    UnaryExprOrType,
     UnaryOp,
     Vardecl,
     Varref,
@@ -78,6 +80,7 @@ export default class GraphAnnotator implements GraphTransformation {
         const coralGraph = graph.as(CoralGraph.Class);
 
         for (const functionEntry of coralGraph.functions) {
+            console.log("Annotating function " + functionEntry.jp.name);
             this.#regionck = coralGraph.getRegionck(functionEntry);
             this.#annotateFunction(functionEntry);
         }
@@ -231,7 +234,7 @@ export default class GraphAnnotator implements GraphTransformation {
         }
 
         if ($scope.parent instanceof FunctionJp) {
-            const $fn = $scope.parent as FunctionJp;
+            const $fn = $scope.parent;
             $fn.params.forEach((param) => {
                 vars.push(param);
             });
@@ -241,9 +244,10 @@ export default class GraphAnnotator implements GraphTransformation {
             node.varsEnteringScope = vars;
         } else {
             for (const $vardecl of vars) {
-                const ty = this.#regionck!.getTy($vardecl);
+                let ty = this.#regionck!.getTy($vardecl);
                 if (ty === undefined) {
-                    throw new Error("Variable " + $vardecl.name + " not found");
+                    ty = this.#parseType($vardecl.type);
+                    this.#regionck!.registerTy($vardecl, ty);
                 }
                 node.accesses.push(
                     new Access(
@@ -264,8 +268,11 @@ export default class GraphAnnotator implements GraphTransformation {
             return;
         }
 
-        const ty = this.#parseType($vardecl.type);
-        this.#regionck!.registerTy($vardecl, ty);
+        let ty = this.#regionck!.getTy($vardecl);
+        if (ty === undefined) {
+            ty = this.#parseType($vardecl.type);
+            this.#regionck!.registerTy($vardecl, ty);
+        }
 
         if ($vardecl.hasInit) {
             this.#annotateExpr(node, $vardecl.init);
@@ -297,12 +304,21 @@ export default class GraphAnnotator implements GraphTransformation {
             return this.#annotateExpr(node, $expr.subExpr);
         } else if ($expr instanceof MemberAccess) {
             return this.#annotateReadAccess(node, $expr);
+        } else if ($expr instanceof Cast) {
+            if ($expr.type.isPointer || $expr.type.isArray || $expr.subExpr.type.isPointer || $expr.subExpr.type.isArray) {
+                // TODO
+                throw new Error("Casts to pointers or arrays are not supported");
+            }
+            return this.#annotateExpr(node, $expr.subExpr);
+        } else if ($expr instanceof UnaryExprOrType) {
+            // This is the sizeof operator
+            // Nothing is done (due to normalizations, inside is a varref without side effects)
+            // sizeof(a) is not an access of a, because it does not matter what value it has, only
+            // its type, which is statically known, is evaluated
+            return;
         } else {
             // TODO Unhandled:
-            // UnaryExprOrType
             // ArrayAccess
-            // Cast
-
             // TODO initializer expressions (e.g. `{1, 2}`) are not handled
             throw new Error(
                 "Unhandled expression annotation for jp: " + $expr.joinPointType,
@@ -343,11 +359,32 @@ export default class GraphAnnotator implements GraphTransformation {
         node: CoralNode.Class,
         $expr: Expression,
         reborrow: boolean,
-        ty?: Ty,
     ) {
         let $parent = $expr.parent;
         while ($parent instanceof ParenExpr) {
             $parent = $parent.parent;
+        }
+
+        let loanedPath: Path | undefined;
+        if ($expr instanceof UnaryOp && $expr.operator === "&") {
+            loanedPath = this.#parseLvalue($expr.operand);
+        } else {
+            const $loanedPathJp = ClavaJoinPoints.unaryOp("*", $expr);
+            loanedPath = new PathDeref($loanedPathJp, this.#parseLvalue($expr));
+        }
+
+        if ($parent instanceof BinaryOp && ["lt", "gt", "le", "ge", "eq", "ne"].indexOf($parent.kind) !== -1) {
+            // We are comparing pointers, this is not a borrow
+            // It still is an access though
+            // TODO check if this access is correct
+            node.accesses.push(
+                new Access(
+                    loanedPath,
+                    Access.Mutability.BORROW,
+                    Access.Depth.DEEP,
+                ),
+            );
+            return undefined;
         }
 
         let leftTy: Ty | undefined;
@@ -371,6 +408,7 @@ export default class GraphAnnotator implements GraphTransformation {
             
             leftTy = fnCall.paramTys[paramIndex];
         } else {
+            console.log($parent.code);
             // Assuming the weakest borrow is ok for `ref1;` but is not sound for `*(&a) = 5;`
             // Loan could be assumed to be the weakest borrow, but there is the risk that that is not sound.
             throw new Error("leftTy not found to annotate reference.");
@@ -382,17 +420,9 @@ export default class GraphAnnotator implements GraphTransformation {
             );
         }
 
-        let loanedPath: Path | undefined;
-        if ($expr instanceof UnaryOp && $expr.operator === "&") {
-            loanedPath = this.#parseLvalue($expr.operand);
-        } else {
-            const $loanedPathJp = ClavaJoinPoints.unaryOp("*", $expr);
-            loanedPath = new PathDeref($loanedPathJp, this.#parseLvalue($expr));
-        }
-
         const regionVar = this.#regionck!.newRegionVar(RegionVariable.Kind.EXISTENTIAL);
 
-        const loan = new Loan(node, regionVar, reborrow, leftTy, loanedPath, ty);
+        const loan = new Loan(node, regionVar, reborrow, leftTy, loanedPath);
 
         node.loans.push(loan);
 
@@ -455,20 +485,22 @@ export default class GraphAnnotator implements GraphTransformation {
             "return",
         );
 
-        // Normalization implies parent is Vardecl
-        let $vardecl = $call.parent;
-        while (!($vardecl instanceof Vardecl)) {
-            $vardecl = $vardecl.parent;
-        }
+        if ($fn.returnType.desugarAll.code !== "void") {
+            // Normalization implies parent is Vardecl
+            let $vardecl = $call.parent;
+            while (!($vardecl instanceof Vardecl)) {
+                $vardecl = $vardecl.parent;
+            }
 
-        this.#regionck!.registerTy($vardecl, returnTy);
-        node.accesses.push(
-            new Access(
-                new PathVarRef($vardecl, returnTy),
-                Access.Mutability.WRITE,
-                Access.Depth.SHALLOW,
-            ),
-        );
+            this.#regionck!.registerTy($vardecl, returnTy);
+            node.accesses.push(
+                new Access(
+                    new PathVarRef($vardecl, returnTy),
+                    Access.Mutability.WRITE,
+                    Access.Depth.SHALLOW,
+                ),
+            );
+        }
 
         // Params
         const paramTys: Ty[] = [];
@@ -496,7 +528,7 @@ export default class GraphAnnotator implements GraphTransformation {
         const path = this.#parseLvalue($expr);
 
         if (path.ty instanceof RefTy) {
-            this.#annotateReference(node, $expr, true, path.ty.referent);
+            this.#annotateReference(node, $expr, true);
         } else {
             node.accesses.push(
                 new Access(path, Access.Mutability.READ, Access.Depth.DEEP),

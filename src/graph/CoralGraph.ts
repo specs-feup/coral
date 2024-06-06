@@ -1,16 +1,7 @@
 import FlowGraph from "clava-flow/flow/FlowGraph";
-import FlowGraphGenerator from "clava-flow/flow/FlowGraphGenerator";
-import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
-import FlowNode from "clava-flow/flow/node/FlowNode";
-import ConditionNode from "clava-flow/flow/node/condition/ConditionNode";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
-import FunctionExitNode from "clava-flow/flow/node/instruction/FunctionExitNode";
-import InstructionNode from "clava-flow/flow/node/instruction/InstructionNode";
-import ScopeEndNode from "clava-flow/flow/node/instruction/ScopeEndNode";
-import ScopeStartNode from "clava-flow/flow/node/instruction/ScopeStartNode";
-import VarDeclarationNode from "clava-flow/flow/node/instruction/VarDeclarationNode";
 import BaseGraph from "clava-flow/graph/BaseGraph";
-import Graph, { GraphBuilder, GraphTypeGuard } from "clava-flow/graph/Graph";
+import { GraphBuilder, GraphTypeGuard } from "clava-flow/graph/Graph";
 import { FileJp, Joinpoint } from "clava-js/api/Joinpoints.js";
 import Regionck from "coral/regionck/Regionck";
 import StructDefsMap from "coral/regionck/StructDefsMap";
