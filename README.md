@@ -1,6 +1,6 @@
 # Research Paper Code Repository
 
-This repository contains the code implementation for the master's thesis [CORAL: a Rust-like Borrow Checker for C](https://hdl.handle.net/10216/153606) and the [LCTE'24](https://pldi24.sigplan.org/home/LCTES-2024) paper [Foundations for a Rust-Like Borrow Checker for C](https://dl.acm.org/doi/10.1145/3652032.3657579). The code provided here is meant to support the findings and experiments described in both works.
+This repository contains the code implementation for the master's thesis [CORAL: a Rust-like Borrow Checker for C](https://hdl.handle.net/10216/153606) and the [LCTES'24](https://pldi24.sigplan.org/home/LCTES-2024) paper [Foundations for a Rust-Like Borrow Checker for C](https://dl.acm.org/doi/10.1145/3652032.3657579). The code provided here is meant to support the findings and experiments described in both works.
 
 ## Introduction
 
