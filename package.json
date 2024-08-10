@@ -14,10 +14,10 @@
         "build:watch": "tsc --watch",
         "lint": "eslint .",
         "format": "prettier --write .",
-        "sandbox": "cross-env DEBUG=\"*\" npx clava-js --config-classic sandbox.xml out/src/sandbox.js -- clang in/sandbox",
-        "sandbox:watch": "cross-env DEBUG=\"*\" npx clava-js --config-classic sandbox.xml out/src/sandbox.js -w out/src -w in/sandbox -- clang in/sandbox",
-        "benchmarks": "cross-env DEBUG=\"*\" npx clava-js --config-classic benchmarks.xml out/src/benchmarks.js",
-        "test": "cross-env DEBUG=\"*\" npx clava-js --config-classic test.xml out/src/test.js"
+        "sandbox": "cross-env DEBUG=\"*\" npx clava-js classic out/src/sandbox.js --config sandbox.xml",
+        "sandbox:watch": "cross-env DEBUG=\"*\" npx clava-js classic out/src/sandbox.js --config sandbox.xml -w out/src -w in/sandbox",
+        "benchmarks": "cross-env DEBUG=\"*\" npx clava-js classic out/src/benchmarks.js --config benchmarks.xml",
+        "test": "cross-env DEBUG=\"*\" npx clava-js classic out/src/test.js --config test.xml"
     },
     "exports": {
         "./*": {
