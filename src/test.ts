@@ -65,6 +65,9 @@ class CoralTester {
     run() {
         const results = this.#runTestCase("");
         this.#printResults(results);
+        if (results.failed > 0) {
+            Io.writeFile("./out/.failed", `${results.failed}`);
+        }
     }
 
     #printResultsTree(
@@ -351,6 +354,5 @@ import System from "lara-js/api/lara/System.js";
 const rootFolder = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const testFolder = rootFolder + "/in/test";
 new CoralTester(testFolder, new CoralPipeline().inferFunctionLifetimes())
-    .writeTo(rootFolder + "/out/woven_code/test")
     .omitTree(CoralTester.Options.OmitTree.PASSED)
     .run();
