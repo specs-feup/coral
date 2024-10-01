@@ -2,7 +2,7 @@ import FlowGraph from "clava-flow/flow/FlowGraph";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
 import BaseGraph from "clava-flow/graph/BaseGraph";
 import { GraphBuilder, GraphTypeGuard } from "clava-flow/graph/Graph";
-import { FileJp, Joinpoint } from "clava-js/api/Joinpoints.js";
+import { FileJp, Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import Regionck from "coral/regionck/Regionck";
 import StructDefsMap from "coral/regionck/StructDefsMap";
 

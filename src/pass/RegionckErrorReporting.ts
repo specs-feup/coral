@@ -4,7 +4,7 @@ import MoveWhileBorrowedError from "coral/error/move/MoveWhileBorrowedError";
 import Loan from "coral/mir/Loan";
 import Access from "coral/mir/Access";
 import BorrowKind from "coral/mir/ty/BorrowKind";
-import { Joinpoint } from "clava-js/api/Joinpoints.js";
+import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import MutableBorrowWhileBorrowedError from "coral/error/borrow/MutableBorrowWhileBorrowedError";
 import { GraphTransformation } from "clava-flow/graph/Graph";
 import BaseGraph from "clava-flow/graph/BaseGraph";

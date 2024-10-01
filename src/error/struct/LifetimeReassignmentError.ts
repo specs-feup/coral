@@ -1,7 +1,7 @@
 import CoralError from "coral/error/CoralError";
 import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
 import Access from "coral/mir/Access";
-import { FunctionJp, Joinpoint, RecordJp, Vardecl } from "clava-js/api/Joinpoints.js";
+import { FunctionJp, Joinpoint, RecordJp, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralPragma from "coral/pragma/CoralPragma";
 import LifetimeAssignmentPragma from "coral/pragma/lifetime/LifetimeAssignmentPragma";
 

@@ -2,7 +2,7 @@ import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
 import BaseGraph from "clava-flow/graph/BaseGraph";
 import { GraphTransformation } from "clava-flow/graph/Graph";
-import { MemberAccess, Vardecl } from "clava-js/api/Joinpoints.js";
+import { MemberAccess, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import MergeInconsistentStructError from "coral/error/drop/MergeInconsistentStructError";
 import CoralGraph from "coral/graph/CoralGraph";
 import CoralNode from "coral/graph/CoralNode";

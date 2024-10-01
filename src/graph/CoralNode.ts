@@ -2,7 +2,7 @@ import FlowNode from "clava-flow/flow/node/FlowNode";
 import LivenessNode from "clava-flow/flow/transformation/liveness/LivenessNode";
 import BaseNode from "clava-flow/graph/BaseNode";
 import { NodeBuilder, NodeTypeGuard } from "clava-flow/graph/Node";
-import { Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
+import { Joinpoint, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import Access from "coral/mir/Access";
 import FunctionCall from "coral/mir/FunctionCall";
 import Loan from "coral/mir/Loan";

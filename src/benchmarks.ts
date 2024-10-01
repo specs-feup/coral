@@ -1,12 +1,12 @@
-// Without this import, clava-js does not work for some reason
-import "clava-js/api/Joinpoints.js";
+// Without this import, clava does not work for some reason
+import "@specs-feup/clava/api/Joinpoints.js";
 
-import Clava from "clava-js/api/clava/Clava.js";
-import Io from "lara-js/api/lara/Io.js";
-import Query from "lara-js/api/weaver/Query.js";
-import ClavaJoinPoints from "clava-js/api/clava/ClavaJoinPoints.js";
-import { Call, Cast, Decl, FunctionJp, FunctionType, IntLiteral, Literal, Op, UnaryOp, Vardecl, Varref } from "clava-js/api/Joinpoints.js";
-import System from "lara-js/api/lara/System.js";
+import Clava from "@specs-feup/clava/api/clava/Clava.js";
+import Io from "@specs-feup/lara/api/lara/Io.js";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
+import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
+import { Call, Cast, Decl, FunctionJp, FunctionType, IntLiteral, Literal, Op, UnaryOp, Vardecl, Varref } from "@specs-feup/clava/api/Joinpoints.js";
+import System from "@specs-feup/lara/api/lara/System.js";
     
 import CoralPipeline from "coral/CoralPipeline";
 
@@ -635,7 +635,7 @@ class BenchmarkFilterer {
 }
 
 // TODO use getContextFolder() instead of Node functions
-//      for now, this is not possible in Clava-JS
+//      for now, this is not possible in clava
 // const rootFolder = Clava.getData().getContextFolder();
 import path from "path";
 import { fileURLToPath } from "url";

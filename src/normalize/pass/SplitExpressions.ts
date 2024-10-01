@@ -23,10 +23,10 @@ import {
     UnaryOp,
     Vardecl,
     Varref,
-} from "clava-js/api/Joinpoints.js";
-import ClavaJoinPoints from "clava-js/api/clava/ClavaJoinPoints.js";
+} from "@specs-feup/clava/api/Joinpoints.js";
+import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
 import CoralNormalizer from "coral/normalize/CoralNormalizer";
-import Query from "lara-js/api/weaver/Query.js";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
 
 export default class SplitExpressions implements CoralNormalizer.Pass {
     tempVarCounter: number;

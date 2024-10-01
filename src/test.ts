@@ -1,8 +1,8 @@
-import Clava from "clava-js/api/clava/Clava.js";
-import Io from "lara-js/api/lara/Io.js";
-import Query from "lara-js/api/weaver/Query.js";
-import ClavaJoinPoints from "clava-js/api/clava/ClavaJoinPoints.js";
-import { Call, FunctionJp, Joinpoint, Pragma } from "clava-js/api/Joinpoints.js";
+import Clava from "@specs-feup/clava/api/clava/Clava.js";
+import Io from "@specs-feup/lara/api/lara/Io.js";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
+import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
+import { Call, FunctionJp, Joinpoint, Pragma } from "@specs-feup/clava/api/Joinpoints.js";
 
 import CoralPipeline from "coral/CoralPipeline";
 import CoralError from "coral/error/CoralError";
@@ -350,7 +350,7 @@ namespace CoralTester {
 // const rootFolder = Clava.getData().getContextFolder();
 import path from "path";
 import { fileURLToPath } from "url";
-import System from "lara-js/api/lara/System.js";
+import System from "@specs-feup/lara/api/lara/System.js";
 const rootFolder = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const testFolder = rootFolder + "/in/test";
 new CoralTester(testFolder, new CoralPipeline().inferFunctionLifetimes())

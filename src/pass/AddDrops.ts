@@ -7,8 +7,8 @@ import UnknownInstructionNode from "clava-flow/flow/node/instruction/UnknownInst
 import LivenessNode from "clava-flow/flow/transformation/liveness/LivenessNode";
 import BaseGraph from "clava-flow/graph/BaseGraph";
 import { GraphTransformation } from "clava-flow/graph/Graph";
-import { MemberAccess, Vardecl } from "clava-js/api/Joinpoints.js";
-import ClavaJoinPoints from "clava-js/api/clava/ClavaJoinPoints.js";
+import { MemberAccess, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
+import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
 import DropInconsistentStructError from "coral/error/drop/DropInconsistentStructError";
 import CoralGraph from "coral/graph/CoralGraph";
 import CoralNode from "coral/graph/CoralNode";

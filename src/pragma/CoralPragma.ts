@@ -1,4 +1,4 @@
-import { Pragma } from "clava-js/api/Joinpoints.js";
+import { Pragma } from "@specs-feup/clava/api/Joinpoints.js";
 
 export default class CoralPragma {
     static keyword: string = "coral";

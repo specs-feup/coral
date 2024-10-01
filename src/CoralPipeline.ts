@@ -1,5 +1,5 @@
-import Query from "lara-js/api/weaver/Query.js";
-import { FileJp, FunctionJp, Program } from "clava-js/api/Joinpoints.js";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
+import { FileJp, FunctionJp, Program } from "@specs-feup/clava/api/Joinpoints.js";
 
 import CoralNormalizer from "coral/normalize/CoralNormalizer";
 import FlowGraph from "clava-flow/flow/FlowGraph";

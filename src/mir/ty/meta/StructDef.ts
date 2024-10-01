@@ -1,4 +1,4 @@
-import { FunctionJp, RecordJp } from "clava-js/api/Joinpoints.js";
+import { FunctionJp, RecordJp } from "@specs-feup/clava/api/Joinpoints.js";
 import Ty from "coral/mir/ty/Ty";
 import MetaTy from "coral/mir/ty/meta/MetaTy";
 import LifetimeBoundPragma from "coral/pragma/lifetime/LifetimeBoundPragma";

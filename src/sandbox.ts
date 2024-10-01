@@ -1,11 +1,11 @@
-// Without this import, clava-js does not work for some reason
-import "clava-js/api/Joinpoints.js";
+// Without this import, clava does not work for some reason
+import "@specs-feup/clava/api/Joinpoints.js";
 
-import Query from "lara-js/api/weaver/Query.js";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
 
 import CoralError from "coral/error/CoralError";
 import CoralPipeline from "coral/CoralPipeline";
-import Clava from "clava-js/api/clava/Clava.js";
+import Clava from "@specs-feup/clava/api/clava/Clava.js";
 
 Clava.pushAst();
 

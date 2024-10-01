@@ -1,6 +1,6 @@
 import CoralError from "coral/error/CoralError";
 import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
-import { Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
+import { Joinpoint, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import Path from "coral/mir/path/Path";
 import StructTy from "coral/mir/ty/StructTy";
 import MoveTable from "coral/mir/MoveTable";

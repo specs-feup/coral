@@ -1,4 +1,4 @@
-import { BuiltinType, EnumDecl } from "clava-js/api/Joinpoints.js";
+import { BuiltinType, EnumDecl } from "@specs-feup/clava/api/Joinpoints.js";
 import Ty from "coral/mir/ty/Ty";
 import MetaTy from "coral/mir/ty/meta/MetaTy";
 import RegionVariable from "coral/regionck/RegionVariable";

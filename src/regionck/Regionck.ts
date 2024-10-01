@@ -1,4 +1,4 @@
-import { Vardecl } from "clava-js/api/Joinpoints.js";
+import { Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import Ty from "coral/mir/ty/Ty";
 import OutlivesConstraint from "coral/regionck/OutlivesConstraint";
 import RegionVariable from "coral/regionck/RegionVariable";

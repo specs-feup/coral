@@ -1,7 +1,7 @@
-import { Joinpoint, Loop } from "clava-js/api/Joinpoints.js";
-import ForToWhileStmt from "clava-js/api/clava/code/ForToWhileStmt.js";
+import { Joinpoint, Loop } from "@specs-feup/clava/api/Joinpoints.js";
+import ForToWhileStmt from "@specs-feup/clava/api/clava/code/ForToWhileStmt.js";
 import CoralNormalizer from "coral/normalize/CoralNormalizer";
-import Query from "lara-js/api/weaver/Query.js";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
 
 export default class ConvertForLoopToWhile implements CoralNormalizer.Pass {
     labelCounter: number;

@@ -1,4 +1,4 @@
-import { BinaryOp, ExprStmt, FunctionJp, Joinpoint, Vardecl } from "clava-js/api/Joinpoints.js";
+import { BinaryOp, ExprStmt, FunctionJp, Joinpoint, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import MergeInconsistentStructError from "coral/error/drop/MergeInconsistentStructError";
 import WriteFieldOfPotentiallyDroppedTypeError from "coral/error/drop/WriteFieldOfPotentiallyDroppedTypeError";
 import MoveBehindReferenceError from "coral/error/move/MoveBehindReferenceError";

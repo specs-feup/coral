@@ -2,7 +2,7 @@ import CoralError from "coral/error/CoralError";
 import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
 import Access from "coral/mir/Access";
 import Loan from "coral/mir/Loan";
-import { Joinpoint } from "clava-js/api/Joinpoints.js";
+import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 
 export default class MutateWhileBorrowedError extends CoralError {
     constructor($invalidUse: Joinpoint, loan: Loan, $nextUse: Joinpoint | undefined, access: Access) {

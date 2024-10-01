@@ -1,10 +1,10 @@
-import { Joinpoint } from "clava-js/api/Joinpoints.js";
+import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import AddAssignmentsToCallsAndBorrows from "coral/normalize/pass/AddAssignmentsToCallsAndBorrows";
 import SimplifyAssignments from "coral/normalize/pass/SimplifyAssignments";
 import SplitExpressions from "coral/normalize/pass/SplitExpressions";
 import SplitVarDecls from "coral/normalize/pass/SplitVarDecls";
 import ConvertForLoopToWhile from "coral/normalize/pass/ConvertForLoopToWhile";
-import Query from "lara-js/api/weaver/Query.js";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
 
 // TODO:
 //       [] into *(+)

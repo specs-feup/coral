@@ -1,4 +1,4 @@
-import { BuiltinType, ElaboratedType, EnumDecl, Field, FileJp, FunctionJp, ParenType, PointerType, QualType, RecordJp, TagType, Type, TypedefType } from "clava-js/api/Joinpoints.js";
+import { BuiltinType, ElaboratedType, EnumDecl, Field, FileJp, FunctionJp, ParenType, PointerType, QualType, RecordJp, TagType, Type, TypedefType } from "@specs-feup/clava/api/Joinpoints.js";
 import IncompatibleSemanticsPragmasError from "coral/error/pragma/IncompatibleSemanticsPragmasError";
 import MultipleDropPragmasError from "coral/error/pragma/MultipleDropPragmasError";
 import DropPragmaParseError from "coral/error/pragma/parse/DropPragmaParseError";
@@ -24,7 +24,7 @@ import LfPathMemberAccess from "coral/pragma/lifetime/path/LfPathMemberAccess";
 import LfPathVarRef from "coral/pragma/lifetime/path/LfPathVarRef";
 import MetaRegionVariable from "coral/regionck/MetaRegionVariable";
 import MetaRegionVariableBound from "coral/regionck/MetaRegionVariableBound";
-import Query from "lara-js/api/weaver/Query.js";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
 
 export default class StructDefsMap {
     #defs: Map<string, StructDef>;

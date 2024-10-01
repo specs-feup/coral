@@ -1,5 +1,5 @@
-import { Joinpoint } from "clava-js/api/Joinpoints.js";
-import cytoscape from "lara-js/api/libs/cytoscape-3.26.0.js";
+import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
+import cytoscape from "@specs-feup/lara/api/libs/cytoscape-3.26.0.js";
 import Path from "coral/mir/path/Path";
 import Ty from "coral/mir/ty/Ty";
 import RefTy from "coral/mir/ty/RefTy";

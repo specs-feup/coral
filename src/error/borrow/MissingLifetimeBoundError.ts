@@ -2,7 +2,7 @@ import CoralError from "coral/error/CoralError";
 import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
 import Access from "coral/mir/Access";
 import Loan from "coral/mir/Loan";
-import { FunctionJp, Joinpoint } from "clava-js/api/Joinpoints.js";
+import { FunctionJp, Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import PathVarRef from "coral/mir/path/PathVarRef";
 import RegionVariable from "coral/regionck/RegionVariable";
 import OutlivesConstraint from "coral/regionck/OutlivesConstraint";

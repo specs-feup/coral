@@ -1,4 +1,4 @@
-import { Joinpoint } from "clava-js/api/Joinpoints.js";
+import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import Ty from "coral/mir/ty/Ty";
 import RegionVariable from "coral/regionck/RegionVariable";
 

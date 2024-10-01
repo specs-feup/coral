@@ -1,6 +1,6 @@
 import CoralError from "coral/error/CoralError";
 import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
-import { FunctionJp, Joinpoint } from "clava-js/api/Joinpoints.js";
+import { FunctionJp, Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import Path from "coral/mir/path/Path";
 import Access from "coral/mir/Access";
 import StructTy from "coral/mir/ty/StructTy";

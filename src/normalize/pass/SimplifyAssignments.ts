@@ -1,8 +1,8 @@
-import { BinaryOp, Joinpoint } from "clava-js/api/Joinpoints.js";
-import SimplifyAssignment from "clava-js/api/clava/code/SimplifyAssignment.js";
+import { BinaryOp, Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
+import SimplifyAssignment from "@specs-feup/clava/api/clava/code/SimplifyAssignment.js";
 import CoralNormalizer from "coral/normalize/CoralNormalizer";
-import { LaraJoinPoint } from "lara-js/api/LaraJoinPoint.js";
-import Query from "lara-js/api/weaver/Query.js";
+import { LaraJoinPoint } from "@specs-feup/lara/api/LaraJoinPoint.js";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
 
 export default class SimplifyAssignments implements CoralNormalizer.Pass {
     apply($jp: Joinpoint) {

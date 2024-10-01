@@ -1,7 +1,7 @@
-import Pass from "lara-js/api/lara/pass/Pass.js";
-import cytoscape from "lara-js/api/libs/cytoscape-3.26.0.js";
-import PassResult from "lara-js/api/lara/pass/results/PassResult.js";
-import { Joinpoint } from "clava-js/api/Joinpoints.js";
+import Pass from "@specs-feup/lara/api/lara/pass/Pass.js";
+import cytoscape from "@specs-feup/lara/api/libs/cytoscape-3.26.0.js";
+import PassResult from "@specs-feup/lara/api/lara/pass/results/PassResult.js";
+import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 
 import Loan from "coral/mir/Loan";
 import Access from "coral/mir/Access";

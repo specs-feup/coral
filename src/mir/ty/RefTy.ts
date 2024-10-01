@@ -1,7 +1,7 @@
 import Ty from "coral/mir/ty/Ty";
 import BorrowKind from "coral/mir/ty/BorrowKind";
 import RegionVariable from "coral/regionck/RegionVariable";
-import { PointerType } from "clava-js/api/Joinpoints.js";
+import { PointerType } from "@specs-feup/clava/api/Joinpoints.js";
 
 export default class RefTy extends Ty {
     regionVar: RegionVariable;

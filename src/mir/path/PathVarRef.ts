@@ -1,5 +1,5 @@
-import { Vardecl, Varref } from "clava-js/api/Joinpoints.js";
-import ClavaJoinPoints from "clava-js/api/clava/ClavaJoinPoints.js";
+import { Vardecl, Varref } from "@specs-feup/clava/api/Joinpoints.js";
+import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
 import Path from "coral/mir/path/Path";
 import Ty from "coral/mir/ty/Ty";
 

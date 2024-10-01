@@ -21,7 +21,7 @@ import ContinueNode from "clava-flow/flow/node/instruction/ContinueNode";
 import GotoLabelNode from "clava-flow/flow/node/instruction/GotoLabelNode";
 import GotoNode from "clava-flow/flow/node/instruction/GotoNode";
 import CoralNode from "coral/graph/CoralNode";
-import { Case, If, Loop } from "clava-js/api/Joinpoints.js";
+import { Case, If, Loop } from "@specs-feup/clava/api/Joinpoints.js";
 import MoveTable from "coral/mir/MoveTable";
 import DropNode from "coral/graph/DropNode";
 

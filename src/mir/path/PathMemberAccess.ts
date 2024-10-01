@@ -1,4 +1,4 @@
-import { Expression, Joinpoint, MemberAccess, Vardecl } from "clava-js/api/Joinpoints.js";
+import { Expression, Joinpoint, MemberAccess, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import Path from "coral/mir/path/Path";
 import StructTy from "coral/mir/ty/StructTy";
 import Ty from "coral/mir/ty/Ty";

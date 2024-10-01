@@ -39,7 +39,7 @@ import {
     UnaryOp,
     Vardecl,
     Varref,
-} from "clava-js/api/Joinpoints.js";
+} from "@specs-feup/clava/api/Joinpoints.js";
 import LifetimeReassignmentError from "coral/error/struct/LifetimeReassignmentError";
 import UnexpectedLifetimeAssignmentError from "coral/error/struct/UnexpectedLifetimeAssignmentError";
 import CoralGraph from "coral/graph/CoralGraph";
@@ -66,8 +66,8 @@ import LfPathMemberAccess from "coral/pragma/lifetime/path/LfPathMemberAccess";
 import LfPathVarRef from "coral/pragma/lifetime/path/LfPathVarRef";
 import RegionVariable from "coral/regionck/RegionVariable";
 import Regionck from "coral/regionck/Regionck";
-import Query from "lara-js/api/weaver/Query.js";
-import ClavaJoinPoints from "clava-js/api/clava/ClavaJoinPoints.js";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
+import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
 
 export default class GraphAnnotator implements GraphTransformation {
     #regionck?: Regionck;

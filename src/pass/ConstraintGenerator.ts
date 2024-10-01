@@ -14,7 +14,7 @@ import BaseGraph from "clava-flow/graph/BaseGraph";
 import CoralGraph from "coral/graph/CoralGraph";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
 import CoralNode from "coral/graph/CoralNode";
-import { Joinpoint } from "clava-js/api/Joinpoints.js";
+import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import LifetimeBoundPragma from "coral/pragma/lifetime/LifetimeBoundPragma";
 import CoralPragma from "coral/pragma/CoralPragma";
 

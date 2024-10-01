@@ -1,7 +1,7 @@
 import CoralError from "coral/error/CoralError";
 import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
 import Access from "coral/mir/Access";
-import { Joinpoint, Type, Vardecl } from "clava-js/api/Joinpoints.js";
+import { Joinpoint, Type, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 
 export default class UseWhileMovedError extends CoralError {
     constructor($invalidUse: Joinpoint, $declaration: Vardecl, access: Access, move: Access) {

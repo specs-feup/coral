@@ -1,4 +1,4 @@
-import { RecordJp } from "clava-js/api/Joinpoints.js";
+import { RecordJp } from "@specs-feup/clava/api/Joinpoints.js";
 import StructTy from "coral/mir/ty/StructTy";
 import Ty from "coral/mir/ty/Ty";
 import MetaTy from "coral/mir/ty/meta/MetaTy";

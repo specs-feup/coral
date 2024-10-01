@@ -1,5 +1,5 @@
 import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
-import { Joinpoint } from "clava-js/api/Joinpoints.js";
+import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralNode from "coral/graph/CoralNode";
 import RegionVariable from "coral/regionck/RegionVariable";
 
