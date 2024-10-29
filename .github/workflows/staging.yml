@@ -58,7 +58,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         repository: specs-feup/clava-flow
-        ref: a504de47349e525c778ccb34c14836a0cb9af7ae
+        #ref: a504de47349e525c778ccb34c14836a0cb9af7ae
         path: workspace/clava-flow
 
     - name: Create package.json
