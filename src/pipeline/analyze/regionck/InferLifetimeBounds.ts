@@ -1,16 +1,15 @@
-
 import { GraphTransformation } from "clava-flow/graph/Graph";
-import CoralGraph from "coral/graph/CoralGraph";
+import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
 import BaseGraph from "clava-flow/graph/BaseGraph";
-import ConstraintGenerator from "coral/pass/ConstraintGenerator";
-import InScopeLoansComputation from "coral/pass/InScopeLoansComputation";
-import RegionckErrorReporting from "coral/pass/RegionckErrorReporting";
+import ConstraintGenerator from "@specs-feup/coral/pass/ConstraintGenerator";
+import InScopeLoansComputation from "@specs-feup/coral/pass/InScopeLoansComputation";
+import RegionckErrorReporting from "@specs-feup/coral/pass/RegionckErrorReporting";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 import { Call, FunctionJp, Pragma } from "@specs-feup/clava/api/Joinpoints.js";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
-import Regionck from "coral/regionck/Regionck";
-import CoralPragma from "coral/pragma/CoralPragma";
-import LifetimeBoundPragma from "coral/pragma/lifetime/LifetimeBoundPragma";
+import Regionck from "@specs-feup/coral/regionck/Regionck";
+import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
+import LifetimeBoundPragma from "@specs-feup/coral/pragma/lifetime/LifetimeBoundPragma";
 
 class InferLifetimeBounds implements GraphTransformation {
     #inferFunctionLifetimes: boolean;
@@ -37,7 +36,10 @@ class InferLifetimeBounds implements GraphTransformation {
         let state = InferLifetimeBounds.State.PRIORITIZE_LEAFS;
         let changed;
         let iterationNumber = 0;
-        while (this.#iterationLimit === undefined || iterationNumber < this.#iterationLimit) {
+        while (
+            this.#iterationLimit === undefined ||
+            iterationNumber < this.#iterationLimit
+        ) {
             changed = false;
 
             for (const functionEntry of coralGraph.functions) {
@@ -182,7 +184,7 @@ namespace InferLifetimeBounds {
     export enum FunctionState {
         NOT_VISITED,
         VISITED,
-        IGNORE
+        IGNORE,
     }
 }
 

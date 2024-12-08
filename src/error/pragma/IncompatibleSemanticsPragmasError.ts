@@ -1,8 +1,8 @@
-import CoralError from "coral/error/CoralError";
-import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
-import Access from "coral/mir/Access";
+import CoralError from "@specs-feup/coral/error/CoralError";
+import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
+import Access from "@specs-feup/coral/mir/Access";
 import { Joinpoint, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
-import CoralPragma from "coral/pragma/CoralPragma";
+import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
 
 export default class IncompatibleSemanticsPragmasError extends CoralError {
     constructor(copyFlag: CoralPragma, moveFlag: CoralPragma) {
@@ -17,9 +17,18 @@ export default class IncompatibleSemanticsPragmasError extends CoralError {
         }
 
         super(
-            new ErrorMessageBuilder("Struct cannot have 'copy' and 'move' semantics simultaneously.", moveFlag.$jp.parent)
-                .code(firstPragma.$jp.parent, `'${firstPragma.name}' semantics defined here`)
-                .code(secondPragma.$jp.parent, `'${secondPragma.name}' semantics defined here`)
+            new ErrorMessageBuilder(
+                "Struct cannot have 'copy' and 'move' semantics simultaneously.",
+                moveFlag.$jp.parent,
+            )
+                .code(
+                    firstPragma.$jp.parent,
+                    `'${firstPragma.name}' semantics defined here`,
+                )
+                .code(
+                    secondPragma.$jp.parent,
+                    `'${secondPragma.name}' semantics defined here`,
+                )
                 .code(secondPragma.$jp.target)
                 .toString(),
         );

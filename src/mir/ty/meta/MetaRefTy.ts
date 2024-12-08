@@ -1,10 +1,10 @@
-import Ty from "coral/mir/ty/Ty";
-import BorrowKind from "coral/mir/ty/BorrowKind";
-import RegionVariable from "coral/regionck/RegionVariable";
+import Ty from "@specs-feup/coral/mir/ty/Ty";
+import BorrowKind from "@specs-feup/coral/mir/ty/BorrowKind";
+import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
 import { PointerType } from "@specs-feup/clava/api/Joinpoints.js";
-import MetaTy from "coral/mir/ty/meta/MetaTy";
-import MetaRegionVariable from "coral/regionck/MetaRegionVariable";
-import RefTy from "coral/mir/ty/RefTy";
+import MetaTy from "@specs-feup/coral/mir/ty/meta/MetaTy";
+import MetaRegionVariable from "@specs-feup/coral/regionck/MetaRegionVariable";
+import RefTy from "@specs-feup/coral/mir/ty/RefTy";
 
 export default class MetaRefTy implements MetaTy {
     metaRegionVar: MetaRegionVariable;
@@ -39,7 +39,9 @@ export default class MetaRefTy implements MetaTy {
     toTy(regionVarMap: Map<string, RegionVariable>): Ty {
         const regionVar = regionVarMap.get(this.metaRegionVar.name);
         if (regionVar === undefined) {
-            throw new Error(`Region variable ${this.metaRegionVar.name} not found in map`);
+            throw new Error(
+                `Region variable ${this.metaRegionVar.name} not found in map`,
+            );
         }
 
         return new RefTy(

@@ -1,7 +1,7 @@
 import { BuiltinType, EnumDecl } from "@specs-feup/clava/api/Joinpoints.js";
-import Ty from "coral/mir/ty/Ty";
-import MetaTy from "coral/mir/ty/meta/MetaTy";
-import RegionVariable from "coral/regionck/RegionVariable";
+import Ty from "@specs-feup/coral/mir/ty/Ty";
+import MetaTy from "@specs-feup/coral/mir/ty/meta/MetaTy";
+import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
 
 export default class BuiltinTy extends Ty implements MetaTy {
     override name: string;

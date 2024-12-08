@@ -20,10 +20,10 @@ import BreakNode from "clava-flow/flow/node/instruction/BreakNode";
 import ContinueNode from "clava-flow/flow/node/instruction/ContinueNode";
 import GotoLabelNode from "clava-flow/flow/node/instruction/GotoLabelNode";
 import GotoNode from "clava-flow/flow/node/instruction/GotoNode";
-import CoralNode from "coral/graph/CoralNode";
+import CoralNode from "@specs-feup/coral/graph/CoralNode";
 import { Case, If, Loop } from "@specs-feup/clava/api/Joinpoints.js";
-import MoveTable from "coral/mir/MoveTable";
-import DropNode from "coral/graph/DropNode";
+import MoveTable from "@specs-feup/coral/mir/MoveTable";
+import DropNode from "@specs-feup/coral/graph/DropNode";
 
 export default class CoralDotFormatter extends DotFormatter {
     override formatNode(node: BaseNode.Class): DotFormatter.Node {
@@ -66,7 +66,10 @@ export default class CoralDotFormatter extends DotFormatter {
             if (coralNode !== undefined) {
                 label += coralNode.varsEnteringScope.map(($v) => $v.name).join(", ");
             }
-            if (node.as(ScopeStartNode.Class).scopeKind === ScopeStartNode.Kind.BROKEN_FLOW) {
+            if (
+                node.as(ScopeStartNode.Class).scopeKind ===
+                ScopeStartNode.Kind.BROKEN_FLOW
+            ) {
                 style = "dashed";
             }
         } else if (node.is(ScopeEndNode.TypeGuard)) {
@@ -131,24 +134,26 @@ export default class CoralDotFormatter extends DotFormatter {
             for (const loan of coralNode.loans) {
                 label += `\nLoan(${loan.toString()})`;
             }
-            
+
             for (const access of coralNode.accesses) {
                 label += `\nAccess(${access.toString()})`;
             }
 
             label += `\n---`;
-            const states: [string, MoveTable.State][] = [["uninit", MoveTable.State.UNINIT], ["valid", MoveTable.State.VALID], ["moved", MoveTable.State.MOVED], ["maybe u.", MoveTable.State.MAYBE_UNINIT], ["maybe m.", MoveTable.State.MAYBE_MOVED]] ;
+            const states: [string, MoveTable.State][] = [
+                ["uninit", MoveTable.State.UNINIT],
+                ["valid", MoveTable.State.VALID],
+                ["moved", MoveTable.State.MOVED],
+                ["maybe u.", MoveTable.State.MAYBE_UNINIT],
+                ["maybe m.", MoveTable.State.MAYBE_MOVED],
+            ];
             for (const [l, state] of states) {
                 const vars = coralNode.moveTable.getVarNames(state);
                 if (vars.length > 0) {
                     label += `\n${l} {${vars.join(", ")}}`;
                 }
-                
             }
-
         }
-
-        
 
         return {
             id: node.id,

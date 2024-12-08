@@ -1,8 +1,8 @@
 import { FunctionJp, RecordJp } from "@specs-feup/clava/api/Joinpoints.js";
-import Ty from "coral/mir/ty/Ty";
-import MetaTy from "coral/mir/ty/meta/MetaTy";
-import StructDef from "coral/mir/ty/meta/StructDef";
-import RegionVariable from "coral/regionck/RegionVariable";
+import Ty from "@specs-feup/coral/mir/ty/Ty";
+import MetaTy from "@specs-feup/coral/mir/ty/meta/MetaTy";
+import StructDef from "@specs-feup/coral/mir/ty/meta/StructDef";
+import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
 
 export default class StructTy extends Ty {
     def: StructDef;
@@ -64,7 +64,7 @@ export default class StructTy extends Ty {
 
     override toString(): string {
         if (this.requiresLifetimes) {
-            return `${this.name}<${this.regionVars.map(r => r.name).join(", ")}>`;
+            return `${this.name}<${this.regionVars.map((r) => r.name).join(", ")}>`;
         } else {
             return this.name;
         }

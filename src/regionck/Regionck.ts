@@ -1,11 +1,11 @@
 import { Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
-import Ty from "coral/mir/ty/Ty";
-import OutlivesConstraint from "coral/regionck/OutlivesConstraint";
-import RegionVariable from "coral/regionck/RegionVariable";
+import Ty from "@specs-feup/coral/mir/ty/Ty";
+import OutlivesConstraint from "@specs-feup/coral/regionck/OutlivesConstraint";
+import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
-import StructDefsMap from "coral/regionck/StructDefsMap";
-import LifetimeBoundPragma from "coral/pragma/lifetime/LifetimeBoundPragma";
-import InferLifetimeBounds from "coral/pass/InferLifetimeBounds";
+import StructDefsMap from "@specs-feup/coral/regionck/StructDefsMap";
+import LifetimeBoundPragma from "@specs-feup/coral/pragma/lifetime/LifetimeBoundPragma";
+import InferLifetimeBounds from "@specs-feup/coral/pass/InferLifetimeBounds";
 
 export default class Regionck {
     functionEntry: FunctionEntryNode.Class;

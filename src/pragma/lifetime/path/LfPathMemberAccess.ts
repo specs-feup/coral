@@ -1,6 +1,6 @@
-import LfPath from "coral/pragma/lifetime/path/LfPath";
-import LfPathDeref from "coral/pragma/lifetime/path/LfPathDeref";
-import LfPathVarRef from "coral/pragma/lifetime/path/LfPathVarRef";
+import LfPath from "@specs-feup/coral/pragma/lifetime/path/LfPath";
+import LfPathDeref from "@specs-feup/coral/pragma/lifetime/path/LfPathDeref";
+import LfPathVarRef from "@specs-feup/coral/pragma/lifetime/path/LfPathVarRef";
 
 export default class LfPathMemberAccess extends LfPath {
     inner: LfPathVarRef | LfPathDeref;

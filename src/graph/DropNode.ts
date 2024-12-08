@@ -1,7 +1,7 @@
 import FlowNode from "clava-flow/flow/node/FlowNode";
 import BaseNode from "clava-flow/graph/BaseNode";
 import { NodeBuilder, NodeTypeGuard } from "clava-flow/graph/Node";
-import CoralNode from "coral/graph/CoralNode";
+import CoralNode from "@specs-feup/coral/graph/CoralNode";
 
 namespace DropNode {
     export class Class<
@@ -58,7 +58,7 @@ namespace DropNode {
             if (targetNode.jp === undefined) {
                 throw new Error("Target node must have a joinpoint");
             }
-            
+
             this.scratchData.$jp = targetNode.jp.insertAfter($call);
             this.data.coral.elaborated = true;
         }
@@ -84,7 +84,7 @@ namespace DropNode {
                     dropIsConditional: this.#isConditional,
                     dropInsertLocation: this.#insertLocation,
                     elaborated: false,
-                }
+                },
             };
         }
 
@@ -100,8 +100,20 @@ namespace DropNode {
             if (!CoralNode.TypeGuard.isDataCompatible(data)) return false;
             const sData = data as Data;
             if (sData.coral === undefined) return false;
-            if (!(sData.coral.dropIsConditional === true || sData.coral.dropIsConditional === false)) return false;
-            if (!(sData.coral.dropInsertLocation === DropInsertLocation.BEFORE_TARGET || sData.coral.dropInsertLocation === DropInsertLocation.AFTER_TARGET)) return false;
+            if (
+                !(
+                    sData.coral.dropIsConditional === true ||
+                    sData.coral.dropIsConditional === false
+                )
+            )
+                return false;
+            if (
+                !(
+                    sData.coral.dropInsertLocation === DropInsertLocation.BEFORE_TARGET ||
+                    sData.coral.dropInsertLocation === DropInsertLocation.AFTER_TARGET
+                )
+            )
+                return false;
             return true;
         },
 
@@ -118,11 +130,11 @@ namespace DropNode {
             dropIsConditional: boolean;
             dropInsertLocation: DropInsertLocation;
             elaborated: boolean;
-        }
+        };
     }
 
-    export interface ScratchData extends CoralNode.ScratchData { }
-    
+    export interface ScratchData extends CoralNode.ScratchData {}
+
     // ------------------------------
 
     export enum DropInsertLocation {

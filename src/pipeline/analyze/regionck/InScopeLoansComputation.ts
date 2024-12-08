@@ -1,12 +1,10 @@
-
-import Loan from "coral/mir/Loan";
+import Loan from "@specs-feup/coral/mir/Loan";
 import { GraphTransformation } from "clava-flow/graph/Graph";
-import CoralGraph from "coral/graph/CoralGraph";
+import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
 import BaseGraph from "clava-flow/graph/BaseGraph";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
 import FlowNode from "clava-flow/flow/node/FlowNode";
-import CoralNode from "coral/graph/CoralNode";
-
+import CoralNode from "@specs-feup/coral/graph/CoralNode";
 
 export default class InScopeLoansComputation implements GraphTransformation {
     #targetFunction: FunctionEntryNode.Class;

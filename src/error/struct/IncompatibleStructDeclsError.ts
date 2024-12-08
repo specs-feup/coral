@@ -1,13 +1,13 @@
-import CoralError from "coral/error/CoralError";
-import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
-import Access from "coral/mir/Access";
+import CoralError from "@specs-feup/coral/error/CoralError";
+import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
+import Access from "@specs-feup/coral/mir/Access";
 import { Joinpoint, RecordJp, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
-import CoralPragma from "coral/pragma/CoralPragma";
+import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
 
 export default class IncompatibleStructDeclsError extends CoralError {
     constructor(
         $firstStruct: RecordJp,
-        firstPragma: CoralPragma | undefined, 
+        firstPragma: CoralPragma | undefined,
         firstMessage: string,
         $secondStruct: RecordJp,
         secondPragma: CoralPragma | undefined,
@@ -22,15 +22,13 @@ export default class IncompatibleStructDeclsError extends CoralError {
 
         const builder = new ErrorMessageBuilder(
             "Struct has incompatible declarations.",
-            $secondStruct
+            $secondStruct,
         );
 
         if (firstPragma === undefined) {
             builder.code($firstStruct, undefinedMessage);
         } else {
-            builder
-                .code(firstPragma.$jp.parent, firstMessage)
-                .code($firstStruct);
+            builder.code(firstPragma.$jp.parent, firstMessage).code($firstStruct);
         }
 
         builder.blankLine();
@@ -38,9 +36,7 @@ export default class IncompatibleStructDeclsError extends CoralError {
         if (secondPragma === undefined) {
             builder.code($secondStruct, undefinedMessage);
         } else {
-            builder
-                .code(secondPragma.$jp.parent, secondMessage)
-                .code($secondStruct);
+            builder.code(secondPragma.$jp.parent, secondMessage).code($secondStruct);
         }
 
         super(builder.toString());

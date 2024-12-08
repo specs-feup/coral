@@ -1,9 +1,9 @@
-import CoralError from "coral/error/CoralError";
-import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
+import CoralError from "@specs-feup/coral/error/CoralError";
+import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
 import { FunctionJp, Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
-import Path from "coral/mir/path/Path";
-import Access from "coral/mir/Access";
-import StructTy from "coral/mir/ty/StructTy";
+import Path from "@specs-feup/coral/mir/path/Path";
+import Access from "@specs-feup/coral/mir/Access";
+import StructTy from "@specs-feup/coral/mir/ty/StructTy";
 
 export default class WriteFieldOfPotentiallyDroppedTypeError extends CoralError {
     constructor(pathWithDrop: Path, write: Access, exampleMove: Access) {

@@ -1,13 +1,16 @@
-import CoralError from "coral/error/CoralError";
-import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
-import Access from "coral/mir/Access";
+import CoralError from "@specs-feup/coral/error/CoralError";
+import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
+import Access from "@specs-feup/coral/mir/Access";
 import { Joinpoint, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
-import CoralPragma from "coral/pragma/CoralPragma";
+import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
 
 export default class MultipleDropPragmasError extends CoralError {
     constructor(firstPragma: CoralPragma, secondPragma: CoralPragma) {
         super(
-            new ErrorMessageBuilder("Multiple drop pragmas found for the same struct.", secondPragma.$jp.parent)
+            new ErrorMessageBuilder(
+                "Multiple drop pragmas found for the same struct.",
+                secondPragma.$jp.parent,
+            )
                 .code(firstPragma.$jp.parent, "A drop function is first assigned here.")
                 .code(secondPragma.$jp.parent, "Drop function is reassigned here.")
                 .code(secondPragma.$jp.target)

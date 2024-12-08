@@ -1,7 +1,7 @@
 import { Vardecl, Varref } from "@specs-feup/clava/api/Joinpoints.js";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
-import Path from "coral/mir/path/Path";
-import Ty from "coral/mir/ty/Ty";
+import Path from "@specs-feup/coral/mir/path/Path";
+import Ty from "@specs-feup/coral/mir/ty/Ty";
 
 /**
  * A direct reference or declaration of a variable, such as `x` or `int y`.

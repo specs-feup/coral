@@ -19,6 +19,10 @@ export default class CoralPragma {
             .filter((token) => token.trim().length > 0);
     }
 
+    isFlag(flag: string): boolean {
+        return this.name === flag && this.tokens.length === 0;
+    }
+
     static parse(pragmas: Pragma[]): CoralPragma[] {
         return pragmas
             .filter(($pragma) => $pragma.name === CoralPragma.keyword)

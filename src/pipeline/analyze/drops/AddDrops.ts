@@ -9,19 +9,24 @@ import BaseGraph from "clava-flow/graph/BaseGraph";
 import { GraphTransformation } from "clava-flow/graph/Graph";
 import { MemberAccess, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
-import DropInconsistentStructError from "coral/error/drop/DropInconsistentStructError";
-import CoralGraph from "coral/graph/CoralGraph";
-import CoralNode from "coral/graph/CoralNode";
-import DropNode from "coral/graph/DropNode";
-import Access from "coral/mir/Access";
-import MoveTable from "coral/mir/MoveTable";
-import Path from "coral/mir/path/Path";
-import PathMemberAccess from "coral/mir/path/PathMemberAccess";
-import StructTy from "coral/mir/ty/StructTy";
-import Regionck from "coral/regionck/Regionck";
+import DropInconsistentStructError from "@specs-feup/coral/error/drop/DropInconsistentStructError";
+import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
+import CoralNode from "@specs-feup/coral/graph/CoralNode";
+import DropNode from "@specs-feup/coral/graph/DropNode";
+import Access from "@specs-feup/coral/mir/Access";
+import MoveTable from "@specs-feup/coral/mir/MoveTable";
+import Path from "@specs-feup/coral/mir/path/Path";
+import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
+import StructTy from "@specs-feup/coral/mir/ty/StructTy";
+import Regionck from "@specs-feup/coral/regionck/Regionck";
 
 export default class AddDrops implements GraphTransformation {
-    #dropsToHandle: [CoralNode.Class, Path, DropNode.DropInsertLocation, MoveTable.StateHolder][] = [];
+    #dropsToHandle: [
+        CoralNode.Class,
+        Path,
+        DropNode.DropInsertLocation,
+        MoveTable.StateHolder,
+    ][] = [];
 
     apply(graph: BaseGraph.Class): void {
         if (!graph.is(CoralGraph.TypeGuard)) {
@@ -77,10 +82,20 @@ export default class AddDrops implements GraphTransformation {
                     case MoveTable.DropKind.NO_DROP:
                         break;
                     case MoveTable.DropKind.DROP_AFTER:
-                        this.#dropsToHandle.push([coralNode, access.path, DropNode.DropInsertLocation.AFTER_TARGET, stateHolder!]);
+                        this.#dropsToHandle.push([
+                            coralNode,
+                            access.path,
+                            DropNode.DropInsertLocation.AFTER_TARGET,
+                            stateHolder!,
+                        ]);
                         break;
                     case MoveTable.DropKind.DROP_BEFORE:
-                        this.#dropsToHandle.push([coralNode, access.path, DropNode.DropInsertLocation.BEFORE_TARGET, stateHolder!]);
+                        this.#dropsToHandle.push([
+                            coralNode,
+                            access.path,
+                            DropNode.DropInsertLocation.BEFORE_TARGET,
+                            stateHolder!,
+                        ]);
                         break;
                     default:
                         throw new Error("Unexpected drop kind.");
@@ -134,7 +149,11 @@ export default class AddDrops implements GraphTransformation {
 
             if (path.ty.dropFunction !== undefined) {
                 if (!stateHolder.isConsistentState()) {
-                    throw new DropInconsistentStructError(coralNode.jp, path, path.ty.dropFunction);
+                    throw new DropInconsistentStructError(
+                        coralNode.jp,
+                        path,
+                        path.ty.dropFunction,
+                    );
                 }
 
                 if (stateHolder.dropState === MoveTable.State.VALID) {
@@ -169,7 +188,13 @@ export default class AddDrops implements GraphTransformation {
         }
 
         if (dropLocation === DropNode.DropInsertLocation.AFTER_TARGET) {
-            this.#addDropFields(Array.from(path.ty.fields.keys()).reverse(), coralNode, path, dropLocation, maybe);
+            this.#addDropFields(
+                Array.from(path.ty.fields.keys()).reverse(),
+                coralNode,
+                path,
+                dropLocation,
+                maybe,
+            );
         }
 
         if (path.ty.dropFunction !== undefined) {
@@ -177,7 +202,13 @@ export default class AddDrops implements GraphTransformation {
         }
 
         if (dropLocation === DropNode.DropInsertLocation.BEFORE_TARGET) {
-            this.#addDropFields(Array.from(path.ty.fields.keys()), coralNode, path, dropLocation, maybe);
+            this.#addDropFields(
+                Array.from(path.ty.fields.keys()),
+                coralNode,
+                path,
+                dropLocation,
+                maybe,
+            );
         }
     }
 
@@ -216,7 +247,7 @@ export default class AddDrops implements GraphTransformation {
                 new Access(path, Access.Mutability.MUTABLE_BORROW, Access.Depth.DEEP),
             );
 
-            if (!(coralNode.is(InstructionNode.TypeGuard))) {
+            if (!coralNode.is(InstructionNode.TypeGuard)) {
                 throw new Error("Expected node to be an InstructionNode.");
             }
 

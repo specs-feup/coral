@@ -1,9 +1,14 @@
-import { Expression, Joinpoint, UnaryOp, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
+import {
+    Expression,
+    Joinpoint,
+    UnaryOp,
+    Vardecl,
+} from "@specs-feup/clava/api/Joinpoints.js";
 
-import Path from "coral/mir/path/Path";
-import Ty from "coral/mir/ty/Ty";
-import RefTy from "coral/mir/ty/RefTy";
-import BorrowKind from "coral/mir/ty/BorrowKind";
+import Path from "@specs-feup/coral/mir/path/Path";
+import Ty from "@specs-feup/coral/mir/ty/Ty";
+import RefTy from "@specs-feup/coral/mir/ty/RefTy";
+import BorrowKind from "@specs-feup/coral/mir/ty/BorrowKind";
 
 /**
  * A dereference of a path, such as `*x`.

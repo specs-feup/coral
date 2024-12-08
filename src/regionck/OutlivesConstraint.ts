@@ -1,8 +1,7 @@
 import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
 import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
-import CoralNode from "coral/graph/CoralNode";
-import RegionVariable from "coral/regionck/RegionVariable";
-
+import CoralNode from "@specs-feup/coral/graph/CoralNode";
+import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
 
 /**
  * A constraint that lifetime 'sup' outlives lifetime 'sub' at node 'node'.

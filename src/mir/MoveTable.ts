@@ -1,16 +1,22 @@
-import { BinaryOp, ExprStmt, FunctionJp, Joinpoint, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
-import MergeInconsistentStructError from "coral/error/drop/MergeInconsistentStructError";
-import WriteFieldOfPotentiallyDroppedTypeError from "coral/error/drop/WriteFieldOfPotentiallyDroppedTypeError";
-import MoveBehindReferenceError from "coral/error/move/MoveBehindReferenceError";
-import UseBeforeInitError from "coral/error/move/UseBeforeInitError";
-import UseWhileMovedError from "coral/error/move/UseWhileMovedError";
-import Access from "coral/mir/Access";
-import Path from "coral/mir/path/Path";
-import PathDeref from "coral/mir/path/PathDeref";
-import PathMemberAccess from "coral/mir/path/PathMemberAccess";
-import PathVarRef from "coral/mir/path/PathVarRef";
-import StructTy from "coral/mir/ty/StructTy";
-import Ty from "coral/mir/ty/Ty";
+import {
+    BinaryOp,
+    ExprStmt,
+    FunctionJp,
+    Joinpoint,
+    Vardecl,
+} from "@specs-feup/clava/api/Joinpoints.js";
+import MergeInconsistentStructError from "@specs-feup/coral/error/drop/MergeInconsistentStructError";
+import WriteFieldOfPotentiallyDroppedTypeError from "@specs-feup/coral/error/drop/WriteFieldOfPotentiallyDroppedTypeError";
+import MoveBehindReferenceError from "@specs-feup/coral/error/move/MoveBehindReferenceError";
+import UseBeforeInitError from "@specs-feup/coral/error/move/UseBeforeInitError";
+import UseWhileMovedError from "@specs-feup/coral/error/move/UseWhileMovedError";
+import Access from "@specs-feup/coral/mir/Access";
+import Path from "@specs-feup/coral/mir/path/Path";
+import PathDeref from "@specs-feup/coral/mir/path/PathDeref";
+import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
+import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
+import StructTy from "@specs-feup/coral/mir/ty/StructTy";
+import Ty from "@specs-feup/coral/mir/ty/Ty";
 
 class MoveTable {
     #states: Map<string, MoveTable.StateHolder>;
@@ -25,7 +31,9 @@ class MoveTable {
         let result: string[] = [];
         for (const [key, value] of this.#states) {
             let name = this.#vardecls.get(key)!.name;
-            result = result.concat(value.getVarNames(state).map(inner => `${name}${inner}`));
+            result = result.concat(
+                value.getVarNames(state).map((inner) => `${name}${inner}`),
+            );
         }
         return result;
     }
@@ -134,15 +142,18 @@ class MoveTable {
                     currentState = holder.copy();
                     holder.state = MoveTable.State.MOVED;
                     holder.exampleMoveAccess = access;
-                    
+
                     let $parent = access.path.$jp.parent;
                     while (true) {
                         if ($parent instanceof FunctionJp) {
                             return [MoveTable.DropKind.DROP_AFTER, currentState];
-                        } else if ($parent instanceof Vardecl || ($parent instanceof BinaryOp && $parent.isAssignment)) {
+                        } else if (
+                            $parent instanceof Vardecl ||
+                            ($parent instanceof BinaryOp && $parent.isAssignment)
+                        ) {
                             break;
                         }
-                        
+
                         $parent = $parent.parent;
                     }
                 }
@@ -159,7 +170,10 @@ class MoveTable {
                     let outerWithDropFunction: MoveTable.FieldStates | undefined;
                     let outerWithDropFunctionPath: Path | undefined;
                     while (parent !== undefined) {
-                        if (parent instanceof MoveTable.FieldStates && parent.hasDropFunction) {
+                        if (
+                            parent instanceof MoveTable.FieldStates &&
+                            parent.hasDropFunction
+                        ) {
                             outerWithDropFunction = parent;
                             outerWithDropFunctionPath = parentPath;
                         }
@@ -171,16 +185,20 @@ class MoveTable {
                         }
                     }
                     if (
-                        outerWithDropFunction !== undefined
-                        && (
-                            outerWithDropFunction.dropState === MoveTable.State.MAYBE_MOVED
-                            || outerWithDropFunction.dropState === MoveTable.State.MAYBE_UNINIT
-                        )
+                        outerWithDropFunction !== undefined &&
+                        (outerWithDropFunction.dropState ===
+                            MoveTable.State.MAYBE_MOVED ||
+                            outerWithDropFunction.dropState ===
+                                MoveTable.State.MAYBE_UNINIT)
                     ) {
-                        throw new WriteFieldOfPotentiallyDroppedTypeError(outerWithDropFunctionPath!, access, outerWithDropFunction.exampleMoveAccess!);
+                        throw new WriteFieldOfPotentiallyDroppedTypeError(
+                            outerWithDropFunctionPath!,
+                            access,
+                            outerWithDropFunction.exampleMoveAccess!,
+                        );
                     }
                 }
-                
+
                 holder.state = MoveTable.State.VALID;
                 return [MoveTable.DropKind.DROP_BEFORE, currentState];
             case Access.Mutability.STORAGE_DEAD:
@@ -264,7 +282,7 @@ class MoveTable {
                         e.vardecl = table.#vardecls.get(key);
                     }
                     throw e;
-                }   
+                }
             }
         }
         return result;
@@ -363,7 +381,7 @@ namespace MoveTable {
                 this.parent.propagateValid();
             }
         }
-        
+
         get state(): MoveTable.State {
             return this.#state;
         }
@@ -380,7 +398,7 @@ namespace MoveTable {
             if (!(other instanceof SingleState)) {
                 throw new Error("Cannot merge SingleState with FieldStates");
             }
-            
+
             if (this.#state === other.#state) {
                 return;
             }

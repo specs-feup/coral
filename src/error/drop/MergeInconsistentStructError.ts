@@ -1,9 +1,9 @@
-import CoralError from "coral/error/CoralError";
-import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
+import CoralError from "@specs-feup/coral/error/CoralError";
+import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
 import { Joinpoint, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
-import Path from "coral/mir/path/Path";
-import StructTy from "coral/mir/ty/StructTy";
-import MoveTable from "coral/mir/MoveTable";
+import Path from "@specs-feup/coral/mir/path/Path";
+import StructTy from "@specs-feup/coral/mir/ty/StructTy";
+import MoveTable from "@specs-feup/coral/mir/MoveTable";
 
 class MergeInconsistentStructError extends CoralError {
     constructor($mergeLocation: Joinpoint, path: Path) {
@@ -31,7 +31,7 @@ namespace MergeInconsistentStructError {
     export class Stub extends Error {
         holder: MoveTable.StateHolder;
         vardecl?: Vardecl;
-        
+
         constructor(holder: MoveTable.StateHolder) {
             super();
             this.holder = holder;

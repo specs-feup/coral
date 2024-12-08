@@ -3,14 +3,14 @@ import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNod
 import BaseGraph from "clava-flow/graph/BaseGraph";
 import { GraphTransformation } from "clava-flow/graph/Graph";
 import { MemberAccess, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
-import MergeInconsistentStructError from "coral/error/drop/MergeInconsistentStructError";
-import CoralGraph from "coral/graph/CoralGraph";
-import CoralNode from "coral/graph/CoralNode";
-import MoveTable from "coral/mir/MoveTable";
-import Path from "coral/mir/path/Path";
-import PathMemberAccess from "coral/mir/path/PathMemberAccess";
-import PathVarRef from "coral/mir/path/PathVarRef";
-import Regionck from "coral/regionck/Regionck";
+import MergeInconsistentStructError from "@specs-feup/coral/error/drop/MergeInconsistentStructError";
+import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
+import CoralNode from "@specs-feup/coral/graph/CoralNode";
+import MoveTable from "@specs-feup/coral/mir/MoveTable";
+import Path from "@specs-feup/coral/mir/path/Path";
+import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
+import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
+import Regionck from "@specs-feup/coral/regionck/Regionck";
 
 export default class MoveAnalyser implements GraphTransformation {
     apply(graph: BaseGraph.Class): void {
@@ -19,8 +19,6 @@ export default class MoveAnalyser implements GraphTransformation {
         }
 
         const coralGraph = graph.as(CoralGraph.Class);
-
-        
 
         for (const functionEntry of coralGraph.functions) {
             this.#processFunction(functionEntry, coralGraph.getRegionck(functionEntry));
@@ -57,7 +55,9 @@ export default class MoveAnalyser implements GraphTransformation {
                                 .map((e) => e.source)
                                 .map((n) => {
                                     if (!n.is(CoralNode.TypeGuard)) {
-                                        throw new Error("Expected node to be a CoralNode.");
+                                        throw new Error(
+                                            "Expected node to be a CoralNode.",
+                                        );
                                     }
                                     return n.as(CoralNode.Class).moveTable;
                                 }),
@@ -67,7 +67,10 @@ export default class MoveAnalyser implements GraphTransformation {
                             throw e;
                         }
 
-                        let path: Path = new PathVarRef(e.vardecl!, regionck.getTy(e.vardecl!)!);
+                        let path: Path = new PathVarRef(
+                            e.vardecl!,
+                            regionck.getTy(e.vardecl!)!,
+                        );
                         let fields = [];
                         let holder: MoveTable.StateHolder | undefined = e.holder;
                         while (holder !== undefined) {
@@ -78,14 +81,22 @@ export default class MoveAnalyser implements GraphTransformation {
                         }
                         fields = fields.reverse();
                         for (const field of fields) {
-                            path = new PathMemberAccess(path.$jp as MemberAccess, path, field);
+                            path = new PathMemberAccess(
+                                path.$jp as MemberAccess,
+                                path,
+                                field,
+                            );
                         }
-                        
+
                         throw new MergeInconsistentStructError(coralNode.jp, path);
                     }
                 }
-                
-                this.#enterVars(coralNode.varsEnteringScope, coralNode.moveTable, regionck);
+
+                this.#enterVars(
+                    coralNode.varsEnteringScope,
+                    coralNode.moveTable,
+                    regionck,
+                );
 
                 for (const access of coralNode.accesses) {
                     coralNode.moveTable.updateAccess(access);
@@ -98,7 +109,12 @@ export default class MoveAnalyser implements GraphTransformation {
         }
     }
 
-    #enterVars(decls: Vardecl[], moveTable: MoveTable, regionck: Regionck, state: MoveTable.State = MoveTable.State.UNINIT): void {
+    #enterVars(
+        decls: Vardecl[],
+        moveTable: MoveTable,
+        regionck: Regionck,
+        state: MoveTable.State = MoveTable.State.UNINIT,
+    ): void {
         for (const $decl of decls) {
             const ty = regionck.getTy($decl);
             if (ty === undefined) {

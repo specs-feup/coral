@@ -1,4 +1,4 @@
-import LfPath from "coral/pragma/lifetime/path/LfPath";
+import LfPath from "@specs-feup/coral/pragma/lifetime/path/LfPath";
 
 export default class LfPathVarRef extends LfPath {
     identifier: string;

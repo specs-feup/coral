@@ -1,14 +1,17 @@
-import CoralError from "coral/error/CoralError";
-import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
-import Access from "coral/mir/Access";
-import { FunctionJp, Joinpoint, RecordJp, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
-import CoralPragma from "coral/pragma/CoralPragma";
-import LifetimeAssignmentPragma from "coral/pragma/lifetime/LifetimeAssignmentPragma";
+import CoralError from "@specs-feup/coral/error/CoralError";
+import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
+import Access from "@specs-feup/coral/mir/Access";
+import {
+    FunctionJp,
+    Joinpoint,
+    RecordJp,
+    Vardecl,
+} from "@specs-feup/clava/api/Joinpoints.js";
+import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
+import LifetimeAssignmentPragma from "@specs-feup/coral/pragma/lifetime/LifetimeAssignmentPragma";
 
 export default class UnexpectedLifetimeAssignmentError extends CoralError {
-    constructor(
-        lfAssign: LifetimeAssignmentPragma,
-    ) {
+    constructor(lfAssign: LifetimeAssignmentPragma) {
         const $struct = lfAssign.pragma.$jp.target.parent;
 
         const startLine = $struct.originNode.line;
@@ -20,13 +23,23 @@ export default class UnexpectedLifetimeAssignmentError extends CoralError {
             lfAssign.pragma.$jp.parent,
         );
 
-        builder.codeString($struct.originNode.code.trim().split("\n")[0], undefined, startLine);
+        builder.codeString(
+            $struct.originNode.code.trim().split("\n")[0],
+            undefined,
+            startLine,
+        );
         if (startLine + 1 < fieldLine) {
             builder.ellipsis();
         }
         builder
-            .code(lfAssign.pragma.$jp.parent, `Unexpected lifetime assignment to '${lfAssign.lhs.toString()}'`)
-            .code(lfAssign.pragma.$jp.target, `'${lfAssign.lhs.toString()}' does not require a lifetime here`);
+            .code(
+                lfAssign.pragma.$jp.parent,
+                `Unexpected lifetime assignment to '${lfAssign.lhs.toString()}'`,
+            )
+            .code(
+                lfAssign.pragma.$jp.target,
+                `'${lfAssign.lhs.toString()}' does not require a lifetime here`,
+            );
 
         if (fieldLine + 1 < endLine) {
             builder.ellipsis();

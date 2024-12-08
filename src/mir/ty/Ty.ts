@@ -1,5 +1,5 @@
 import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
-import RegionVariable from "coral/regionck/RegionVariable";
+import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
 
 abstract class Ty {
     abstract get name(): string;

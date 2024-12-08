@@ -1,11 +1,11 @@
 import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import cytoscape from "@specs-feup/lara/api/libs/cytoscape-3.26.0.js";
-import Path from "coral/mir/path/Path";
-import Ty from "coral/mir/ty/Ty";
-import RefTy from "coral/mir/ty/RefTy";
-import BorrowKind from "coral/mir/ty/BorrowKind";
-import RegionVariable from "coral/regionck/RegionVariable";
-import CoralNode from "coral/graph/CoralNode";
+import Path from "@specs-feup/coral/mir/path/Path";
+import Ty from "@specs-feup/coral/mir/ty/Ty";
+import RefTy from "@specs-feup/coral/mir/ty/RefTy";
+import BorrowKind from "@specs-feup/coral/mir/ty/BorrowKind";
+import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
+import CoralNode from "@specs-feup/coral/graph/CoralNode";
 
 export default class Loan {
     node: CoralNode.Class;
@@ -27,7 +27,12 @@ export default class Loan {
         this.reborrow = reborrow;
         this.leftTy = leftTy;
         this.loanedPath = loanedPath;
-        this.loanedRefTy = new RefTy(this.borrowKind, this.loanedPath.ty, this.leftTy.$jp, this.regionVar);
+        this.loanedRefTy = new RefTy(
+            this.borrowKind,
+            this.loanedPath.ty,
+            this.leftTy.$jp,
+            this.regionVar,
+        );
     }
 
     toString(): string {

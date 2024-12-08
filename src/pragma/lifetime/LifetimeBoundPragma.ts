@@ -1,5 +1,5 @@
-import LifetimePragmaParseError from "coral/error/pragma/parse/LifetimePragmaParseError";
-import CoralPragma from "coral/pragma/CoralPragma";
+import LifetimePragmaParseError from "@specs-feup/coral/error/pragma/parse/LifetimePragmaParseError";
+import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
 
 export default class LifetimeBoundPragma {
     static keyword: string = "lf";
@@ -18,29 +18,41 @@ export default class LifetimeBoundPragma {
         this.pragma = pragma;
         const tokens = pragma.tokens;
         let idx = 0;
-        
+
         if (tokens.at(idx) === undefined) {
             throw new LifetimePragmaParseError(pragma, "Expected lifetime identifier");
         }
         if (!LifetimeBoundPragma.isLifetimeIdentifier(tokens[0])) {
-            throw new LifetimePragmaParseError(pragma, `Expected lifetime identifier, found '${pragma.tokens[idx]}'`);
+            throw new LifetimePragmaParseError(
+                pragma,
+                `Expected lifetime identifier, found '${pragma.tokens[idx]}'`,
+            );
         }
         this.name = tokens[idx];
-        
+
         idx++;
         if (tokens.at(idx) === undefined) {
             return;
         }
         if (tokens[idx] !== ":") {
-            throw new LifetimePragmaParseError(pragma, `Expected ':', found '${pragma.tokens[idx]}'`);
+            throw new LifetimePragmaParseError(
+                pragma,
+                `Expected ':', found '${pragma.tokens[idx]}'`,
+            );
         }
 
         idx++;
         if (tokens.at(idx) === undefined) {
-            throw new LifetimePragmaParseError(pragma, "Expected lifetime identifier after ':'");
+            throw new LifetimePragmaParseError(
+                pragma,
+                "Expected lifetime identifier after ':'",
+            );
         }
         if (!LifetimeBoundPragma.isLifetimeIdentifier(tokens[idx])) {
-            throw new LifetimePragmaParseError(pragma, `Expected lifetime identifier, found '${pragma.tokens[idx]}'`);
+            throw new LifetimePragmaParseError(
+                pragma,
+                `Expected lifetime identifier, found '${pragma.tokens[idx]}'`,
+            );
         }
         this.bound = pragma.tokens[idx];
     }

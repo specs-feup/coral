@@ -1,11 +1,10 @@
 import { RecordJp } from "@specs-feup/clava/api/Joinpoints.js";
-import StructTy from "coral/mir/ty/StructTy";
-import Ty from "coral/mir/ty/Ty";
-import MetaTy from "coral/mir/ty/meta/MetaTy";
-import MetaRegionVariable from "coral/regionck/MetaRegionVariable";
-import RegionVariable from "coral/regionck/RegionVariable";
-import StructDefsMap from "coral/regionck/StructDefsMap";
-
+import StructTy from "@specs-feup/coral/mir/ty/StructTy";
+import Ty from "@specs-feup/coral/mir/ty/Ty";
+import MetaTy from "@specs-feup/coral/mir/ty/meta/MetaTy";
+import MetaRegionVariable from "@specs-feup/coral/regionck/MetaRegionVariable";
+import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
+import StructDefsMap from "@specs-feup/coral/regionck/StructDefsMap";
 
 export default class MetaStructTy implements MetaTy {
     isConst: boolean;

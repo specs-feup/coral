@@ -1,6 +1,6 @@
-import Path from "coral/mir/path/Path";
-import BorrowKind from "coral/mir/ty/BorrowKind";
-import Ty from "coral/mir/ty/Ty";
+import Path from "@specs-feup/coral/mir/path/Path";
+import BorrowKind from "@specs-feup/coral/mir/ty/BorrowKind";
+import Ty from "@specs-feup/coral/mir/ty/Ty";
 
 class Access {
     mutability: Access.Mutability;

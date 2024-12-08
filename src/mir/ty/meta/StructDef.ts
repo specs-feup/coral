@@ -1,9 +1,9 @@
 import { FunctionJp, RecordJp } from "@specs-feup/clava/api/Joinpoints.js";
-import Ty from "coral/mir/ty/Ty";
-import MetaTy from "coral/mir/ty/meta/MetaTy";
-import LifetimeBoundPragma from "coral/pragma/lifetime/LifetimeBoundPragma";
-import MetaRegionVariable from "coral/regionck/MetaRegionVariable";
-import MetaRegionVariableBound from "coral/regionck/MetaRegionVariableBound";
+import Ty from "@specs-feup/coral/mir/ty/Ty";
+import MetaTy from "@specs-feup/coral/mir/ty/meta/MetaTy";
+import LifetimeBoundPragma from "@specs-feup/coral/pragma/lifetime/LifetimeBoundPragma";
+import MetaRegionVariable from "@specs-feup/coral/regionck/MetaRegionVariable";
+import MetaRegionVariableBound from "@specs-feup/coral/regionck/MetaRegionVariableBound";
 
 /**
  * #pragma coral lf %a
@@ -12,9 +12,9 @@ import MetaRegionVariableBound from "coral/regionck/MetaRegionVariableBound";
  *   int y;
  *   #pragma coral lf inner = %a
  *   #pragma coral lf inner->%a = %a
- *   A *inner; 
+ *   A *inner;
  * }
- * 
+ *
  */
 
 export default class StructDef {

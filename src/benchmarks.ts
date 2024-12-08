@@ -5,10 +5,22 @@ import Clava from "@specs-feup/clava/api/clava/Clava.js";
 import Io from "@specs-feup/lara/api/lara/Io.js";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
-import { Call, Cast, Decl, FunctionJp, FunctionType, IntLiteral, Literal, Op, UnaryOp, Vardecl, Varref } from "@specs-feup/clava/api/Joinpoints.js";
+import {
+    Call,
+    Cast,
+    Decl,
+    FunctionJp,
+    FunctionType,
+    IntLiteral,
+    Literal,
+    Op,
+    UnaryOp,
+    Vardecl,
+    Varref,
+} from "@specs-feup/clava/api/Joinpoints.js";
 import System from "@specs-feup/lara/api/lara/System.js";
-    
-import CoralPipeline from "coral/CoralPipeline";
+
+import CoralPipeline from "@specs-feup/coral/CoralPipeline";
 
 function stringifyReplacer(key: unknown, value: unknown): unknown {
     if (value instanceof Map) {
@@ -88,14 +100,13 @@ class CoralBenchmarkTester {
         prefix: string = "",
         headPrefix: string = "",
     ) {
-        const info = results.total === 0
-            ? "No tests"
-            : (results.failed === 0
-                ? "Pass"
-                : `Failed ${results.failed} out of ${results.total} tests`);
-            
-            
-            
+        const info =
+            results.total === 0
+                ? "No tests"
+                : results.failed === 0
+                  ? "Pass"
+                  : `Failed ${results.failed} out of ${results.total} tests`;
+
         console.log(`${headPrefix}${head} (${info})`);
 
         if (
@@ -140,11 +151,12 @@ class CoralBenchmarkTester {
         prefix: string = "",
         headPrefix: string = "",
     ) {
-        const info = results.total === 0
-            ? "No functions"
-            : (results.failed === 0
-                ? "Pass"
-                : `Failed ${results.failed} out of ${results.total} functions`);
+        const info =
+            results.total === 0
+                ? "No functions"
+                : results.failed === 0
+                  ? "Pass"
+                  : `Failed ${results.failed} out of ${results.total} functions`;
         console.log(`${headPrefix}${head} (${info})`);
 
         if (
@@ -183,9 +195,14 @@ class CoralBenchmarkTester {
                 callSignatures.push(`${call.type.desugarAll.code} ${call.signature}`);
                 callFnNames.push(callName);
             }
-            const externalCalls = subresults.externalCalls.length > 0 ? " [calls: " + callSignatures.join(", ") + "]" : "";
+            const externalCalls =
+                subresults.externalCalls.length > 0
+                    ? " [calls: " + callSignatures.join(", ") + "]"
+                    : "";
 
-            const globalsConverted = subresults.fnWithAddedGlobalsAsParams ? " [globals converted]" : "";
+            const globalsConverted = subresults.fnWithAddedGlobalsAsParams
+                ? " [globals converted]"
+                : "";
 
             console.log(
                 `${prefix}+--> ${subresults.$fn.type.desugarAll.code} ${subresults.$fn.signature} (${subresults.result}) [${subresults.runTime}ns]${ptr}${excp}${globalsConverted}${externalCalls}`,
@@ -221,17 +238,24 @@ class CoralBenchmarkTester {
                 }
             }
             if (!isBlacklisted) {
-                if (completePath.endsWith(".c") || completePath.endsWith(".h") || completePath.endsWith(".cpp") || completePath.endsWith(".hpp")) {
+                if (
+                    completePath.endsWith(".c") ||
+                    completePath.endsWith(".h") ||
+                    completePath.endsWith(".cpp") ||
+                    completePath.endsWith(".hpp")
+                ) {
                     const $file = ClavaJoinPoints.file(completePath);
                     // $file.setRelativeFolderpath(basePath+relativePath+"/.."); TODO this doesn't work
                     Clava.addFile($file);
                 }
             }
-            
         }
     }
 
-    #runFunctionTest($fn: FunctionJp, fnWithAddedGlobalsAsParams: boolean): CoralBenchmarkTester.FunctionTestResults {
+    #runFunctionTest(
+        $fn: FunctionJp,
+        fnWithAddedGlobalsAsParams: boolean,
+    ): CoralBenchmarkTester.FunctionTestResults {
         const result: CoralBenchmarkTester.FunctionTestResults = {
             type: "function-test",
             result: "Pass",
@@ -268,7 +292,6 @@ class CoralBenchmarkTester {
             this.#pipeline.apply();
             endTime = System.nanos();
 
-
             for (const $fn2_ of Query.search("function")) {
                 const $fn2 = $fn2_ as FunctionJp;
                 if ($fn2.isImplementation && $fn2.name === $fn.name) {
@@ -281,7 +304,9 @@ class CoralBenchmarkTester {
                 endTime = System.nanos();
             }
             if (!(e instanceof CoralError)) {
-                console.log(`Fatal error ${this.#fatalErrors++}/${this.#nonFatalErrors} (in function ${ $fn.name })`);
+                console.log(
+                    `Fatal error ${this.#fatalErrors++}/${this.#nonFatalErrors} (in function ${$fn.name})`,
+                );
             } else {
                 this.#nonFatalErrors++;
             }
@@ -323,15 +348,20 @@ class CoralBenchmarkTester {
             new BenchmarkFilterer(result).apply();
 
             for (const $fn of result.parsedFns) {
-                console.log(`Running test ${path} (function ${ $fn.name })`);
-                const fnResult = this.#runFunctionTest($fn, result.fnsWithAddedGlobalsAsParams.some($f => $f.name === $fn.name));
+                console.log(`Running test ${path} (function ${$fn.name})`);
+                const fnResult = this.#runFunctionTest(
+                    $fn,
+                    result.fnsWithAddedGlobalsAsParams.some(($f) => $f.name === $fn.name),
+                );
                 result.content.set($fn.name, fnResult);
                 fnResult.result === "Pass" ? (result.passed += 1) : (result.failed += 1);
                 result.total += 1;
             }
         } catch (e) {
             result.buildError = e;
-            console.log(`Fatal error ${this.#fatalErrors++}/${this.#nonFatalErrors} (in path ${ path })`);
+            console.log(
+                `Fatal error ${this.#fatalErrors++}/${this.#nonFatalErrors} (in path ${path})`,
+            );
         } finally {
             Clava.popAst();
         }
@@ -626,7 +656,8 @@ class BenchmarkFilterer {
             if (!this.filter($fn, this.noArrays)) continue;
             if (!this.filter($fn, this.noFunctionPointers)) continue;
             if (!this.filter($fn, this.noComplexGlobals)) continue;
-            if (!this.filter($fn, ($fn) => !this.#result.alloc_poison.includes($fn.name))) continue;
+            if (!this.filter($fn, ($fn) => !this.#result.alloc_poison.includes($fn.name)))
+                continue;
             this.removeNullPtrTypecasts($fn);
             this.globalsAsParams($fn);
             this.#result.parsedFns.push($fn);
@@ -639,9 +670,8 @@ class BenchmarkFilterer {
 // const rootFolder = Clava.getData().getContextFolder();
 import path from "path";
 import { fileURLToPath } from "url";
-import CoralError from "coral/error/CoralError";
+import CoralError from "@specs-feup/coral/error/CoralError";
 const rootFolder = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-
 
 // CHALLENGES
 // const testFolder = rootFolder + "/in/challenges";
@@ -651,7 +681,6 @@ const rootFolder = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".
 //     .blacklist(["pov.c"])
 //     .includes(["/../challenges_include/include"])
 //     .run();
-
 
 // BENCHMARKS
 const testFolder = rootFolder + "/in/benchmarks";

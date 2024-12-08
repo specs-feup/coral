@@ -1,22 +1,22 @@
-import OutlivesConstraint from "coral/regionck/OutlivesConstraint";
-import RegionVariable from "coral/regionck/RegionVariable";
-import Regionck from "coral/regionck/Regionck";
-import PathDeref from "coral/mir/path/PathDeref";
-import Ty from "coral/mir/ty/Ty";
-import RefTy from "coral/mir/ty/RefTy";
-import BuiltinTy from "coral/mir/ty/BuiltinTy";
-import StructTy from "coral/mir/ty/StructTy";
-import Variance from "coral/mir/ty/Variance";
-import BorrowKind from "coral/mir/ty/BorrowKind";
-import Loan from "coral/mir/Loan";
+import OutlivesConstraint from "@specs-feup/coral/regionck/OutlivesConstraint";
+import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
+import Regionck from "@specs-feup/coral/regionck/Regionck";
+import PathDeref from "@specs-feup/coral/mir/path/PathDeref";
+import Ty from "@specs-feup/coral/mir/ty/Ty";
+import RefTy from "@specs-feup/coral/mir/ty/RefTy";
+import BuiltinTy from "@specs-feup/coral/mir/ty/BuiltinTy";
+import StructTy from "@specs-feup/coral/mir/ty/StructTy";
+import Variance from "@specs-feup/coral/mir/ty/Variance";
+import BorrowKind from "@specs-feup/coral/mir/ty/BorrowKind";
+import Loan from "@specs-feup/coral/mir/Loan";
 import { GraphTransformation } from "clava-flow/graph/Graph";
 import BaseGraph from "clava-flow/graph/BaseGraph";
-import CoralGraph from "coral/graph/CoralGraph";
+import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
-import CoralNode from "coral/graph/CoralNode";
+import CoralNode from "@specs-feup/coral/graph/CoralNode";
 import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
-import LifetimeBoundPragma from "coral/pragma/lifetime/LifetimeBoundPragma";
-import CoralPragma from "coral/pragma/CoralPragma";
+import LifetimeBoundPragma from "@specs-feup/coral/pragma/lifetime/LifetimeBoundPragma";
+import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
 
 export default class ConstraintGenerator implements GraphTransformation {
     #regionck?: Regionck;
@@ -46,12 +46,17 @@ export default class ConstraintGenerator implements GraphTransformation {
         this.#inferConstraints();
 
         if (this.#debug) {
-            console.log(`Constraint Set for ${this.#targetFunction.jp.name} after inference:`);
+            console.log(
+                `Constraint Set for ${this.#targetFunction.jp.name} after inference:`,
+            );
             console.log(this.#regionck!.debugInfo());
         }
     }
 
-    #processFunction(functionEntry: FunctionEntryNode.Class, coralGraph: CoralGraph.Class) {
+    #processFunction(
+        functionEntry: FunctionEntryNode.Class,
+        coralGraph: CoralGraph.Class,
+    ) {
         for (const region of this.#regionck!.universalRegionVars) {
             region.points.add(`end(${region.name})`);
         }
@@ -95,7 +100,7 @@ export default class ConstraintGenerator implements GraphTransformation {
             for (const call of coralNode.fnCalls) {
                 const successor = this.#getSuccessor(coralNode);
                 const calleeNode = coralGraph.getFunction(call.$functionJp.name);
-                
+
                 let bounds: LifetimeBoundPragma[] | undefined;
                 if (calleeNode === undefined) {
                     bounds = [];
@@ -117,7 +122,7 @@ export default class ConstraintGenerator implements GraphTransformation {
                     const calleeRegionck = coralGraph.getRegionck(calleeNode);
                     bounds = calleeRegionck.bounds;
                 }
-                
+
                 for (const bound of bounds) {
                     const sup = call.lifetimes.get(bound.name);
                     const sub = call.lifetimes.get(bound.bound!);
@@ -127,18 +132,12 @@ export default class ConstraintGenerator implements GraphTransformation {
                         );
                     }
 
-                    this.#relateRegions(
-                        sub,
-                        sup,
-                        Variance.CO,
-                        successor,
-                        coralNode.jp,
-                    );
+                    this.#relateRegions(sub, sup, Variance.CO, successor, coralNode.jp);
                 }
             }
         }
     }
-    
+
     #getSuccessor(node: CoralNode.Class): CoralNode.Class {
         const successors = node.outgoers.map((e) => e.target);
         if (successors.length != 1) {

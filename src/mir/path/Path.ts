@@ -1,5 +1,5 @@
 import { Expression, Joinpoint, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
-import Ty from "coral/mir/ty/Ty";
+import Ty from "@specs-feup/coral/mir/ty/Ty";
 
 /**
  * A path to a value, such as `a` or `(*x).y`.

@@ -1,13 +1,10 @@
-import CoralError from "coral/error/CoralError";
-import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
-import Access from "coral/mir/Access";
+import CoralError from "@specs-feup/coral/error/CoralError";
+import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
+import Access from "@specs-feup/coral/mir/Access";
 import { Joinpoint, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 
 export default class MoveBehindReferenceError extends CoralError {
-    constructor(
-        $invalidUse: Joinpoint,
-        access: Access,
-    ) {
+    constructor($invalidUse: Joinpoint, access: Access) {
         super(
             new ErrorMessageBuilder(
                 `Cannot move out of '${access.path.toString()}' which is behind a reference`,

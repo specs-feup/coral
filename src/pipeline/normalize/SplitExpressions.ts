@@ -8,6 +8,7 @@ import {
     Expression,
     If,
     Joinpoint,
+    LabelDecl,
     Literal,
     Loop,
     MemberAccess,
@@ -25,35 +26,13 @@ import {
     Varref,
 } from "@specs-feup/clava/api/Joinpoints.js";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
-import CoralNormalizer from "coral/normalize/CoralNormalizer";
+import { NormalizationContext, NormalizationPass } from "@specs-feup/coral/pipeline/CoralNormalizer";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 
-export default class SplitExpressions implements CoralNormalizer.Pass {
-    tempVarCounter: number;
-    #varNamePrefix: string;
-    #labelSuffix: string;
-    labelCounter: number;
+export default class SplitExpressions implements NormalizationPass<typeof Statement> {
+    query = Statement;
 
-    constructor(
-        tempVarCounter: number = 0,
-        labelCounter: number = 0,
-        varNamePrefix: string = "__coral_tmp_",
-        labelSuffix: string = "__coral_label_",
-    ) {
-        this.tempVarCounter = tempVarCounter;
-        this.#varNamePrefix = varNamePrefix;
-        this.labelCounter = labelCounter;
-        this.#labelSuffix = labelSuffix;
-    }
-
-    apply($jp: Joinpoint) {
-        if (!($jp instanceof Statement)) {
-            for (const $stmt of Query.searchFrom($jp, "statement")) {
-                this.apply($stmt as Statement);
-            }
-            return;
-        }
-
+    apply($jp: Statement, context: NormalizationContext) {
         if ($jp.parent instanceof Loop) {
             // While loops have a statement jointpoint for the condition
             // which should not be considered a statement
@@ -61,36 +40,28 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
         }
 
         if ($jp instanceof Switch) {
-            this.#splitNonLvalue($jp, $jp.condition);
+            this.#splitNonLvalue($jp, $jp.condition, context);
         } else if ($jp instanceof If) {
-            this.#splitNonLvalue($jp, $jp.cond);
+            this.#splitNonLvalue($jp, $jp.cond, context);
         } else if ($jp instanceof Loop) {
             if ($jp.kind === "while") {
-                const label = ClavaJoinPoints.labelDecl(this.#getLabelName());
-                $jp.insertBefore(ClavaJoinPoints.labelStmt(label));
-                this.#splitNonLvalue($jp, ($jp.cond as ExprStmt).expr);
-
-                $jp.body.insertEnd(ClavaJoinPoints.gotoStmt(label));
-                for (const $continueJp of Query.searchFrom($jp, "continue")) {
-                    const $continue = $continueJp as Continue;
-                    let $parentLoop: Joinpoint = $continue.parent;
-                    while (!($parentLoop instanceof Loop)) {
-                        $parentLoop = $parentLoop.parent;
-                    }
-                    if ($parentLoop.astId !== $jp.astId) {
-                        continue;
-                    }
-                    ($continueJp as Continue).replaceWith(ClavaJoinPoints.gotoStmt(label));
-                }
+                const $label = ClavaJoinPoints.labelDecl(context.generateLabelName());
+                $jp.insertBefore(ClavaJoinPoints.labelStmt($label));
+                this.#splitNonLvalue($jp, ($jp.cond as ExprStmt).expr, context);
+                $jp.body.insertEnd(ClavaJoinPoints.gotoStmt($label));
+                this.#replaceContinue($jp, $label);
             } else if ($jp.kind === "dowhile") {
                 const $condGenerator = $jp.cond.copy() as Statement;
                 $jp.body.insertEnd($condGenerator);
-                const label = ClavaJoinPoints.labelDecl(this.#getLabelName());
-                $condGenerator.insertBefore(ClavaJoinPoints.labelStmt(label));
-                this.#splitNonLvalue($condGenerator, ($jp.cond as ExprStmt).expr);
-                
+                const $label = ClavaJoinPoints.labelDecl(context.generateLabelName());
+                $condGenerator.insertBefore(ClavaJoinPoints.labelStmt($label));
+                this.#splitNonLvalue($condGenerator, ($jp.cond as ExprStmt).expr, context);
+
                 // `while` cannot use variables declared inside the `do` scope
-                const $vardecl = ClavaJoinPoints.varDeclNoInit(this.#getTempVarName(), ($jp.cond as ExprStmt).expr.type);
+                const $vardecl = ClavaJoinPoints.varDeclNoInit(
+                    context.generateVarName(),
+                    ($jp.cond as ExprStmt).expr.type,
+                );
                 $jp.insertBefore($vardecl);
                 $condGenerator.insertBefore(
                     ClavaJoinPoints.exprStmt(
@@ -102,26 +73,15 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
                 );
                 $condGenerator.detach();
                 ($jp.cond as ExprStmt).expr.replaceWith(ClavaJoinPoints.varRef($vardecl));
-                
 
-                for (const $continueJp of Query.searchFrom($jp, "continue")) {
-                    const $continue = $continueJp as Continue;
-                    let $parentLoop: Joinpoint = $continue.parent;
-                    while (!($parentLoop instanceof Loop)) {
-                        $parentLoop = $parentLoop.parent;
-                    }
-                    if ($parentLoop.astId !== $jp.astId) {
-                        continue;
-                    }
-                    ($continueJp as Continue).replaceWith(ClavaJoinPoints.gotoStmt(label));
-                }
+                this.#replaceContinue($jp, $label);
             }
         } else if ($jp instanceof ReturnStmt) {
-            this.#splitNonLvalue($jp, $jp.returnExpr);
+            this.#splitNonLvalue($jp, $jp.returnExpr, context);
         } else if ($jp instanceof DeclStmt) {
             for (const $vardecl of $jp.decls) {
                 if ($vardecl instanceof Vardecl && $vardecl.hasInit) {
-                    this.#splitInner($jp, $vardecl.init);
+                    this.#splitInner($jp, $vardecl.init, context);
                 }
             }
         } else if ($jp instanceof ExprStmt) {
@@ -131,32 +91,53 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
             }
 
             if ($expr instanceof BinaryOp && $expr.isAssignment) {
-                this.#splitEverything($jp, $expr.right);
-                this.#splitNonLvalue($jp, $expr.left);
+                this.#splitEverything($jp, $expr.right, context);
+                this.#splitNonLvalue($jp, $expr.left, context);
             } else {
-                this.#splitInner($jp, $expr);
+                this.#splitInner($jp, $expr, context);
             }
         }
     }
 
-    #splitEverything($targetStmt: Statement, $expr: Expression) {
-        if ($expr instanceof ParenExpr) {
-            this.#splitEverything($targetStmt, $expr.subExpr);
-        } else if (!($expr instanceof Literal)) {
-            this.#split($targetStmt, $expr);
+    #replaceContinue($jp: Loop, $label: LabelDecl) {
+        for (const $continue of Query.searchFrom($jp, Continue)) {
+            let $parentLoop: Joinpoint = $continue.parent;
+            while (!($parentLoop instanceof Loop)) {
+                $parentLoop = $parentLoop.parent;
+            }
+            if ($parentLoop.astId !== $jp.astId) {
+                continue;
+            }
+            $continue.replaceWith(ClavaJoinPoints.gotoStmt($label));
         }
     }
 
-    #splitNonLvalue($targetStmt: Statement, $expr: Expression) {
+    #splitEverything(
+        $targetStmt: Statement,
+        $expr: Expression,
+        context: NormalizationContext,
+    ) {
         if ($expr instanceof ParenExpr) {
-            this.#splitNonLvalue($targetStmt, $expr.subExpr);
+            this.#splitEverything($targetStmt, $expr.subExpr, context);
+        } else if (!($expr instanceof Literal)) {
+            this.#split($targetStmt, $expr, context);
+        }
+    }
+
+    #splitNonLvalue(
+        $targetStmt: Statement,
+        $expr: Expression,
+        context: NormalizationContext,
+    ) {
+        if ($expr instanceof ParenExpr) {
+            this.#splitNonLvalue($targetStmt, $expr.subExpr, context);
         } else if ($expr instanceof MemberAccess) {
-            this.#splitNonLvalue($targetStmt, $expr.base);
+            this.#splitNonLvalue($targetStmt, $expr.base, context);
         } else if ($expr instanceof UnaryOp) {
             if ($expr.operator === "*") {
-                this.#splitNonLvalue($targetStmt, $expr.operand);
+                this.#splitNonLvalue($targetStmt, $expr.operand, context);
             } else {
-                this.#split($targetStmt, $expr);
+                this.#split($targetStmt, $expr, context);
             }
         } else if (
             $expr instanceof TernaryOp ||
@@ -164,31 +145,35 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
             $expr instanceof Call ||
             $expr instanceof Cast
         ) {
-            this.#split($targetStmt, $expr);
+            this.#split($targetStmt, $expr, context);
         }
     }
 
-    #splitInner($targetStmt: Statement, $expr: Expression): Expression {
+    #splitInner(
+        $targetStmt: Statement,
+        $expr: Expression,
+        context: NormalizationContext,
+    ): Expression {
         if ($expr instanceof ParenExpr) {
-            this.#splitInner($targetStmt, $expr.subExpr);
+            this.#splitInner($targetStmt, $expr.subExpr, context);
         } else if ($expr instanceof MemberAccess) {
-            this.#splitNonLvalue($targetStmt, $expr.base);
+            this.#splitNonLvalue($targetStmt, $expr.base, context);
         } else if ($expr instanceof UnaryExprOrType) {
-            const inner = $expr.children[0];
             if ($expr.children.length > 0 && $expr.children[0] instanceof Expression) {
-                this.#splitNonLvalue($targetStmt, $expr.children[0]);
+                this.#splitNonLvalue($targetStmt, $expr.children[0], context);
             }
         } else if ($expr instanceof UnaryOp) {
-            this.#splitNonLvalue($targetStmt, $expr.operand);
+            this.#splitNonLvalue($targetStmt, $expr.operand, context);
             if (
                 $expr.kind === "post_inc" ||
                 $expr.kind === "post_dec" ||
                 $expr.kind === "pre_inc" ||
                 $expr.kind === "pre_dec"
             ) {
-                const operator = ($expr.kind === "post_inc" || $expr.kind === "pre_inc") ? "+" : "-";
+                const operator =
+                    $expr.kind === "post_inc" || $expr.kind === "pre_inc" ? "+" : "-";
                 const $vardecl = ClavaJoinPoints.varDecl(
-                    this.#getTempVarName(),
+                    context.generateVarName(),
                     $expr.operand,
                 );
                 const $assign = ClavaJoinPoints.exprStmt(
@@ -205,18 +190,18 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
                 $targetStmt.insertBefore($assign);
 
                 const $newExpr =
-                    ($expr.kind === "post_inc" || $expr.kind === "post_dec")
+                    $expr.kind === "post_inc" || $expr.kind === "post_dec"
                         ? ClavaJoinPoints.varRef($vardecl)
                         : $expr.operand;
                 $expr.replaceWith($newExpr);
-                return ($expr.kind === "post_inc" || $expr.kind === "post_dec")
+                return $expr.kind === "post_inc" || $expr.kind === "post_dec"
                     ? ClavaJoinPoints.varRef($vardecl)
                     : $expr.operand;
             }
         } else if ($expr instanceof BinaryOp) {
             if ($expr.isAssignment) {
-                const $varref = this.#split($targetStmt, $expr.right);
-                this.#splitNonLvalue($targetStmt, $expr.left);
+                const $varref = this.#split($targetStmt, $expr.right, context);
+                this.#splitNonLvalue($targetStmt, $expr.left, context);
 
                 const $assign = ClavaJoinPoints.exprStmt(
                     ClavaJoinPoints.assign($expr.left, $varref),
@@ -226,17 +211,17 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
                 $expr.replaceWith($varref);
                 return $varref;
             } else if ($expr.operator === ",") {
-                this.#split($targetStmt, $expr.left);
-                this.#splitInner($targetStmt, $expr.right);
+                this.#split($targetStmt, $expr.left, context);
+                this.#splitInner($targetStmt, $expr.right, context);
                 $expr.replaceWith($expr.right);
                 return $expr.right;
             } else {
-                this.#splitEverything($targetStmt, $expr.left);
-                this.#splitEverything($targetStmt, $expr.right);
+                this.#splitEverything($targetStmt, $expr.left, context);
+                this.#splitEverything($targetStmt, $expr.right, context);
             }
         } else if ($expr instanceof TernaryOp) {
             const $resultVardecl = ClavaJoinPoints.varDeclNoInit(
-                this.#getTempVarName(),
+                context.generateVarName(),
                 $expr.trueExpr.type,
             );
 
@@ -254,17 +239,17 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
             const $thenGenerator = ClavaJoinPoints.comment("ifTrue").stmt;
             const $elseGenerator = ClavaJoinPoints.comment("ifFalse").stmt;
             const $ifStmt = ClavaJoinPoints.ifStmt(
-                this.#split($targetStmt, $expr.cond),
+                this.#split($targetStmt, $expr.cond, context),
                 $thenGenerator,
                 $elseGenerator,
             );
 
-            const $trueVarref = this.#split($thenGenerator, $expr.trueExpr);
+            const $trueVarref = this.#split($thenGenerator, $expr.trueExpr, context);
             $thenGenerator.insertBefore(
                 ClavaJoinPoints.assign($resultVarref, $trueVarref),
             );
 
-            const $falseVarref = this.#split($elseGenerator, $expr.falseExpr);
+            const $falseVarref = this.#split($elseGenerator, $expr.falseExpr, context);
             $elseGenerator.insertBefore(
                 ClavaJoinPoints.assign($resultVarref, $falseVarref),
             );
@@ -284,35 +269,33 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
                 if (this.#isLvalue($arg) && $arg.type.isPointer) {
                     lastArgs.push($arg);
                 } else {
-                    this.#splitEverything($targetStmt, $arg);
+                    this.#splitEverything($targetStmt, $arg, context);
                 }
             }
 
             for (const $arg of lastArgs) {
-                this.#splitEverything($targetStmt, $arg);
+                this.#splitEverything($targetStmt, $arg, context);
             }
         } else if ($expr instanceof Cast) {
-            this.#splitNonLvalue($targetStmt, $expr.subExpr);
+            this.#splitNonLvalue($targetStmt, $expr.subExpr, context);
         }
 
         return $expr;
     }
 
-    #getTempVarName() {
-        return `${this.#varNamePrefix}${this.tempVarCounter++}`;
-    }
-
-    #getLabelName() {
-        return `${this.#labelSuffix}${this.labelCounter++}`;
-    }
-
-    #split($targetStmt: Statement, $expr: Expression): Expression {
-        $expr = this.#splitInner($targetStmt, $expr);
+    #split(
+        $targetStmt: Statement,
+        $expr: Expression,
+        context: NormalizationContext,
+    ): Expression {
+        $expr = this.#splitInner($targetStmt, $expr, context);
         if ($expr.parent !== undefined) {
-            const varName = this.#getTempVarName();
-            const $vardecl = ClavaJoinPoints.varDecl(varName, $expr);
+            const $vardecl = ClavaJoinPoints.varDecl(context.generateVarName(), $expr);
 
-            if (($expr instanceof UnaryOp && $expr.operator === "&") || $expr instanceof Varref) {
+            if (
+                ($expr instanceof UnaryOp && $expr.operator === "&") ||
+                $expr instanceof Varref
+            ) {
                 if (this.#canBeConst($expr)) {
                     let $vardeclType = $vardecl.type.desugarAll;
                     while ($vardeclType instanceof QualType) {
@@ -373,7 +356,10 @@ export default class SplitExpressions implements CoralNormalizer.Pass {
                 return true;
             }
         } else if ($parent instanceof TernaryOp) {
-            if ($parent.trueExpr.astId === $expr.astId || $parent.falseExpr.astId === $expr.astId) {
+            if (
+                $parent.trueExpr.astId === $expr.astId ||
+                $parent.falseExpr.astId === $expr.astId
+            ) {
                 return this.#canBeConst($parent);
             }
         } else if ($parent instanceof Vardecl) {

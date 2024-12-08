@@ -1,8 +1,13 @@
-import CoralError from "coral/error/CoralError";
-import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
-import Access from "coral/mir/Access";
-import { FunctionJp, Joinpoint, Type, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
-import Path from "coral/mir/path/Path";
+import CoralError from "@specs-feup/coral/error/CoralError";
+import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
+import Access from "@specs-feup/coral/mir/Access";
+import {
+    FunctionJp,
+    Joinpoint,
+    Type,
+    Vardecl,
+} from "@specs-feup/clava/api/Joinpoints.js";
+import Path from "@specs-feup/coral/mir/path/Path";
 
 export default class DropInconsistentStructError extends CoralError {
     constructor($dropLocation: Joinpoint, path: Path, $dropFunction: FunctionJp) {

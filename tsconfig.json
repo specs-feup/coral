@@ -5,7 +5,7 @@
         "outDir": "out/src",
         "declaration": true,
         "strict": true,
-        "allowJs": true,
+        "allowJs": false,
         "moduleResolution": "NodeNext",
         "sourceMap": true,
         "declarationMap": true,
@@ -13,7 +13,7 @@
         "forceConsistentCasingInFileNames": true,
         "noFallthroughCasesInSwitch": true,
         "paths": {
-            "coral/*": ["./src/*.js"]
+            "@specs-feup/coral/*": ["./src/*.ts"]
         }
         //"esModuleInterop": true
     },

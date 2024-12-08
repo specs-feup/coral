@@ -4,8 +4,8 @@ import Query from "@specs-feup/lara/api/weaver/Query.js";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
 import { Call, FunctionJp, Joinpoint, Pragma } from "@specs-feup/clava/api/Joinpoints.js";
 
-import CoralPipeline from "coral/CoralPipeline";
-import CoralError from "coral/error/CoralError";
+import CoralPipeline from "@specs-feup/coral/CoralPipeline";
+import CoralError from "@specs-feup/coral/error/CoralError";
 
 function stringifyReplacer(key: unknown, value: unknown): unknown {
     if (value instanceof Map) {
@@ -118,7 +118,10 @@ class CoralTester {
 
     #printResults(results: CoralTester.TestCaseResults) {
         if (this.#writeTo !== undefined) {
-            Io.writeFile(this.#writeTo + "/stats.json", JSON.stringify(results, stringifyReplacer, 4));
+            Io.writeFile(
+                this.#writeTo + "/stats.json",
+                JSON.stringify(results, stringifyReplacer, 4),
+            );
         }
 
         console.log("\n\n========== Test results: ==========");
@@ -211,7 +214,7 @@ class CoralTester {
             initTime = System.nanos();
             this.#pipeline.apply();
             endTime = System.nanos();
-            
+
             if (this.#writeTo !== undefined) {
                 let writeTo = this.#writeTo + "/" + path;
                 if (singleFile) {

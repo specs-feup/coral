@@ -40,32 +40,32 @@ import {
     Vardecl,
     Varref,
 } from "@specs-feup/clava/api/Joinpoints.js";
-import LifetimeReassignmentError from "coral/error/struct/LifetimeReassignmentError";
-import UnexpectedLifetimeAssignmentError from "coral/error/struct/UnexpectedLifetimeAssignmentError";
-import CoralGraph from "coral/graph/CoralGraph";
-import CoralNode from "coral/graph/CoralNode";
-import Access from "coral/mir/Access";
-import FunctionCall from "coral/mir/FunctionCall";
-import Loan from "coral/mir/Loan";
-import Path from "coral/mir/path/Path";
-import PathDeref from "coral/mir/path/PathDeref";
-import PathMemberAccess from "coral/mir/path/PathMemberAccess";
-import PathVarRef from "coral/mir/path/PathVarRef";
-import BorrowKind from "coral/mir/ty/BorrowKind";
-import BuiltinTy from "coral/mir/ty/BuiltinTy";
-import RefTy from "coral/mir/ty/RefTy";
-import StructTy from "coral/mir/ty/StructTy";
-import Ty from "coral/mir/ty/Ty";
-import InferLifetimeBounds from "coral/pass/InferLifetimeBounds";
-import CoralPragma from "coral/pragma/CoralPragma";
-import LifetimeBoundPragma from "coral/pragma/lifetime/LifetimeBoundPragma";
-import LifetimeAssignmentPragma from "coral/pragma/lifetime/LifetimeAssignmentPragma";
-import LfPath from "coral/pragma/lifetime/path/LfPath";
-import LfPathDeref from "coral/pragma/lifetime/path/LfPathDeref";
-import LfPathMemberAccess from "coral/pragma/lifetime/path/LfPathMemberAccess";
-import LfPathVarRef from "coral/pragma/lifetime/path/LfPathVarRef";
-import RegionVariable from "coral/regionck/RegionVariable";
-import Regionck from "coral/regionck/Regionck";
+import LifetimeReassignmentError from "@specs-feup/coral/error/struct/LifetimeReassignmentError";
+import UnexpectedLifetimeAssignmentError from "@specs-feup/coral/error/struct/UnexpectedLifetimeAssignmentError";
+import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
+import CoralNode from "@specs-feup/coral/graph/CoralNode";
+import Access from "@specs-feup/coral/mir/Access";
+import FunctionCall from "@specs-feup/coral/mir/FunctionCall";
+import Loan from "@specs-feup/coral/mir/Loan";
+import Path from "@specs-feup/coral/mir/path/Path";
+import PathDeref from "@specs-feup/coral/mir/path/PathDeref";
+import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
+import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
+import BorrowKind from "@specs-feup/coral/mir/ty/BorrowKind";
+import BuiltinTy from "@specs-feup/coral/mir/ty/BuiltinTy";
+import RefTy from "@specs-feup/coral/mir/ty/RefTy";
+import StructTy from "@specs-feup/coral/mir/ty/StructTy";
+import Ty from "@specs-feup/coral/mir/ty/Ty";
+import InferLifetimeBounds from "@specs-feup/coral/pass/InferLifetimeBounds";
+import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
+import LifetimeBoundPragma from "@specs-feup/coral/pragma/lifetime/LifetimeBoundPragma";
+import LifetimeAssignmentPragma from "@specs-feup/coral/pragma/lifetime/LifetimeAssignmentPragma";
+import LfPath from "@specs-feup/coral/pragma/lifetime/path/LfPath";
+import LfPathDeref from "@specs-feup/coral/pragma/lifetime/path/LfPathDeref";
+import LfPathMemberAccess from "@specs-feup/coral/pragma/lifetime/path/LfPathMemberAccess";
+import LfPathVarRef from "@specs-feup/coral/pragma/lifetime/path/LfPathVarRef";
+import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
+import Regionck from "@specs-feup/coral/regionck/Regionck";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
 
@@ -86,7 +86,7 @@ export default class GraphAnnotator implements GraphTransformation {
         }
     }
 
-    #annotateFunction(functionEntry: FunctionEntryNode.Class) {        
+    #annotateFunction(functionEntry: FunctionEntryNode.Class) {
         this.#annotateFunctionSignature(functionEntry.jp);
 
         for (const node of functionEntry.reachableNodes) {
@@ -135,9 +135,12 @@ export default class GraphAnnotator implements GraphTransformation {
 
     #annotateFunctionSignature($jp: FunctionJp) {
         const coralPragmas = CoralPragma.parse($jp.pragmas);
-        
+
         // Static lifetime
-        const staticRegionVar = this.#regionck!.newRegionVar(RegionVariable.Kind.UNIVERSAL, "%static");
+        const staticRegionVar = this.#regionck!.newRegionVar(
+            RegionVariable.Kind.UNIVERSAL,
+            "%static",
+        );
 
         // Lifetime Bounds
         const potentialBoundPragmas = coralPragmas.filter(
@@ -152,7 +155,7 @@ export default class GraphAnnotator implements GraphTransformation {
             }
             this.#regionck!.bounds.push(lifetimeBoundPragma);
         }
-        
+
         // Lifetime assignments
         const potentialAssignmentPragmas = coralPragmas.filter(
             (p) =>
@@ -165,7 +168,7 @@ export default class GraphAnnotator implements GraphTransformation {
         let lifetimeAssignments = new Map<
             string,
             [LfPath, RegionVariable, LifetimeAssignmentPragma][]
-            >();
+        >();
         let lifetimes = new Map<string, RegionVariable>();
         lifetimes.set("%static", staticRegionVar);
         for (const lifetimeAssignmentPragma of lifetimeAssignmentPragmas) {
@@ -178,9 +181,11 @@ export default class GraphAnnotator implements GraphTransformation {
                 );
                 lifetimes.set(lifetimeAssignmentPragma.rhs, regionVar);
             }
-            
+
             if (lifetimeAssignments.has(lfPath.varName)) {
-                lifetimeAssignments.get(lfPath.varName)!.push([lfPath, regionVar, lifetimeAssignmentPragma]);
+                lifetimeAssignments
+                    .get(lfPath.varName)!
+                    .push([lfPath, regionVar, lifetimeAssignmentPragma]);
             } else {
                 lifetimeAssignments.set(lfPath.varName, [
                     [lfPath, regionVar, lifetimeAssignmentPragma],
@@ -190,7 +195,8 @@ export default class GraphAnnotator implements GraphTransformation {
 
         // Inference is only done if there are explicit no pragmas
         if (lifetimeAssignmentPragmas.length === 0 && lifetimeBoundPragmas.length === 0) {
-            this.#regionck!.inferLifetimeBoundsState = InferLifetimeBounds.FunctionState.NOT_VISITED;
+            this.#regionck!.inferLifetimeBoundsState =
+                InferLifetimeBounds.FunctionState.NOT_VISITED;
         }
 
         const takenLifetimeNames = new Set(lifetimes.keys());
@@ -201,7 +207,7 @@ export default class GraphAnnotator implements GraphTransformation {
             lifetimeAssignments.get("return"),
             RegionVariable.Kind.UNIVERSAL,
             takenLifetimeNames,
-            "return"
+            "return",
         );
         this.#regionck!.registerReturnTy(returnTy);
 
@@ -305,7 +311,12 @@ export default class GraphAnnotator implements GraphTransformation {
         } else if ($expr instanceof MemberAccess) {
             return this.#annotateReadAccess(node, $expr);
         } else if ($expr instanceof Cast) {
-            if ($expr.type.isPointer || $expr.type.isArray || $expr.subExpr.type.isPointer || $expr.subExpr.type.isArray) {
+            if (
+                $expr.type.isPointer ||
+                $expr.type.isArray ||
+                $expr.subExpr.type.isPointer ||
+                $expr.subExpr.type.isArray
+            ) {
                 // TODO
                 throw new Error("Casts to pointers or arrays are not supported");
             }
@@ -355,11 +366,7 @@ export default class GraphAnnotator implements GraphTransformation {
         }
     }
 
-    #annotateReference(
-        node: CoralNode.Class,
-        $expr: Expression,
-        reborrow: boolean,
-    ) {
+    #annotateReference(node: CoralNode.Class, $expr: Expression, reborrow: boolean) {
         let $parent = $expr.parent;
         while ($parent instanceof ParenExpr) {
             $parent = $parent.parent;
@@ -373,16 +380,15 @@ export default class GraphAnnotator implements GraphTransformation {
             loanedPath = new PathDeref($loanedPathJp, this.#parseLvalue($expr));
         }
 
-        if ($parent instanceof BinaryOp && ["lt", "gt", "le", "ge", "eq", "ne"].indexOf($parent.kind) !== -1) {
+        if (
+            $parent instanceof BinaryOp &&
+            ["lt", "gt", "le", "ge", "eq", "ne"].indexOf($parent.kind) !== -1
+        ) {
             // We are comparing pointers, this is not a borrow
             // It still is an access though
             // TODO check if this access is correct
             node.accesses.push(
-                new Access(
-                    loanedPath,
-                    Access.Mutability.BORROW,
-                    Access.Depth.DEEP,
-                ),
+                new Access(loanedPath, Access.Mutability.BORROW, Access.Depth.DEEP),
             );
             return undefined;
         }
@@ -395,7 +401,9 @@ export default class GraphAnnotator implements GraphTransformation {
         } else if ($parent instanceof ReturnStmt) {
             leftTy = this.#regionck!.getReturnTy();
         } else if ($parent instanceof Call) {
-            const fnCall = node.fnCalls.find((fnCall) => fnCall.$callJp.astId === $parent.astId);
+            const fnCall = node.fnCalls.find(
+                (fnCall) => fnCall.$callJp.astId === $parent.astId,
+            );
             if (fnCall === undefined) {
                 throw new Error("Function call not found");
             }
@@ -405,7 +413,7 @@ export default class GraphAnnotator implements GraphTransformation {
             if (paramIndex === -1) {
                 throw new Error("Parameter not found");
             }
-            
+
             leftTy = fnCall.paramTys[paramIndex];
         } else {
             console.log($parent.code);
@@ -433,7 +441,7 @@ export default class GraphAnnotator implements GraphTransformation {
                 Access.Depth.DEEP,
             ),
         );
-        
+
         return loan.loanedRefTy;
     }
 
@@ -587,7 +595,13 @@ export default class GraphAnnotator implements GraphTransformation {
                         throw new Error("Unhandled LfPath");
                     },
                 );
-            const inner = this.#parseType($type.pointee, innerLfs, regionType, takenLifetimeNames, `(*${newPragmaLhs})`);
+            const inner = this.#parseType(
+                $type.pointee,
+                innerLfs,
+                regionType,
+                takenLifetimeNames,
+                `(*${newPragmaLhs})`,
+            );
             if (inner.isConst && isRestrict) {
                 throw new Error("Cannot have a restrict pointer to a const type");
             }
@@ -599,7 +613,11 @@ export default class GraphAnnotator implements GraphTransformation {
             }
             let regionVar: RegionVariable;
             if (outer.length === 0) {
-                regionVar = this.#generateRegionVar(regionType, takenLifetimeNames, newPragmaLhs);
+                regionVar = this.#generateRegionVar(
+                    regionType,
+                    takenLifetimeNames,
+                    newPragmaLhs,
+                );
             } else {
                 regionVar = outer[0][1];
             }
@@ -700,7 +718,11 @@ export default class GraphAnnotator implements GraphTransformation {
         }
     }
 
-    #generateRegionVar(regionType: RegionVariable.Kind, takenLifetimeNames: Set<string>, newPragmaLhs: string): RegionVariable {
+    #generateRegionVar(
+        regionType: RegionVariable.Kind,
+        takenLifetimeNames: Set<string>,
+        newPragmaLhs: string,
+    ): RegionVariable {
         if (regionType === RegionVariable.Kind.UNIVERSAL) {
             let i = 0;
             while (takenLifetimeNames.has(`%tmp${i}`)) {
@@ -714,14 +736,14 @@ export default class GraphAnnotator implements GraphTransformation {
             );
             return this.#regionck!.newRegionVar(regionType, name);
         }
-        
+
         return this.#regionck!.newRegionVar(regionType);
     }
 
     #parseLvalue($expr: Expression): Path {
         if ($expr instanceof Varref) {
             const ty = this.#regionck!.getTy($expr.vardecl);
-            // TODO will there not be a problem if the order of node 
+            // TODO will there not be a problem if the order of node
             //      visit (varref vs vardecl) is different ?
             if (ty === undefined) {
                 throw new Error("Variable " + $expr.name + " not found");

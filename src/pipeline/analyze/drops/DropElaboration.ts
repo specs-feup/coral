@@ -4,15 +4,15 @@ import BaseGraph from "clava-flow/graph/BaseGraph";
 import { GraphTransformation } from "clava-flow/graph/Graph";
 import { Joinpoint, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
-import CoralGraph from "coral/graph/CoralGraph";
-import CoralNode from "coral/graph/CoralNode";
-import DropNode from "coral/graph/DropNode";
-import Access from "coral/mir/Access";
-import Path from "coral/mir/path/Path";
-import PathMemberAccess from "coral/mir/path/PathMemberAccess";
-import PathVarRef from "coral/mir/path/PathVarRef";
-import StructTy from "coral/mir/ty/StructTy";
-import Ty from "coral/mir/ty/Ty";
+import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
+import CoralNode from "@specs-feup/coral/graph/CoralNode";
+import DropNode from "@specs-feup/coral/graph/DropNode";
+import Access from "@specs-feup/coral/mir/Access";
+import Path from "@specs-feup/coral/mir/path/Path";
+import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
+import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
+import StructTy from "@specs-feup/coral/mir/ty/StructTy";
+import Ty from "@specs-feup/coral/mir/ty/Ty";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 
 class DropElaboration implements GraphTransformation {
@@ -59,7 +59,9 @@ class DropElaboration implements GraphTransformation {
             let $dropCall = `${$dropFn.name}(&${path.toString()});`;
 
             if (dropNode.dropIsConditional) {
-                const $dropFlag = ClavaJoinPoints.varRef(this.#getDropFlag(path, functionEntry));
+                const $dropFlag = ClavaJoinPoints.varRef(
+                    this.#getDropFlag(path, functionEntry),
+                );
                 $dropCall = `if (${$dropFlag.code}) {${$dropCall}}`;
             }
 
@@ -126,7 +128,9 @@ class DropElaboration implements GraphTransformation {
             ClavaJoinPoints.integerLiteral(path.innerVardecl.hasInit ? "1" : "0"),
         );
 
-        for (const $jp of Query.searchFrom(functionEntry.jp, "vardecl", { name: path.innerVardecl.name })) {
+        for (const $jp of Query.searchFrom(functionEntry.jp, "vardecl", {
+            name: path.innerVardecl.name,
+        })) {
             const $vardecl = $jp as Vardecl;
             $vardecl.insertAfter($dropFlagDecl);
         }
@@ -181,10 +185,7 @@ namespace DropElaboration {
                         continue;
                     }
 
-                    dropFlags.set(
-                        field,
-                        DropFlagHolder.create(fieldTy),
-                    );
+                    dropFlags.set(field, DropFlagHolder.create(fieldTy));
                 }
                 return new FieldDropFlags(dropFlags);
             } else {

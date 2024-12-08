@@ -1,15 +1,19 @@
-import CoralError from "coral/error/CoralError";
-import ErrorMessageBuilder from "coral/error/ErrorMessageBuilder";
-import Access from "coral/mir/Access";
-import Loan from "coral/mir/Loan";
+import CoralError from "@specs-feup/coral/error/CoralError";
+import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
+import Access from "@specs-feup/coral/mir/Access";
+import Loan from "@specs-feup/coral/mir/Loan";
 import { FunctionJp, Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
-import PathVarRef from "coral/mir/path/PathVarRef";
-import RegionVariable from "coral/regionck/RegionVariable";
-import OutlivesConstraint from "coral/regionck/OutlivesConstraint";
+import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
+import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
+import OutlivesConstraint from "@specs-feup/coral/regionck/OutlivesConstraint";
 
 export default class MissingLifetimeBoundError extends CoralError {
-    
-    constructor(region: RegionVariable, requiredBound: string, relevantConstraint: OutlivesConstraint, $fn: FunctionJp) {
+    constructor(
+        region: RegionVariable,
+        requiredBound: string,
+        relevantConstraint: OutlivesConstraint,
+        $fn: FunctionJp,
+    ) {
         const builder = new ErrorMessageBuilder(
             "lifetime may not live long enough",
             relevantConstraint.$jp,
@@ -23,9 +27,9 @@ export default class MissingLifetimeBoundError extends CoralError {
                 relevantConstraint.$jp,
                 `'${region.name}' must outlive '${requiredBound}'`,
             );
-        
+
         super(builder.toString());
-        
+
         this.name = this.constructor.name;
     }
 }

@@ -1,25 +1,24 @@
-import MutateWhileBorrowedError from "coral/error/borrow/MutateWhileBorrowedError";
-import UseWhileMutBorrowedError from "coral/error/borrow/UseWhileMutBorrowedError";
-import MoveWhileBorrowedError from "coral/error/move/MoveWhileBorrowedError";
-import Loan from "coral/mir/Loan";
-import Access from "coral/mir/Access";
-import BorrowKind from "coral/mir/ty/BorrowKind";
+import MutateWhileBorrowedError from "@specs-feup/coral/error/borrow/MutateWhileBorrowedError";
+import UseWhileMutBorrowedError from "@specs-feup/coral/error/borrow/UseWhileMutBorrowedError";
+import MoveWhileBorrowedError from "@specs-feup/coral/error/move/MoveWhileBorrowedError";
+import Loan from "@specs-feup/coral/mir/Loan";
+import Access from "@specs-feup/coral/mir/Access";
+import BorrowKind from "@specs-feup/coral/mir/ty/BorrowKind";
 import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
-import MutableBorrowWhileBorrowedError from "coral/error/borrow/MutableBorrowWhileBorrowedError";
+import MutableBorrowWhileBorrowedError from "@specs-feup/coral/error/borrow/MutableBorrowWhileBorrowedError";
 import { GraphTransformation } from "clava-flow/graph/Graph";
 import BaseGraph from "clava-flow/graph/BaseGraph";
-import CoralGraph from "coral/graph/CoralGraph";
+import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
 import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
 import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
-import CoralNode from "coral/graph/CoralNode";
-import DanglingReferenceError from "coral/error/borrow/DanglingReferenceError";
-import Regionck from "coral/regionck/Regionck";
-import MissingLifetimeBoundError from "coral/error/borrow/MissingLifetimeBoundError";
+import CoralNode from "@specs-feup/coral/graph/CoralNode";
+import DanglingReferenceError from "@specs-feup/coral/error/borrow/DanglingReferenceError";
+import Regionck from "@specs-feup/coral/regionck/Regionck";
+import MissingLifetimeBoundError from "@specs-feup/coral/error/borrow/MissingLifetimeBoundError";
 
-    
 export default class RegionckErrorReporting implements GraphTransformation {
     #shouldCheckUniversalRegions: boolean;
-    
+
     constructor(checkUniversalRegions: boolean = true) {
         this.#shouldCheckUniversalRegions = checkUniversalRegions;
     }
@@ -45,27 +44,33 @@ export default class RegionckErrorReporting implements GraphTransformation {
                 continue;
             }
 
-            const ends = Array
-                .from(region.points)
+            const ends = Array.from(region.points)
                 .filter((point) => point.startsWith("end("))
                 .map((point) => point.slice(4, -1));
-            
+
             for (const end of ends) {
                 if (region.name === end) {
                     continue;
                 }
-                
-                const hasBound = regionck.bounds.some(b => b.name === region.name && b.bound === end);
+
+                const hasBound = regionck.bounds.some(
+                    (b) => b.name === region.name && b.bound === end,
+                );
 
                 if (!hasBound) {
                     const relevantConstraint = regionck.constraints.find(
-                        c => c.sup.name === region.name
-                            && c.addedEnds.has(`end(${end})`)
+                        (c) =>
+                            c.sup.name === region.name && c.addedEnds.has(`end(${end})`),
                     );
                     if (!relevantConstraint) {
                         throw new Error("No relevant constraint found");
                     }
-                    throw new MissingLifetimeBoundError(region, end, relevantConstraint, regionck.functionEntry.jp);
+                    throw new MissingLifetimeBoundError(
+                        region,
+                        end,
+                        relevantConstraint,
+                        regionck.functionEntry.jp,
+                    );
                 }
             }
         }
@@ -137,8 +142,8 @@ export default class RegionckErrorReporting implements GraphTransformation {
             if (path.length == 0) continue;
             const previousNode = path[path.length - 1].source;
             if (
-                loan.regionVar.points.has(previousNode.id)
-                && !loan.regionVar.points.has(vNode.id)
+                loan.regionVar.points.has(previousNode.id) &&
+                !loan.regionVar.points.has(vNode.id)
             ) {
                 if (previousNode.is(CoralNode.TypeGuard)) {
                     return previousNode.as(CoralNode.Class).jp;

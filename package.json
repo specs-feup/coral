@@ -1,5 +1,5 @@
 {
-    "name": "coral",
+    "name": "@specs-feup/coral",
     "version": "1.0.0",
     "description": "A Rust-like Borrow Checker for C",
     "type": "module",
@@ -43,7 +43,8 @@
     "homepage": "https://github.com/specs-feup/coral#readme",
     "dependencies": {
         "@specs-feup/clava": "3.0.1",
-        "clava-flow": "1.0.0"
+        "@specs-feup/clava-flow": "1.0.0",
+        "@specs-feup/flow": "1.0.0"
     },
     "devDependencies": {
         "@typescript-eslint/eslint-plugin": "^6.7.4",

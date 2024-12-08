@@ -3,10 +3,10 @@ import LivenessNode from "clava-flow/flow/transformation/liveness/LivenessNode";
 import BaseNode from "clava-flow/graph/BaseNode";
 import { NodeBuilder, NodeTypeGuard } from "clava-flow/graph/Node";
 import { Joinpoint, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
-import Access from "coral/mir/Access";
-import FunctionCall from "coral/mir/FunctionCall";
-import Loan from "coral/mir/Loan";
-import MoveTable from "coral/mir/MoveTable";
+import Access from "@specs-feup/coral/mir/Access";
+import FunctionCall from "@specs-feup/coral/mir/FunctionCall";
+import Loan from "@specs-feup/coral/mir/Loan";
+import MoveTable from "@specs-feup/coral/mir/MoveTable";
 
 namespace CoralNode {
     export class Class<
@@ -105,7 +105,7 @@ namespace CoralNode {
             }
 
             return {
-                ...scratchData as LivenessNode.ScratchData & { $jp: Joinpoint },
+                ...(scratchData as LivenessNode.ScratchData & { $jp: Joinpoint }),
                 ...super.buildScratchData(scratchData),
                 coral: {
                     inScopeLoans: new Set(),
@@ -115,7 +115,7 @@ namespace CoralNode {
                     moveTable: new MoveTable(),
                     fnCall: [],
                     loans: [],
-                }
+                },
             };
         }
     }
@@ -131,7 +131,8 @@ namespace CoralNode {
             scratchData: BaseNode.ScratchData,
         ): scratchData is ScratchData {
             if (!BaseNode.TypeGuard.isScratchDataCompatible(scratchData)) return false;
-            if (!LivenessNode.TypeGuard.isScratchDataCompatible(scratchData)) return false;
+            if (!LivenessNode.TypeGuard.isScratchDataCompatible(scratchData))
+                return false;
             if (!scratchData.$jp) return false;
             const sData = scratchData as ScratchData;
             if (!sData.coral) return false;

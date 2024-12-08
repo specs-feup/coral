@@ -1,94 +1,95 @@
-import FlowGraph from "clava-flow/flow/FlowGraph";
-import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
-import BaseGraph from "clava-flow/graph/BaseGraph";
-import { GraphBuilder, GraphTypeGuard } from "clava-flow/graph/Graph";
-import { FileJp, Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
-import Regionck from "coral/regionck/Regionck";
-import StructDefsMap from "coral/regionck/StructDefsMap";
-
+import ClavaFlowGraph from "@specs-feup/clava-flow/ClavaFlowGraph";
+import { CoralConfig } from "@specs-feup/coral/Coral";
+import Graph from "@specs-feup/flow/graph/Graph";
 
 namespace CoralGraph {
+    export const TAG = "__coral__coral_graph";
+    export const VERSION = "1";
+
     export class Class<
         D extends Data = Data,
         S extends ScratchData = ScratchData,
-    > extends FlowGraph.Class<D, S> {
-        getRegionck(functionEntry: FunctionEntryNode.Class): Regionck {
-            let regionck = this.scratchData.coral.functions.get(functionEntry.jp.name);
+    > extends ClavaFlowGraph.Class<D, S> {
+        // getRegionck(functionEntry: FunctionEntryNode.Class): Regionck {
+        //     let regionck = this.scratchData.coral.functions.get(functionEntry.jp.name);
 
-            let $file: Joinpoint = functionEntry.jp;
-            while (!($file instanceof FileJp)) {
-                $file = $file.parent;
-            }
+        //     let $file: Joinpoint = functionEntry.jp;
+        //     while (!($file instanceof FileJp)) {
+        //         $file = $file.parent;
+        //     }
 
-            if (regionck === undefined) {
-                regionck = new Regionck(functionEntry, this.getStructDefsMap($file));
-                this.scratchData.coral.functions.set(functionEntry.jp.name, regionck);
-            }
-            return regionck;
-        }
+        //     if (regionck === undefined) {
+        //         regionck = new Regionck(functionEntry, this.getStructDefsMap($file));
+        //         this.scratchData.coral.functions.set(functionEntry.jp.name, regionck);
+        //     }
+        //     return regionck;
+        // }
 
-        getStructDefsMap(file: FileJp): StructDefsMap {
-            let structDefs = this.scratchData.coral.files.get(file.astId);
-            if (structDefs === undefined) {
-                structDefs = new StructDefsMap(file);
-                this.scratchData.coral.files.set(file.astId, structDefs);
-            }
-            return structDefs;
-        }
+        // getStructDefsMap(file: FileJp): StructDefsMap {
+        //     let structDefs = this.scratchData.coral.files.get(file.astId);
+        //     if (structDefs === undefined) {
+        //         structDefs = new StructDefsMap(file);
+        //         this.scratchData.coral.files.set(file.astId, structDefs);
+        //     }
+        //     return structDefs;
+        // }
     }
 
     export class Builder
-        extends BaseGraph.Builder
-        implements GraphBuilder<Data, ScratchData>
+        implements Graph.Builder<Data, ScratchData, ClavaFlowGraph.Data, ClavaFlowGraph.ScratchData>
     {
-        override buildData(data: BaseGraph.Data): Data {
-            if (!FlowGraph.TypeGuard.isDataCompatible(data)) {
-                throw new Error("CoralGraph must have FlowGraph data to be initialized.");
-            }
+        #config: CoralConfig;
 
-            return {
-                ...data,
-                ...super.buildData(data),
-            };
+        constructor(config: CoralConfig) {
+            this.#config = config;
         }
 
-        override buildScratchData(scratchData: BaseGraph.ScratchData): ScratchData {
-            if (!FlowGraph.TypeGuard.isScratchDataCompatible(scratchData)) {
-                throw new Error("CoralGraph must have FlowGraph data to be initialized.");
-            }
-
+        buildData(data: ClavaFlowGraph.Data): Data {
             return {
-                ...scratchData,
-                ...super.buildScratchData(scratchData),
-                coral: {
-                    functions: new Map<string, Regionck>(),
-                    files: new Map<string, StructDefsMap>(),
+                ...data,
+                [TAG]: {
+                    version: VERSION,
+                    config: this.#config,
                 },
             };
         }
+
+        buildScratchData(scratchData: ClavaFlowGraph.ScratchData): ScratchData {
+            return scratchData;
+
+            // return {
+            //     ...scratchData,
+            //     ...super.buildScratchData(scratchData),
+            //     coral: {
+            //         functions: new Map<string, Regionck>(),
+            //         files: new Map<string, StructDefsMap>(),
+            //     },
+            // };
+        }
     }
 
-    export const TypeGuard: GraphTypeGuard<Data, ScratchData> = {
-        isDataCompatible(data: BaseGraph.Data): data is Data {
-            if (!FlowGraph.TypeGuard.isDataCompatible(data)) return false;
-            return true;
+    export const TypeGuard = Graph.TagTypeGuard<Data, ScratchData>(
+        TAG,
+        VERSION,
+        (sData) => {
+            const sd = sData as ClavaFlowGraph.ScratchData;
+            return typeof sd[ClavaFlowGraph.TAG] === "object" && typeof sd[ClavaFlowGraph.TAG].jpToNodeMap === "object";
+            // TODO add more tests ?
         },
+    );
 
-        isScratchDataCompatible(sData: BaseGraph.ScratchData): sData is ScratchData {
-            if (!FlowGraph.TypeGuard.isScratchDataCompatible(sData)) return false;
-            const data = sData as ScratchData;
-            if (data.coral === undefined) return false;
-            return true;
-        },
-    };
-
-    export interface Data extends FlowGraph.Data { }
-
-    export interface ScratchData extends FlowGraph.ScratchData {
-        coral: {
-            functions: Map<string, Regionck>;
-            files: Map<string, StructDefsMap>;
+    export interface Data extends ClavaFlowGraph.Data {
+        [TAG]: {
+            version: typeof VERSION;
+            config: CoralConfig;
         };
+    }
+
+    export interface ScratchData extends ClavaFlowGraph.ScratchData {
+        // [TAG]: {
+        //     // functions: Map<string, Regionck>;
+        //     // files: Map<string, StructDefsMap>;
+        // };
     }
 }
 
