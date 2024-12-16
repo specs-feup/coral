@@ -7,13 +7,13 @@ export default class UseBeforeInitError extends CoralError {
     constructor($invalidUse: Joinpoint, $declaration: Vardecl, access: Access) {
         super(
             new ErrorMessageBuilder(
-                `Used binding '${access.path.toString()}' is possibly uninitialized`,
+                `Used binding '${access.#path.toString()}' is possibly uninitialized`,
                 $invalidUse,
             )
                 .code($declaration, `binding declared here but left uninitialized`)
                 .code(
                     $invalidUse,
-                    `'${access.path.toString()}' is used here but it isn't initialized`,
+                    `'${access.#path.toString()}' is used here but it isn't initialized`,
                 )
                 .toString(),
         );

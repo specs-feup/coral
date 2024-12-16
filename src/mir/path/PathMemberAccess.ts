@@ -1,31 +1,28 @@
 import {
-    Expression,
-    Joinpoint,
     MemberAccess,
     Vardecl,
 } from "@specs-feup/clava/api/Joinpoints.js";
 import Path from "@specs-feup/coral/mir/path/Path";
-import StructTy from "@specs-feup/coral/mir/ty/StructTy";
-import Ty from "@specs-feup/coral/mir/ty/Ty";
+import PathDeref from "@specs-feup/coral/mir/path/PathDeref";
+import Ty from "@specs-feup/coral/mir/symbol/Ty";
+import StructTy from "@specs-feup/coral/mir/symbol/ty/StructTy";
 
 /**
  * A member access, such as `x.y`.
  */
-export default class PathMemberAccess extends Path {
-    $jp: MemberAccess;
-    inner: Path;
-    fieldName: string;
-    innerTy: StructTy;
+export default class PathMemberAccess implements Path {
+    #jp: MemberAccess;
+    #inner: Path;
+    #fieldName: string;
+    #innerTy: StructTy;
 
     constructor($jp: MemberAccess, inner: Path, fieldName: string) {
-        super();
-
-        this.$jp = $jp;
-        this.inner = inner;
-        this.fieldName = fieldName;
+        this.#jp = $jp;
+        this.#inner = inner;
+        this.#fieldName = fieldName;
 
         if (inner.ty instanceof StructTy) {
-            this.innerTy = inner.ty;
+            this.#innerTy = inner.ty;
         } else {
             throw new Error(
                 "Cannot member-access in non-struct type " + inner.ty.toString(),
@@ -33,46 +30,54 @@ export default class PathMemberAccess extends Path {
         }
     }
 
-    override toString(): string {
-        return `(${this.inner.toString()}).${this.fieldName}`;
+    toString(): string {
+        if (this.#inner instanceof PathDeref) {
+            return `(${this.#inner.toString()}).${this.#fieldName}`;
+        } else {
+            return `${this.#inner.toString()}.${this.#fieldName}`;
+        }
     }
 
-    override equals(other: Path): boolean {
+    equals(other: Path): boolean {
         return (
             other instanceof PathMemberAccess &&
-            this.inner.equals(other.inner) &&
-            this.fieldName === other.fieldName
+            this.#fieldName === other.#fieldName && 
+            this.#inner.equals(other.#inner)
         );
     }
 
-    override contains(other: Path): boolean {
-        return this.equals(other) || this.inner.contains(other);
+    contains(other: Path): boolean {
+        return this.equals(other) || this.#inner.contains(other);
     }
 
-    override get prefixes(): Path[] {
-        return [this, ...this.inner.prefixes];
+    get prefixes(): Path[] {
+        return [this, ...this.#inner.prefixes];
     }
 
-    override get shallowPrefixes(): Path[] {
-        return [this, ...this.inner.shallowPrefixes];
+    get shallowPrefixes(): Path[] {
+        return [this, ...this.#inner.shallowPrefixes];
     }
 
-    override get supportingPrefixes(): Path[] {
-        return [this, ...this.inner.supportingPrefixes];
+    get supportingPrefixes(): Path[] {
+        return [this, ...this.#inner.supportingPrefixes];
     }
 
-    override get ty(): Ty {
-        const ty = this.innerTy.fields.get(this.fieldName);
+    get ty(): Ty {
+        const ty = this.#innerTy.fields.get(this.#fieldName);
         if (ty === undefined) {
             throw new Error(
-                `Field ${this.fieldName} not found in struct ${this.innerTy.name}`,
+                `Field ${this.#fieldName} not found in ${this.#innerTy.toString()}`,
             );
         }
 
         return ty;
     }
 
-    override get innerVardecl(): Vardecl {
-        return this.inner.innerVardecl;
+    get jp(): MemberAccess {
+        return this.#jp;
+    }
+
+    get vardecl(): Vardecl {
+        return this.#inner.vardecl;
     }
 }

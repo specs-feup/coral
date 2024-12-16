@@ -3,7 +3,6 @@ import {
     ElaboratedType,
     EnumDecl,
     Field,
-    FileJp,
     FunctionJp,
     ParenType,
     PointerType,
@@ -22,13 +21,12 @@ import LifetimeExpectedError from "@specs-feup/coral/error/struct/LifetimeExpect
 import LifetimeReassignmentError from "@specs-feup/coral/error/struct/LifetimeReassignmentError";
 import StructCannotBeCopyError from "@specs-feup/coral/error/struct/StructCannotBeCopyError";
 import UnexpectedLifetimeAssignmentError from "@specs-feup/coral/error/struct/UnexpectedLifetimeAssignmentError";
-import BorrowKind from "@specs-feup/coral/mir/ty/BorrowKind";
-import BuiltinTy from "@specs-feup/coral/mir/ty/BuiltinTy";
-import Ty from "@specs-feup/coral/mir/ty/Ty";
-import MetaRefTy from "@specs-feup/coral/mir/ty/meta/MetaRefTy";
-import MetaStructTy from "@specs-feup/coral/mir/ty/meta/MetaStructTy";
-import MetaTy from "@specs-feup/coral/mir/ty/meta/MetaTy";
-import StructDef from "@specs-feup/coral/mir/ty/meta/StructDef";
+import Def from "@specs-feup/coral/mir/symbol/Def";
+import Ty from "@specs-feup/coral/mir/symbol/Ty";
+import BuiltinTy from "@specs-feup/coral/mir/symbol/ty/BuiltinTy";
+import MetaRefTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaRefTy";
+import MetaStructTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaStructTy";
+import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
 import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
 import LifetimeAssignmentPragma from "@specs-feup/coral/pragma/lifetime/LifetimeAssignmentPragma";
 import LifetimeBoundPragma from "@specs-feup/coral/pragma/lifetime/LifetimeBoundPragma";
@@ -40,26 +38,23 @@ import MetaRegionVariable from "@specs-feup/coral/regionck/MetaRegionVariable";
 import MetaRegionVariableBound from "@specs-feup/coral/regionck/MetaRegionVariableBound";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 
-export default class StructDefsMap {
-    #defs: Map<string, StructDef>;
-    #$file: FileJp;
+export default class DefMap {
+    #symbolTable: Map<string, Def>;
 
-    constructor($file: FileJp) {
-        this.#defs = new Map();
-        this.#$file = $file;
+    constructor() {
+        this.#symbolTable = new Map();
     }
 
-    get($struct: RecordJp): StructDef {
-        const name = $struct.name;
-        const def = this.#defs.get(name);
+    get($struct: RecordJp): Def {
+        const def = this.#symbolTable.get($struct.name);
         if (def !== undefined) {
             return def;
         }
 
-        const $structs = Query.searchFrom(this.#$file, "record", {
-            name,
-        }).get() as RecordJp[];
-
+        const $structs = Query
+            .searchFrom($struct.getAncestor("file"), RecordJp, $s => $s.name === $struct.name)
+            .get();
+        
         // Give priority to complete structs
         const $canonicalStruct =
             $structs.find(($s) => $s.fields.length > 0) ?? $structs.at(0);
@@ -70,9 +65,11 @@ export default class StructDefsMap {
             );
         }
 
-        const structDef = this.#parseStruct($canonicalStruct);
-        this.#defs.set(name, structDef);
-        return structDef;
+        // TODO doesnt this crash for incomplete structs?
+
+        const newDef = this.#parseStruct($canonicalStruct);
+        this.#symbolTable.set($struct.name, newDef);
+        return newDef;
     }
 
     #parseIncompleteStruct($struct: RecordJp) {
@@ -119,7 +116,7 @@ export default class StructDefsMap {
         };
     }
 
-    #parseStruct($struct: RecordJp): StructDef {
+    #parseStruct($struct: RecordJp): Def {
         const { isComplete, copyFlag, moveFlag, dropFnPragma, lifetimes, lifetimesSet } =
             this.#parseIncompleteStruct($struct);
 
@@ -127,9 +124,12 @@ export default class StructDefsMap {
         const hasMoveFlag = moveFlag !== undefined;
         const dropFnName = dropFnPragma?.tokens[0];
 
-        for (const $other of Query.searchFrom(this.#$file, "record", {
-            name: $struct.name,
-        })) {
+        const $structs = Query.searchFrom(
+            $struct.getAncestor("file"),
+            RecordJp,
+            ($s) => $s.name === $struct.name,
+        );
+        for (const $other of $structs) {
             console.log(($other as RecordJp).location, ($other as RecordJp).name);
             if (($other as RecordJp).astId === $struct.astId) {
                 continue;
@@ -187,9 +187,11 @@ export default class StructDefsMap {
 
         let $dropFn: FunctionJp | undefined = undefined;
         if (dropFnName !== undefined) {
-            $dropFn = Query.searchFrom(this.#$file, "function", {
-                name: dropFnName,
-            }).first() as FunctionJp | undefined;
+            const $dropFn = Query.searchFrom(
+                $struct.getAncestor("file"),
+                FunctionJp,
+                ($fn) => $fn.name === dropFnName,
+            ).first();
             if ($dropFn === undefined) {
                 throw new DropPragmaParseError(
                     dropFnPragma!,
@@ -279,7 +281,7 @@ export default class StructDefsMap {
             }
         }
 
-        return new StructDef(
+        return new Def(
             $struct,
             isComplete,
             semantics,
@@ -401,10 +403,9 @@ export default class StructDefsMap {
                 throw new UnexpectedLifetimeAssignmentError(outer[0][2]);
             }
             return new MetaRefTy(
-                inner.isConst ? BorrowKind.SHARED : BorrowKind.MUTABLE,
+                new MetaRegionVariable(outer[0][1]),
                 inner,
                 $type,
-                new MetaRegionVariable(outer[0][1]),
                 isConst,
             );
         } else if ($type instanceof TypedefType) {
@@ -468,7 +469,7 @@ export default class StructDefsMap {
                     );
                 }
 
-                return new MetaStructTy($decl, regionVarMap, this, isConst);
+                return new MetaStructTy($decl, this, regionVarMap, isConst);
             } else if ($decl instanceof EnumDecl) {
                 if (metaRegionVarAssignments.length > 0) {
                     throw new UnexpectedLifetimeAssignmentError(

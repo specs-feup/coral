@@ -4,9 +4,9 @@ import { NormalizationContext, NormalizationPass } from "@specs-feup/coral/pipel
 import { Filter_WrapperVariant } from "@specs-feup/lara/api/weaver/Selector.js";
 
 export default class ConvertForLoopToWhile implements NormalizationPass<typeof Loop> {
-    query: {jp: typeof Loop, filter: Filter_WrapperVariant<typeof Loop>} = {
+    query = {
         jp: Loop,
-        filter: { kind: "for" },
+        filter: (jp: Loop) => jp.kind === "for",
     };
 
     apply($jp: Loop, context: NormalizationContext) {

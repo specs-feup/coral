@@ -13,14 +13,14 @@ export default class DanglingReferenceError extends CoralError {
         access: Access,
     ) {
         const builder = new ErrorMessageBuilder(
-            `'${access.path.toString()}' does not live long enough`,
+            `'${access.#path.toString()}' does not live long enough`,
             loan.node.jp,
         )
-            .code(access.path.innerVardecl, `'${access.path.toString()}' declared here`)
+            .code(access.#path.innerVardecl, `'${access.#path.toString()}' declared here`)
             .code(loan.node.jp, `borrowed value does not live long enough`)
             .codeString(
                 "}",
-                `'${access.path.toString()}' dropped here while still borrowed`,
+                `'${access.#path.toString()}' dropped here while still borrowed`,
                 $scopeEnd.originNode.endLine,
             );
 

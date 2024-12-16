@@ -7,7 +7,7 @@ import RefTy from "@specs-feup/coral/mir/ty/RefTy";
 import BuiltinTy from "@specs-feup/coral/mir/ty/BuiltinTy";
 import StructTy from "@specs-feup/coral/mir/ty/StructTy";
 import Variance from "@specs-feup/coral/mir/ty/Variance";
-import BorrowKind from "@specs-feup/coral/mir/ty/BorrowKind";
+import Loan.Kind from "@specs-feup/coral/mir/ty/Loan.Kind";
 import Loan from "@specs-feup/coral/mir/Loan";
 import { GraphTransformation } from "clava-flow/graph/Graph";
 import BaseGraph from "clava-flow/graph/BaseGraph";
@@ -99,12 +99,12 @@ export default class ConstraintGenerator implements GraphTransformation {
             // Bounds for function calls
             for (const call of coralNode.fnCalls) {
                 const successor = this.#getSuccessor(coralNode);
-                const calleeNode = coralGraph.getFunction(call.$functionJp.name);
+                const calleeNode = coralGraph.getFunction(call.jp.function.name);
 
                 let bounds: LifetimeBoundPragma[] | undefined;
                 if (calleeNode === undefined) {
                     bounds = [];
-                    const coralPragmas = CoralPragma.parse(call.$functionJp.pragmas);
+                    const coralPragmas = CoralPragma.parse(call.jp.function.pragmas);
                     const potentialBoundPragmas = coralPragmas.filter(
                         (p) =>
                             p.name === LifetimeBoundPragma.keyword &&
@@ -132,7 +132,13 @@ export default class ConstraintGenerator implements GraphTransformation {
                         );
                     }
 
-                    this.#relateRegions(sub, sup, Variance.CO, successor, coralNode.jp);
+                    this.#relateRegions(
+                        sub,
+                        sup,
+                        Variance.COVARIANT,
+                        successor,
+                        coralNode.jp,
+                    );
                 }
             }
         }
@@ -154,7 +160,7 @@ export default class ConstraintGenerator implements GraphTransformation {
     }
 
     #subtypingConstraints(loan: Loan, successor: CoralNode.Class, $jp: Joinpoint) {
-        this.#relateTy(loan.leftTy, loan.loanedRefTy, Variance.CO, successor, $jp);
+        this.#relateTy(loan.leftTy, loan.loanedRefTy, Variance.COVARIANT, successor, $jp);
     }
 
     #reborrowConstraints(loan: Loan, successor: CoralNode.Class, $jp: Joinpoint) {
@@ -162,7 +168,7 @@ export default class ConstraintGenerator implements GraphTransformation {
             if (!(path instanceof PathDeref)) continue;
 
             this.#relateRegions(
-                path.innerTy.regionVar,
+                path.#innerTy.regionVar,
                 loan.regionVar,
                 Variance.CONTRA,
                 successor,
@@ -182,7 +188,7 @@ export default class ConstraintGenerator implements GraphTransformation {
             this.#relateRegions(
                 ty1.regionVar,
                 ty2.regionVar,
-                Variance.xform(variance, Variance.CO),
+                Variance.xform(variance, Variance.COVARIANT),
                 successor,
                 $jp,
             );
@@ -191,7 +197,9 @@ export default class ConstraintGenerator implements GraphTransformation {
                 ty2.referent,
                 Variance.xform(
                     variance,
-                    ty1.borrowKind == BorrowKind.MUTABLE ? Variance.IN : Variance.CO,
+                    ty1.borrowKind == Loan.Kind.MUTABLE
+                        ? Variance.IN
+                        : Variance.COVARIANT,
                 ),
                 successor,
                 $jp,
@@ -202,7 +210,7 @@ export default class ConstraintGenerator implements GraphTransformation {
                     `Cannot relate types ${ty1.toString()} and ${ty2.toString()}, different kinds or names`,
                 );
             }
-            if (ty1.regionVars.length != ty2.regionVars.length) {
+            if (ty1.regionVarMap.length != ty2.regionVarMap.length) {
                 throw new Error(
                     `Cannot relate types ${ty1.toString()} and ${ty2.toString()}, different number of lifetimes`,
                 );
@@ -233,7 +241,7 @@ export default class ConstraintGenerator implements GraphTransformation {
         $jp: Joinpoint,
     ) {
         switch (variance) {
-            case Variance.CO: // "a Co b" == "a <= b"
+            case Variance.COVARIANT: // "a Co b" == "a <= b"
                 this.#regionck!.constraints.push(
                     new OutlivesConstraint(region2, region1, successor, $jp),
                 );

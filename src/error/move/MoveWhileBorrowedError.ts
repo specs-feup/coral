@@ -12,16 +12,16 @@ export default class MoveWhileBorrowedError extends CoralError {
         access: Access,
     ) {
         const builder = new ErrorMessageBuilder(
-            `Cannot move out of '${access.path.toString()}' because it is borrowed`,
+            `Cannot move out of '${access.#path.toString()}' because it is borrowed`,
             $invalidUse,
         )
             .code(
                 loan.node.jp,
-                `(${loan.borrowKind}) borrow of '${loan.loanedPath.toString()}' occurs here`,
+                `(${loan.kind}) borrow of '${loan.loanedPath.toString()}' occurs here`,
             )
             .code(
                 $invalidUse,
-                `move out of '${access.path.toString()}' occurs here, while borrow is still active`,
+                `move out of '${access.#path.toString()}' occurs here, while borrow is still active`,
             );
         if ($nextUse) {
             builder.code($nextUse, "borrow is later used here");

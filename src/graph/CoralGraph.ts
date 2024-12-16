@@ -1,6 +1,13 @@
 import ClavaFlowGraph from "@specs-feup/clava-flow/ClavaFlowGraph";
+import ClavaFunctionNode from "@specs-feup/clava-flow/ClavaFunctionNode";
+import { FunctionJp, RecordJp, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import { CoralConfig } from "@specs-feup/coral/Coral";
+import Def from "@specs-feup/coral/mir/symbol/Def";
+import Ty from "@specs-feup/coral/mir/symbol/Ty";
+import FileSymbolTable from "@specs-feup/coral/symbol/FileSymbolTable";
 import Graph from "@specs-feup/flow/graph/Graph";
+import { NodeCollection } from "@specs-feup/flow/graph/NodeCollection";
+
 
 namespace CoralGraph {
     export const TAG = "__coral__coral_graph";
@@ -9,7 +16,23 @@ namespace CoralGraph {
     export class Class<
         D extends Data = Data,
         S extends ScratchData = ScratchData,
-    > extends ClavaFlowGraph.Class<D, S> {
+        > extends ClavaFlowGraph.Class<D, S> {
+        get functionsToAnalyze(): NodeCollection<ClavaFunctionNode.Class> {
+            return this.clavaFunctions.filter(fn => this.data[TAG].functionsToAnalyze.includes(fn.jp.name));
+        }
+
+        getSymbol($decl: Vardecl): Ty;
+        getSymbol($decl: RecordJp): Def;
+        getSymbol($decl: Vardecl | RecordJp): Ty | Def {
+            const symbolTable = this.scratchData[TAG].symbolTable;
+            let fileSymbolTable = symbolTable.get($decl.getAncestor("file").astId);
+            if (fileSymbolTable === undefined) {
+                fileSymbolTable = new FileSymbolTable();
+                symbolTable.set($decl.filepath, fileSymbolTable);
+            }
+            return fileSymbolTable.get($decl);
+        }
+
         // getRegionck(functionEntry: FunctionEntryNode.Class): Regionck {
         //     let regionck = this.scratchData.coral.functions.get(functionEntry.jp.name);
 
@@ -39,9 +62,11 @@ namespace CoralGraph {
         implements Graph.Builder<Data, ScratchData, ClavaFlowGraph.Data, ClavaFlowGraph.ScratchData>
     {
         #config: CoralConfig;
+        #functionsToAnalyze: string[];
 
-        constructor(config: CoralConfig) {
+        constructor(config: CoralConfig, functionsToAnalyze: FunctionJp[]) {
             this.#config = config;
+            this.#functionsToAnalyze = functionsToAnalyze.map(fn => fn.signature);
         }
 
         buildData(data: ClavaFlowGraph.Data): Data {
@@ -50,21 +75,18 @@ namespace CoralGraph {
                 [TAG]: {
                     version: VERSION,
                     config: this.#config,
+                    functionsToAnalyze: this.#functionsToAnalyze,
                 },
             };
         }
 
         buildScratchData(scratchData: ClavaFlowGraph.ScratchData): ScratchData {
-            return scratchData;
-
-            // return {
-            //     ...scratchData,
-            //     ...super.buildScratchData(scratchData),
-            //     coral: {
-            //         functions: new Map<string, Regionck>(),
-            //         files: new Map<string, StructDefsMap>(),
-            //     },
-            // };
+            return {
+                ...scratchData,
+                [TAG]: {
+                    symbolTable: new Map(),
+                },
+            };
         }
     }
 
@@ -82,14 +104,14 @@ namespace CoralGraph {
         [TAG]: {
             version: typeof VERSION;
             config: CoralConfig;
+            functionsToAnalyze: string[];
         };
     }
 
     export interface ScratchData extends ClavaFlowGraph.ScratchData {
-        // [TAG]: {
-        //     // functions: Map<string, Regionck>;
-        //     // files: Map<string, StructDefsMap>;
-        // };
+        [TAG]: {
+            symbolTable: Map<string, FileSymbolTable>;
+        };
     }
 }
 

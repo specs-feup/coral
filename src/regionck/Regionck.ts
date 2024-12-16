@@ -1,40 +1,25 @@
-import { Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import Ty from "@specs-feup/coral/mir/ty/Ty";
 import OutlivesConstraint from "@specs-feup/coral/regionck/OutlivesConstraint";
 import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
-import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
-import StructDefsMap from "@specs-feup/coral/regionck/StructDefsMap";
 import LifetimeBoundPragma from "@specs-feup/coral/pragma/lifetime/LifetimeBoundPragma";
 import InferLifetimeBounds from "@specs-feup/coral/pass/InferLifetimeBounds";
 
 export default class Regionck {
-    functionEntry: FunctionEntryNode.Class;
     // List of constraints that must be satisfied based on the regionck analysis.
     constraints: OutlivesConstraint[];
     // List of meta region variable constraints that can be set via pragmas by the user.
     bounds: LifetimeBoundPragma[];
-    structDefs: StructDefsMap;
     #regionVars: RegionVariable[];
-    #symbolTable: Map<string, Ty>;
     #returnTy?: Ty;
+
+    // Should go to FunctionNode
     inferLifetimeBoundsState: InferLifetimeBounds.FunctionState;
 
-    constructor(functionEntry: FunctionEntryNode.Class, structDefs: StructDefsMap) {
+    constructor() {
         this.constraints = [];
         this.bounds = [];
         this.#regionVars = [];
-        this.structDefs = structDefs;
-        this.#symbolTable = new Map();
-        this.functionEntry = functionEntry;
         this.inferLifetimeBoundsState = InferLifetimeBounds.FunctionState.IGNORE;
-    }
-
-    getTy($varDecl: Vardecl): Ty | undefined {
-        return this.#symbolTable.get($varDecl.astId);
-    }
-
-    registerTy($varDecl: Vardecl, ty: Ty): void {
-        this.#symbolTable.set($varDecl.astId, ty);
     }
 
     registerReturnTy(ty: Ty): void {

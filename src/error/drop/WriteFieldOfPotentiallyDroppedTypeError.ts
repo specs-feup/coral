@@ -10,14 +10,14 @@ export default class WriteFieldOfPotentiallyDroppedTypeError extends CoralError 
         super(
             new ErrorMessageBuilder(
                 `Cannot mutate partially uninitialized or moved variable that must be dropped`,
-                write.path.$jp,
+                write.#path.$jp,
             )
                 .code(
-                    pathWithDrop.innerVardecl,
-                    `'${pathWithDrop.toString()}' has type '${pathWithDrop.ty.name}' with drop function '${(pathWithDrop.ty as StructTy).dropFunction!.name}'`,
+                    pathWithDrop.vardecl,
+                    `'${pathWithDrop.toString()}' has type '${pathWithDrop.#ty.name}' with drop function '${(pathWithDrop.#ty as StructTy).dropFunction!.name}'`,
                 )
-                .code(exampleMove.path.$jp, "variable might have been moved here")
-                .code(write.path.$jp, "writing to field of potentially dropped variable")
+                .code(exampleMove.#path.$jp, "variable might have been moved here")
+                .code(write.#path.$jp, "writing to field of potentially dropped variable")
                 .toString(),
         );
         this.name = this.constructor.name;

@@ -5,12 +5,9 @@ import { LaraJoinPoint } from "@specs-feup/lara/api/LaraJoinPoint.js";
 import { Filter_WrapperVariant } from "@specs-feup/lara/api/weaver/Selector.js";
 
 export default class SimplifyAssignments implements NormalizationPass<typeof BinaryOp> {
-    query: { jp: typeof BinaryOp; filter: Filter_WrapperVariant<typeof BinaryOp> } = {
+    query = {
         jp: BinaryOp,
-        filter: {
-            self: (self: LaraJoinPoint) =>
-                (self as BinaryOp).isAssignment && (self as BinaryOp).operator !== "=",
-        },
+        filter: (jp: BinaryOp) => jp.isAssignment && jp.operator !== "=",
     };
 
     apply($jp: BinaryOp) {

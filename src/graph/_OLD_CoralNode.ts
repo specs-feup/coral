@@ -27,7 +27,7 @@ namespace CoralNode {
 
         get assignments(): Access[] {
             return this.scratchData.coral.accesses.filter(
-                (access) => access.mutability === Access.Mutability.WRITE,
+                (access) => access.mutability === Access.Kind.WRITE,
             );
         }
 

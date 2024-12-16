@@ -1,32 +1,42 @@
+import Loan from "@specs-feup/coral/mir/Loan";
 import Path from "@specs-feup/coral/mir/path/Path";
-import BorrowKind from "@specs-feup/coral/mir/ty/BorrowKind";
-import Ty from "@specs-feup/coral/mir/ty/Ty";
+import Ty from "@specs-feup/coral/mir/symbol/Ty";
 
 class Access {
-    mutability: Access.Mutability;
-    depth: Access.Depth;
-    path: Path;
+    #path: Path;
+    #kind: Access.Kind;
 
-    constructor(path: Path, mutability: Access.Mutability, depth: Access.Depth) {
-        this.path = path;
-        this.mutability = mutability;
-        this.depth = depth;
+    constructor(path: Path, kind: Access.Kind) {
+        this.#path = path;
+        this.#kind = kind;
+    }
+
+    get path(): Path {
+        return this.#path;
+    }
+
+    get kind(): Access.Kind {
+        return this.#kind;
     }
 
     get isMove(): boolean {
         return (
-            this.mutability === Access.Mutability.READ &&
-            this.path.ty.semantics === Ty.Semantics.MOVE
+            this.#kind === Access.Kind.READ &&
+            this.#path.ty.semantics === Ty.Semantics.MOVE
         );
     }
 
-    toString(): string {
-        return `${this.path.toString()}, ${this.mutability}, ${this.depth}`;
+    get depth(): Access.Depth {
+        if (this.#kind === Access.Kind.STORAGE_DEAD || this.#kind === Access.Kind.WRITE) {
+            return Access.Depth.SHALLOW;
+        }
+
+        return Access.Depth.DEEP;
     }
 }
 
 namespace Access {
-    export enum Mutability {
+    export enum Kind {
         READ = "read",
         WRITE = "write",
         BORROW = "borrow",
@@ -34,13 +44,13 @@ namespace Access {
         STORAGE_DEAD = "storage dead",
     }
 
-    export namespace Mutability {
-        export function fromBorrowKind(kind: BorrowKind): Mutability {
+    export namespace Kind {
+        export function fromLoanKind(kind: Loan.Kind): Kind {
             switch (kind) {
-                case BorrowKind.SHARED:
-                    return Mutability.BORROW;
-                case BorrowKind.MUTABLE:
-                    return Mutability.MUTABLE_BORROW;
+                case Loan.Kind.SHARED:
+                    return Kind.BORROW;
+                case Loan.Kind.MUTABLE:
+                    return Kind.MUTABLE_BORROW;
             }
         }
     }

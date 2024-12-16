@@ -54,7 +54,7 @@ class MoveTable {
     }
 
     updateAccess(access: Access): void {
-        const path = access.path;
+        const path = access.#path;
         const holder = this.#pathToStateHolder(path);
         const state = holder?.state ?? MoveTable.State.UNINIT;
         const $vardecl = this.#pathToVardecl(path);
@@ -92,10 +92,10 @@ class MoveTable {
                 throw new Error("State holder not found");
             }
 
-            switch (access.mutability) {
-                case Access.Mutability.READ:
-                case Access.Mutability.BORROW:
-                case Access.Mutability.MUTABLE_BORROW: {
+            switch (access.#type) {
+                case Access.Kind.READ:
+                case Access.Kind.BORROW:
+                case Access.Kind.MUTABLE_BORROW: {
                     if (state === MoveTable.State.VALID) {
                         if (access.isMove) {
                             holder.state = MoveTable.State.MOVED;
@@ -116,10 +116,10 @@ class MoveTable {
                     }
                     break;
                 }
-                case Access.Mutability.WRITE:
+                case Access.Kind.WRITE:
                     holder.state = MoveTable.State.VALID;
                     break;
-                case Access.Mutability.STORAGE_DEAD:
+                case Access.Kind.STORAGE_DEAD:
                     this.#states.delete($vardecl.astId);
                     break;
             }
@@ -127,7 +127,7 @@ class MoveTable {
     }
 
     checkDrop(access: Access): [MoveTable.DropKind, MoveTable.StateHolder?] {
-        const path = access.path;
+        const path = access.#path;
         const holder = this.#pathToStateHolder(path);
         const $vardecl = this.#pathToVardecl(path);
 
@@ -136,14 +136,14 @@ class MoveTable {
         }
 
         let currentState: MoveTable.StateHolder;
-        switch (access.mutability) {
-            case Access.Mutability.READ:
+        switch (access.#type) {
+            case Access.Kind.READ:
                 if (access.isMove) {
                     currentState = holder.copy();
                     holder.state = MoveTable.State.MOVED;
                     holder.exampleMoveAccess = access;
 
-                    let $parent = access.path.$jp.parent;
+                    let $parent = access.#path.$jp.parent;
                     while (true) {
                         if ($parent instanceof FunctionJp) {
                             return [MoveTable.DropKind.DROP_AFTER, currentState];
@@ -158,14 +158,14 @@ class MoveTable {
                     }
                 }
                 break;
-            case Access.Mutability.WRITE:
+            case Access.Kind.WRITE:
                 currentState = holder.copy();
 
                 if (!this.#hasDeref(path)) {
                     let parent = holder.parent;
                     let parentPath: Path | undefined = path;
                     if (path instanceof PathMemberAccess) {
-                        parentPath = path.inner;
+                        parentPath = path.#inner;
                     }
                     let outerWithDropFunction: MoveTable.FieldStates | undefined;
                     let outerWithDropFunctionPath: Path | undefined;
@@ -179,7 +179,7 @@ class MoveTable {
                         }
                         parent = parent.parent;
                         if (parentPath instanceof PathMemberAccess) {
-                            parentPath = parentPath.inner;
+                            parentPath = parentPath.#inner;
                         } else {
                             parentPath = undefined;
                         }
@@ -201,7 +201,7 @@ class MoveTable {
 
                 holder.state = MoveTable.State.VALID;
                 return [MoveTable.DropKind.DROP_BEFORE, currentState];
-            case Access.Mutability.STORAGE_DEAD:
+            case Access.Kind.STORAGE_DEAD:
                 currentState = holder.copy();
                 this.#states.delete($vardecl.astId);
                 return [MoveTable.DropKind.DROP_BEFORE, currentState];
@@ -214,9 +214,9 @@ class MoveTable {
         if (path instanceof PathVarRef) {
             return path.$vardecl;
         } else if (path instanceof PathDeref) {
-            return this.#pathToVardecl(path.inner);
+            return this.#pathToVardecl(path.#inner);
         } else if (path instanceof PathMemberAccess) {
-            return this.#pathToVardecl(path.inner);
+            return this.#pathToVardecl(path.#inner);
         } else {
             throw new Error("Unsupported path type");
         }
@@ -226,11 +226,11 @@ class MoveTable {
         if (path instanceof PathVarRef) {
             return this.#states.get(path.$vardecl.astId);
         } else if (path instanceof PathDeref) {
-            return this.#pathToStateHolder(path.inner);
+            return this.#pathToStateHolder(path.#inner);
         } else if (path instanceof PathMemberAccess) {
-            const inner = this.#pathToStateHolder(path.inner);
+            const inner = this.#pathToStateHolder(path.#inner);
             if (inner instanceof MoveTable.FieldStates) {
-                return inner.get(path.fieldName);
+                return inner.get(path.#fieldName);
             } else {
                 return inner;
             }
@@ -243,7 +243,7 @@ class MoveTable {
         if (path instanceof PathDeref) {
             return true;
         } else if (path instanceof PathMemberAccess) {
-            return this.#hasDeref(path.inner);
+            return this.#hasDeref(path.#inner);
         } else {
             return false;
         }

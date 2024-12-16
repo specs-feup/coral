@@ -130,7 +130,7 @@ export default class AddDrops implements GraphTransformation {
         stateHolder: MoveTable.StateHolder,
     ): void {
         if (stateHolder instanceof MoveTable.SingleState) {
-            if (!(path.ty instanceof StructTy)) {
+            if (!(path.#ty instanceof StructTy)) {
                 return;
             }
 
@@ -143,16 +143,16 @@ export default class AddDrops implements GraphTransformation {
                 this.#addDrops(coralNode, path, dropLocation, true);
             }
         } else if (stateHolder instanceof MoveTable.FieldStates) {
-            if (!(path.ty instanceof StructTy)) {
+            if (!(path.#ty instanceof StructTy)) {
                 throw new Error("Expected path to be a struct.");
             }
 
-            if (path.ty.dropFunction !== undefined) {
+            if (path.#ty.dropFunction !== undefined) {
                 if (!stateHolder.isConsistentState()) {
                     throw new DropInconsistentStructError(
                         coralNode.jp,
                         path,
-                        path.ty.dropFunction,
+                        path.#ty.dropFunction,
                     );
                 }
 
@@ -165,9 +165,9 @@ export default class AddDrops implements GraphTransformation {
                     this.#addDrops(coralNode, path, dropLocation, true);
                 }
             } else {
-                for (const field of path.ty.fields.keys()) {
+                for (const field of path.#ty.fields.keys()) {
                     const subStateHolder = stateHolder.get(field);
-                    const $subPathJp = path.$jp as MemberAccess; //TODO// ClavaJoinPoints.memberAccess(path.$jp, field);
+                    const $subPathJp = path.#$jp as MemberAccess; //TODO// ClavaJoinPoints.memberAccess(path.$jp, field);
                     const subPath = new PathMemberAccess($subPathJp, path, field);
                     this.#handleDrop(coralNode, subPath, dropLocation, subStateHolder);
                 }
@@ -183,13 +183,13 @@ export default class AddDrops implements GraphTransformation {
         dropLocation: DropNode.DropInsertLocation,
         maybe: boolean,
     ) {
-        if (!(path.ty instanceof StructTy)) {
+        if (!(path.#ty instanceof StructTy)) {
             return;
         }
 
         if (dropLocation === DropNode.DropInsertLocation.AFTER_TARGET) {
             this.#addDropFields(
-                Array.from(path.ty.fields.keys()).reverse(),
+                Array.from(path.#ty.fields.keys()).reverse(),
                 coralNode,
                 path,
                 dropLocation,
@@ -197,13 +197,13 @@ export default class AddDrops implements GraphTransformation {
             );
         }
 
-        if (path.ty.dropFunction !== undefined) {
+        if (path.#ty.dropFunction !== undefined) {
             this.#addDrop(coralNode, path, dropLocation, maybe);
         }
 
         if (dropLocation === DropNode.DropInsertLocation.BEFORE_TARGET) {
             this.#addDropFields(
-                Array.from(path.ty.fields.keys()),
+                Array.from(path.#ty.fields.keys()),
                 coralNode,
                 path,
                 dropLocation,
@@ -220,7 +220,7 @@ export default class AddDrops implements GraphTransformation {
         maybe: boolean,
     ) {
         for (const field of fields) {
-            const $subPathJp = path.$jp as MemberAccess; //TODO// ClavaJoinPoints.memberAccess(path.$jp, field);
+            const $subPathJp = path.#$jp as MemberAccess; //TODO// ClavaJoinPoints.memberAccess(path.$jp, field);
             const subPath = new PathMemberAccess($subPathJp, path, field);
             this.#addDrops(coralNode, subPath, dropLocation, maybe);
         }
@@ -244,7 +244,7 @@ export default class AddDrops implements GraphTransformation {
                 .as(DropNode.Class);
 
             nodeAsDrop.accesses.push(
-                new Access(path, Access.Mutability.MUTABLE_BORROW, Access.Depth.DEEP),
+                new Access(path, Access.Kind.MUTABLE_BORROW, Access.Depth.DEEP),
             );
 
             if (!coralNode.is(InstructionNode.TypeGuard)) {

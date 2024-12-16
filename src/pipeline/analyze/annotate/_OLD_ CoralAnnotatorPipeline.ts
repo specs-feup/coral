@@ -51,7 +51,7 @@ import Path from "@specs-feup/coral/mir/path/Path";
 import PathDeref from "@specs-feup/coral/mir/path/PathDeref";
 import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
 import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
-import BorrowKind from "@specs-feup/coral/mir/ty/BorrowKind";
+import Loan.Kind from "@specs-feup/coral/mir/ty/Loan.Kind";
 import BuiltinTy from "@specs-feup/coral/mir/ty/BuiltinTy";
 import RefTy from "@specs-feup/coral/mir/ty/RefTy";
 import StructTy from "@specs-feup/coral/mir/ty/StructTy";
@@ -69,7 +69,7 @@ import Regionck from "@specs-feup/coral/regionck/Regionck";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
 
-export default class GraphAnnotator implements GraphTransformation {
+export default class CoralAnnotatorPipeline implements GraphTransformation {
     #regionck?: Regionck;
 
     apply(graph: BaseGraph.Class): void {
@@ -258,7 +258,7 @@ export default class GraphAnnotator implements GraphTransformation {
                 node.accesses.push(
                     new Access(
                         new PathVarRef($vardecl, ty),
-                        Access.Mutability.STORAGE_DEAD,
+                        Access.Kind.STORAGE_DEAD,
                         Access.Depth.SHALLOW,
                     ),
                 );
@@ -286,7 +286,7 @@ export default class GraphAnnotator implements GraphTransformation {
             node.accesses.push(
                 new Access(
                     new PathVarRef($vardecl, ty),
-                    Access.Mutability.WRITE,
+                    Access.Kind.WRITE,
                     Access.Depth.SHALLOW,
                 ),
             );
@@ -341,9 +341,7 @@ export default class GraphAnnotator implements GraphTransformation {
         if ($binaryOp.isAssignment) {
             this.#annotateExpr(node, $binaryOp.right);
             const path = this.#parseLvalue($binaryOp.left);
-            node.accesses.push(
-                new Access(path, Access.Mutability.WRITE, Access.Depth.SHALLOW),
-            );
+            node.accesses.push(new Access(path, Access.Kind.WRITE, Access.Depth.SHALLOW));
         } else {
             this.#annotateExpr(node, $binaryOp.left);
             this.#annotateExpr(node, $binaryOp.right);
@@ -388,14 +386,14 @@ export default class GraphAnnotator implements GraphTransformation {
             // It still is an access though
             // TODO check if this access is correct
             node.accesses.push(
-                new Access(loanedPath, Access.Mutability.BORROW, Access.Depth.DEEP),
+                new Access(loanedPath, Access.Kind.BORROW, Access.Depth.DEEP),
             );
             return undefined;
         }
 
         let leftTy: Ty | undefined;
         if ($parent instanceof BinaryOp && $parent.isAssignment) {
-            leftTy = this.#parseLvalue($parent.left).ty;
+            leftTy = this.#parseLvalue($parent.left).#ty;
         } else if ($parent instanceof Vardecl) {
             leftTy = this.#regionck!.getTy($parent);
         } else if ($parent instanceof ReturnStmt) {
@@ -437,12 +435,12 @@ export default class GraphAnnotator implements GraphTransformation {
         node.accesses.push(
             new Access(
                 loanedPath,
-                Access.Mutability.fromBorrowKind(leftTy.borrowKind),
+                Access.Kind.fromLoan.Kind(leftTy.borrowKind),
                 Access.Depth.DEEP,
             ),
         );
 
-        return loan.loanedRefTy;
+        return loan.rightTy;
     }
 
     #annotateFunctionCall(node: CoralNode.Class, $call: Call) {
@@ -504,7 +502,7 @@ export default class GraphAnnotator implements GraphTransformation {
             node.accesses.push(
                 new Access(
                     new PathVarRef($vardecl, returnTy),
-                    Access.Mutability.WRITE,
+                    Access.Kind.WRITE,
                     Access.Depth.SHALLOW,
                 ),
             );
@@ -535,15 +533,13 @@ export default class GraphAnnotator implements GraphTransformation {
     #annotateReadAccess(node: CoralNode.Class, $expr: Varref | UnaryOp | MemberAccess) {
         const path = this.#parseLvalue($expr);
 
-        if (path.ty instanceof RefTy) {
+        if (path.#ty instanceof RefTy) {
             this.#annotateReference(node, $expr, true);
         } else {
-            node.accesses.push(
-                new Access(path, Access.Mutability.READ, Access.Depth.DEEP),
-            );
+            node.accesses.push(new Access(path, Access.Kind.READ, Access.Depth.DEEP));
         }
 
-        return path.ty;
+        return path.#ty;
     }
 
     #parseType(
@@ -622,7 +618,7 @@ export default class GraphAnnotator implements GraphTransformation {
                 regionVar = outer[0][1];
             }
             return new RefTy(
-                inner.isConst ? BorrowKind.SHARED : BorrowKind.MUTABLE,
+                inner.isConst ? Loan.Kind.SHARED : Loan.Kind.MUTABLE,
                 inner,
                 $type,
                 regionVar,
@@ -730,7 +726,7 @@ export default class GraphAnnotator implements GraphTransformation {
             }
             const name = `%tmp${i}`;
             takenLifetimeNames.add(name);
-            // TODO only insert if there is flag for it
+            // TODO only insert in code generation phase
             this.#regionck!.functionEntry.jp.insertBefore(
                 `#pragma coral lf ${newPragmaLhs} = ${name}`,
             );
@@ -743,8 +739,6 @@ export default class GraphAnnotator implements GraphTransformation {
     #parseLvalue($expr: Expression): Path {
         if ($expr instanceof Varref) {
             const ty = this.#regionck!.getTy($expr.vardecl);
-            // TODO will there not be a problem if the order of node
-            //      visit (varref vs vardecl) is different ?
             if (ty === undefined) {
                 throw new Error("Variable " + $expr.name + " not found");
             }

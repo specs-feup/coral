@@ -20,6 +20,7 @@ export default class CoralPragma {
     }
 
     isFlag(flag: string): boolean {
+        // TODO instead of second condition, it should be an error
         return this.name === flag && this.tokens.length === 0;
     }
 

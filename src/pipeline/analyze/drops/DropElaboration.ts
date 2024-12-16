@@ -101,13 +101,13 @@ class DropElaboration implements GraphTransformation {
                 return holder;
             }
 
-            const newHolder = DropElaboration.DropFlagHolder.create(path.ty);
+            const newHolder = DropElaboration.DropFlagHolder.create(path.#ty);
             this.#dropFlags.set(path.$vardecl.astId, newHolder);
             return newHolder;
         } else if (path instanceof PathMemberAccess) {
-            const inner = this.#pathToDropFlagHolder(path.inner);
+            const inner = this.#pathToDropFlagHolder(path.#inner);
             if (inner instanceof DropElaboration.FieldDropFlags) {
-                return inner.get(path.fieldName);
+                return inner.get(path.#fieldName);
             } else {
                 return inner;
             }
@@ -125,11 +125,11 @@ class DropElaboration implements GraphTransformation {
 
         const $dropFlagDecl = ClavaJoinPoints.varDecl(
             dropFlagName,
-            ClavaJoinPoints.integerLiteral(path.innerVardecl.hasInit ? "1" : "0"),
+            ClavaJoinPoints.integerLiteral(path.vardecl.hasInit ? "1" : "0"),
         );
 
         for (const $jp of Query.searchFrom(functionEntry.jp, "vardecl", {
-            name: path.innerVardecl.name,
+            name: path.vardecl.name,
         })) {
             const $vardecl = $jp as Vardecl;
             $vardecl.insertAfter($dropFlagDecl);
@@ -143,11 +143,11 @@ class DropElaboration implements GraphTransformation {
             const nodeAsCoralNode = node.as(CoralNode.Class);
 
             for (const access of nodeAsCoralNode.accesses) {
-                if (access.mutability === Access.Mutability.WRITE) {
+                if (access.mutability === Access.Kind.WRITE) {
                     if (path.contains(access.path) || access.path.contains(path)) {
                         this.#addFlagAssignment(nodeAsCoralNode.jp, $dropFlagDecl, true);
                     }
-                } else if (access.mutability === Access.Mutability.READ) {
+                } else if (access.mutability === Access.Kind.READ) {
                     if (path.contains(access.path)) {
                         this.#addFlagAssignment(nodeAsCoralNode.jp, $dropFlagDecl, false);
                     }

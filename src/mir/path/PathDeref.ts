@@ -1,36 +1,29 @@
-import {
-    Expression,
-    Joinpoint,
-    UnaryOp,
-    Vardecl,
-} from "@specs-feup/clava/api/Joinpoints.js";
-
+import { UnaryOp, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
+import Loan from "@specs-feup/coral/mir/Loan";
 import Path from "@specs-feup/coral/mir/path/Path";
-import Ty from "@specs-feup/coral/mir/ty/Ty";
-import RefTy from "@specs-feup/coral/mir/ty/RefTy";
-import BorrowKind from "@specs-feup/coral/mir/ty/BorrowKind";
+import Ty from "@specs-feup/coral/mir/symbol/Ty";
+import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
 
 /**
  * A dereference of a path, such as `*x`.
  */
-export default class PathDeref extends Path {
-    $jp: UnaryOp;
+export default class PathDeref implements Path {
+    #jp: UnaryOp;
     /**
      * The path being dereferenced. For example, in `*x`, this would be `x`.
      */
-    inner: Path;
+    #inner: Path;
     /**
      * The type of the path being dereferenced. For example, in `*x` of type `int`, this would be the type `&int`.
      */
-    innerTy: RefTy;
+    #innerTy: RefTy;
 
     constructor($jp: UnaryOp, inner: Path) {
-        super();
-        this.$jp = $jp;
-        this.inner = inner;
+        this.#jp = $jp;
+        this.#inner = inner;
 
         if (inner.ty instanceof RefTy) {
-            this.innerTy = inner.ty;
+            this.#innerTy = inner.ty;
         } else {
             throw new Error(
                 "Cannot dereference non-reference type " + inner.ty.toString(),
@@ -38,39 +31,43 @@ export default class PathDeref extends Path {
         }
     }
 
-    override toString(): string {
-        return `*${this.inner.toString()}`;
+    toString(): string {
+        return `*${this.#inner.toString()}`;
     }
 
-    override equals(other: Path): boolean {
-        return other instanceof PathDeref && this.inner.equals(other.inner);
+    equals(other: Path): boolean {
+        return other instanceof PathDeref && this.#inner.equals(other.#inner);
     }
 
-    override contains(other: Path): boolean {
-        return this.equals(other) || this.inner.contains(other);
+    contains(other: Path): boolean {
+        return this.equals(other) || this.#inner.contains(other);
     }
 
-    override get prefixes(): Path[] {
-        return [this, ...this.inner.prefixes];
+    get prefixes(): Path[] {
+        return [this, ...this.#inner.prefixes];
     }
 
-    override get shallowPrefixes(): Path[] {
+    get shallowPrefixes(): Path[] {
         return [this];
     }
 
-    override get supportingPrefixes(): Path[] {
-        if (this.innerTy.borrowKind === BorrowKind.MUTABLE) {
-            return [this, ...this.inner.supportingPrefixes];
+    get supportingPrefixes(): Path[] {
+        if (this.#innerTy.loanKind === Loan.Kind.MUTABLE) {
+            return [this, ...this.#inner.supportingPrefixes];
         } else {
             return [this];
         }
     }
 
-    override get ty(): Ty {
-        return this.innerTy.referent;
+    get ty(): Ty {
+        return this.#innerTy.referent;
     }
 
-    override get innerVardecl(): Vardecl {
-        return this.inner.innerVardecl;
+    get jp(): UnaryOp {
+        return this.#jp;
+    }
+
+    get vardecl(): Vardecl {
+        return this.#inner.vardecl;
     }
 }

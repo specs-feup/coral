@@ -82,7 +82,7 @@ export default class MoveAnalyser implements GraphTransformation {
                         fields = fields.reverse();
                         for (const field of fields) {
                             path = new PathMemberAccess(
-                                path.$jp as MemberAccess,
+                                path.#$jp as MemberAccess,
                                 path,
                                 field,
                             );

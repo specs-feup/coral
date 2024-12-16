@@ -17,8 +17,8 @@ export default class DropInconsistentStructError extends CoralError {
                 $dropLocation,
             )
                 .code(
-                    path.innerVardecl,
-                    `'${path.toString()}' has type '${path.ty.name}' with drop function '${$dropFunction.name}'`,
+                    path.vardecl,
+                    `'${path.toString()}' has type '${path.#ty.name}' with drop function '${$dropFunction.name}'`,
                 )
                 .codeString(
                     $dropLocation.originNode.code.trim().split("\n").reverse()[0],

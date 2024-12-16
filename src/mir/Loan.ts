@@ -1,45 +1,56 @@
-import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
-import cytoscape from "@specs-feup/lara/api/libs/cytoscape-3.26.0.js";
 import Path from "@specs-feup/coral/mir/path/Path";
-import Ty from "@specs-feup/coral/mir/ty/Ty";
-import RefTy from "@specs-feup/coral/mir/ty/RefTy";
-import BorrowKind from "@specs-feup/coral/mir/ty/BorrowKind";
+import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
 import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
-import CoralNode from "@specs-feup/coral/graph/CoralNode";
 
-export default class Loan {
-    node: CoralNode.Class;
-    regionVar: RegionVariable;
-    reborrow: boolean;
-    leftTy: RefTy;
-    loanedPath: Path;
-    loanedRefTy: RefTy;
+class Loan {
+    #loanedPath: Path;
+    #regionVar: RegionVariable;
+    #reborrow: boolean;
+    #leftTy: RefTy;
+    #rightTy: RefTy;
 
     constructor(
-        node: CoralNode.Class,
+        loanedPath: Path,
         regionVar: RegionVariable,
         reborrow: boolean,
         leftTy: RefTy,
-        loanedPath: Path,
     ) {
-        this.node = node;
-        this.regionVar = regionVar;
-        this.reborrow = reborrow;
-        this.leftTy = leftTy;
-        this.loanedPath = loanedPath;
-        this.loanedRefTy = new RefTy(
-            this.borrowKind,
-            this.loanedPath.ty,
-            this.leftTy.$jp,
-            this.regionVar,
+        this.#loanedPath = loanedPath;
+        this.#regionVar = regionVar;
+        this.#reborrow = reborrow;
+        this.#leftTy = leftTy;
+        this.#rightTy = new RefTy(
+            this.#regionVar,
+            this.#loanedPath.ty,
+            this.#leftTy.jp,
+            this.#leftTy.isConst,
         );
     }
 
     toString(): string {
-        return `${this.borrowKind === BorrowKind.MUTABLE ? "&mut" : "&const"}${this.regionVar.name} ${this.loanedPath.toString()}`;
+        return `${this.kind.toString} ${this.#regionVar.name} ${this.#loanedPath.toString()}`;
     }
 
-    get borrowKind(): BorrowKind {
-        return this.leftTy.borrowKind;
+    get kind(): Loan.Kind {
+        return this.#leftTy.loanKind;
     }
 }
+
+namespace Loan {
+    export enum Kind {
+        SHARED = "shared",
+        MUTABLE = "mutable",
+    }
+
+    export namespace Kind {
+        export function toString(kind: Kind): string {
+            if (kind === Kind.SHARED) {
+                return "&const";
+            } else {
+                return "&mut";
+            }
+        }
+    }
+}
+
+export default Loan;

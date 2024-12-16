@@ -12,7 +12,7 @@ export default class UseWhileMutBorrowedError extends CoralError {
         access: Access,
     ) {
         const builder = new ErrorMessageBuilder(
-            `Cannot use '${access.path.toString()}' while mutably borrowed`,
+            `Cannot use '${access.#path.toString()}' while mutably borrowed`,
             $invalidUse,
         )
             .code(
@@ -21,7 +21,7 @@ export default class UseWhileMutBorrowedError extends CoralError {
             )
             .code(
                 $invalidUse,
-                `use of '${access.path.toString()}' occurs here, while borrow is still active`,
+                `use of '${access.#path.toString()}' occurs here, while borrow is still active`,
             );
         if ($nextLoanUse) {
             builder.code($nextLoanUse, "borrow is later used here");

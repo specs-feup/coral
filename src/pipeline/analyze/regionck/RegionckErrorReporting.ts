@@ -3,7 +3,7 @@ import UseWhileMutBorrowedError from "@specs-feup/coral/error/borrow/UseWhileMut
 import MoveWhileBorrowedError from "@specs-feup/coral/error/move/MoveWhileBorrowedError";
 import Loan from "@specs-feup/coral/mir/Loan";
 import Access from "@specs-feup/coral/mir/Access";
-import BorrowKind from "@specs-feup/coral/mir/ty/BorrowKind";
+import Loan.Kind from "@specs-feup/coral/mir/ty/Loan.Kind";
 import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import MutableBorrowWhileBorrowedError from "@specs-feup/coral/error/borrow/MutableBorrowWhileBorrowedError";
 import { GraphTransformation } from "clava-flow/graph/Graph";
@@ -96,39 +96,39 @@ export default class RegionckErrorReporting implements GraphTransformation {
             case Access.Depth.SHALLOW:
                 return Array.from(node.inScopeLoans).filter(
                     (loan) =>
-                        access.path.equals(loan.loanedPath) ||
-                        access.path.prefixes.some((prefix) =>
+                        access.#path.equals(loan.loanedPath) ||
+                        access.#path.prefixes.some((prefix) =>
                             prefix.equals(loan.loanedPath),
                         ) ||
                         loan.loanedPath.shallowPrefixes.some((prefix) =>
-                            prefix.equals(access.path),
+                            prefix.equals(access.#path),
                         ),
                 );
             case Access.Depth.DEEP:
                 return Array.from(node.inScopeLoans).filter(
                     (loan) =>
-                        access.path.equals(loan.loanedPath) ||
-                        access.path.prefixes.some((prefix) =>
+                        access.#path.equals(loan.loanedPath) ||
+                        access.#path.prefixes.some((prefix) =>
                             prefix.equals(loan.loanedPath),
                         ) ||
                         loan.loanedPath.supportingPrefixes.some((prefix) =>
-                            prefix.equals(access.path),
+                            prefix.equals(access.#path),
                         ),
                 );
         }
     }
 
     #checkAccess(node: CoralNode.Class, access: Access, loan: Loan) {
-        if (access.mutability === Access.Mutability.STORAGE_DEAD) {
+        if (access.#type === Access.Kind.STORAGE_DEAD) {
             const $nextUse = this.#findNextUse(node, loan);
             throw new DanglingReferenceError(node.jp, loan, $nextUse, access);
-        } else if (loan.borrowKind === BorrowKind.MUTABLE) {
+        } else if (loan.kind === Loan.Kind.MUTABLE) {
             const $nextUse = this.#findNextUse(node, loan);
             throw new UseWhileMutBorrowedError(node.jp, loan, $nextUse, access);
-        } else if (access.mutability === Access.Mutability.WRITE) {
+        } else if (access.#type === Access.Kind.WRITE) {
             const $nextUse = this.#findNextUse(node, loan);
             throw new MutateWhileBorrowedError(node.jp, loan, $nextUse, access);
-        } else if (access.mutability === Access.Mutability.MUTABLE_BORROW) {
+        } else if (access.#type === Access.Kind.MUTABLE_BORROW) {
             const $nextUse = this.#findNextUse(node, loan);
             throw new MutableBorrowWhileBorrowedError(node.jp, loan, $nextUse, access);
         } else if (access.isMove) {

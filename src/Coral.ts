@@ -6,7 +6,6 @@ import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 
 
-
 export interface CoralConfig {
     debug: boolean;
     /**
@@ -36,8 +35,7 @@ export default function run_coral(config: Partial<CoralConfig> = {}) {
     Clava.pushAst(); // Additional copy for normalization
 
     // TODO put this in a better place
-    const functionsToAnalyze = Query.search(FunctionJp, { self: ($fn_) => {
-        const $fn = $fn_ as FunctionJp;
+    const functionsToAnalyze = Query.search(FunctionJp, $fn => {
         if (!$fn.isImplementation) {
             return false;
         }
@@ -52,7 +50,7 @@ export default function run_coral(config: Partial<CoralConfig> = {}) {
             return false;
         }
         return isSafe || completeConfig.safeByDefault;
-    }}).get();
+    }).get();
     new CoralNormalizer(completeConfig).apply(functionsToAnalyze);
     new CoralAnalyzer(completeConfig).apply(functionsToAnalyze);
     // new CoralCodeGenerator(completeConfig).apply($root); TODO

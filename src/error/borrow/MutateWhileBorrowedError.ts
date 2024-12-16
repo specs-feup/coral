@@ -12,16 +12,16 @@ export default class MutateWhileBorrowedError extends CoralError {
         access: Access,
     ) {
         const builder = new ErrorMessageBuilder(
-            `Cannot write to '${access.path.toString()}' while borrowed`,
+            `Cannot write to '${access.#path.toString()}' while borrowed`,
             $invalidUse,
         )
             .code(
                 loan.node.jp,
-                `(${loan.borrowKind}) borrow of '${loan.loanedPath.toString()}' occurs here`,
+                `(${loan.kind}) borrow of '${loan.loanedPath.toString()}' occurs here`,
             )
             .code(
                 $invalidUse,
-                `write to '${access.path.toString()}' occurs here, while borrow is still active`,
+                `write to '${access.#path.toString()}' occurs here, while borrow is still active`,
             );
         if ($nextUse) {
             builder.code($nextUse, "borrow is later used here");

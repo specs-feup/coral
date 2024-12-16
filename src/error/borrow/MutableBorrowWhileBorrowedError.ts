@@ -12,7 +12,7 @@ export default class MutableBorrowWhileBorrowedError extends CoralError {
         access: Access,
     ) {
         const builder = new ErrorMessageBuilder(
-            `Cannot borrow '${access.path.toString()}' as mutable because it is also borrowed as immutable`,
+            `Cannot borrow '${access.#path.toString()}' as mutable because it is also borrowed as immutable`,
             $invalidUse,
         )
             .code(
@@ -21,7 +21,7 @@ export default class MutableBorrowWhileBorrowedError extends CoralError {
             )
             .code(
                 $invalidUse,
-                `mutable borrow of '${access.path.toString()}' occurs here`,
+                `mutable borrow of '${access.#path.toString()}' occurs here`,
             );
         if ($nextUse) {
             builder.code($nextUse, "immutable borrow is later used here");

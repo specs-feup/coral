@@ -12,14 +12,14 @@ export default class UseWhileMovedError extends CoralError {
     ) {
         super(
             new ErrorMessageBuilder(
-                `Use of moved value '${access.path.toString()}'`,
+                `Use of moved value '${access.#path.toString()}'`,
                 $invalidUse,
             )
                 .code(
                     $declaration,
-                    `move occurs because '${move.path.toString()}' has type '${move.path.ty.name}' which does not have 'Copy' semantics`,
+                    `move occurs because '${move.#path.toString()}' has type '${move.#path.ty.name}' which does not have 'Copy' semantics`,
                 )
-                .code(move.path.$jp, `value moved here`)
+                .code(move.#path.$jp, `value moved here`)
                 .code($invalidUse, `value used here after move`)
                 .toString(),
         );

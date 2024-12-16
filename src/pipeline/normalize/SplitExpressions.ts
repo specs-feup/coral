@@ -101,11 +101,7 @@ export default class SplitExpressions implements NormalizationPass<typeof Statem
 
     #replaceContinue($jp: Loop, $label: LabelDecl) {
         for (const $continue of Query.searchFrom($jp, Continue)) {
-            let $parentLoop: Joinpoint = $continue.parent;
-            while (!($parentLoop instanceof Loop)) {
-                $parentLoop = $parentLoop.parent;
-            }
-            if ($parentLoop.astId !== $jp.astId) {
+            if ($jp.getAncestor("loop").astId !== $jp.astId) {
                 continue;
             }
             $continue.replaceWith(ClavaJoinPoints.gotoStmt($label));

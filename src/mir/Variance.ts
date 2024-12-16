@@ -1,7 +1,7 @@
 enum Variance {
-    CO = "co",
-    CONTRA = "contra",
-    IN = "in",
+    CO = "covariant",
+    CONTRA = "contravariant",
+    IN = "invariant",
 }
 
 namespace Variance {
