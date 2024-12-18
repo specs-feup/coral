@@ -1,8 +1,8 @@
 import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
-import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
+import Region from "@specs-feup/coral/regionck/RegionVariable";
 
 interface Ty {
-    get regionVars(): RegionVariable[];
+    get regionVars(): Region[];
     get semantics(): Ty.Semantics;
     get isConst(): boolean;
     get jp(): Joinpoint;

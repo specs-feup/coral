@@ -59,7 +59,11 @@ export default class LifetimeBoundPragma {
 
     static parse(pragmas: CoralPragma[]): LifetimeBoundPragma[] {
         return pragmas
-            .filter((p) => p.name === LifetimeBoundPragma.keyword)
+            .filter(
+                (p) =>
+                    p.name === LifetimeBoundPragma.keyword &&
+                    !p.tokens.some((token) => token === "="),
+            )
             .map((p) => new LifetimeBoundPragma(p));
     }
 }

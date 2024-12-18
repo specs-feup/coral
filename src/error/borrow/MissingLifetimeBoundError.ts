@@ -4,14 +4,14 @@ import Access from "@specs-feup/coral/mir/Access";
 import Loan from "@specs-feup/coral/mir/Loan";
 import { FunctionJp, Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
-import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
-import OutlivesConstraint from "@specs-feup/coral/regionck/OutlivesConstraint";
+import Region from "@specs-feup/coral/regionck/RegionVariable";
+import RegionConstraint from "@specs-feup/coral/regionck/OutlivesConstraint";
 
 export default class MissingLifetimeBoundError extends CoralError {
     constructor(
-        region: RegionVariable,
+        region: Region,
         requiredBound: string,
-        relevantConstraint: OutlivesConstraint,
+        relevantConstraint: RegionConstraint,
         $fn: FunctionJp,
     ) {
         const builder = new ErrorMessageBuilder(

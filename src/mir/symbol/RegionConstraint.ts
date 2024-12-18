@@ -1,26 +1,21 @@
 import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
 import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralNode from "@specs-feup/coral/graph/CoralNode";
-import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
+import Region from "@specs-feup/coral/regionck/RegionVariable";
 
 /**
  * A constraint that lifetime 'sup' outlives lifetime 'sub' at node 'node'.
  */
-export default class OutlivesConstraint {
-    sup: RegionVariable;
-    sub: RegionVariable;
+export default class RegionConstraint {
+    sup: Region;
+    sub: Region;
     node: CoralNode.Class;
     // "end()" points added to the sup region variable due to this constraint.
     // This is relevant for producing error messages for universal region variables.
     addedEnds: Set<string>;
     $jp: Joinpoint;
 
-    constructor(
-        sup: RegionVariable,
-        sub: RegionVariable,
-        node: CoralNode.Class,
-        $jp: Joinpoint,
-    ) {
+    constructor(sup: Region, sub: Region, node: CoralNode.Class, $jp: Joinpoint) {
         this.sup = sup;
         this.sub = sub;
         this.node = node;
@@ -33,7 +28,7 @@ export default class OutlivesConstraint {
     }
 
     apply(): boolean {
-        if (this.sub.kind === RegionVariable.Kind.EXISTENTIAL) {
+        if (this.sub.kind === Region.Kind.EXISTENTIAL) {
             return this.applyExistential();
         } else {
             return this.applyUniversal();
@@ -42,9 +37,9 @@ export default class OutlivesConstraint {
 
     applyUniversal(): boolean {
         let changed = false;
-        if (this.sup.kind !== RegionVariable.Kind.UNIVERSAL) {
+        if (this.sup.kind !== Region.Kind.UNIVERSAL) {
             changed = true;
-            this.sup.kind = RegionVariable.Kind.UNIVERSAL;
+            this.sup.kind = Region.Kind.UNIVERSAL;
         }
 
         for (const point of this.sub.points) {

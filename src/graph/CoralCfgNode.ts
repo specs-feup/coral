@@ -1,10 +1,11 @@
 import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
 import { Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
+import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
 import Access from "@specs-feup/coral/mir/Access";
 import Loan from "@specs-feup/coral/mir/Loan";
 import Path from "@specs-feup/coral/mir/path/Path";
 import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
-import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
+import Region from "@specs-feup/coral/regionck/Region";
 import Node from "@specs-feup/flow/graph/Node";
 
 namespace CoralCfgNode {
@@ -15,15 +16,16 @@ namespace CoralCfgNode {
         D extends Data = Data,
         S extends ScratchData = ScratchData,
     > extends ClavaControlFlowNode.Class<D, S> {
-        
         addAccess(path: Path, kind: Access.Kind) {
             this.scratchData[TAG].accesses.push(new Access(path, kind));
         }
 
-        addLoan(loanedPath: Path, regionVar: RegionVariable, reborrow: boolean, leftTy: RefTy) {
-            this.scratchData[TAG].loans.push(new Loan(loanedPath, regionVar, reborrow, leftTy));
+        addLoan(loanedPath: Path, regionVar: Region, reborrow: boolean, leftTy: RefTy) {
+            this.scratchData[TAG].loans.push(
+                new Loan(loanedPath, regionVar, reborrow, leftTy),
+            );
         }
-        
+
         get varsEnteringScope(): Vardecl[] {
             return this.scratchData[TAG].varsEnteringScope;
         }

@@ -1,19 +1,19 @@
-import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
-import { PointerType } from "@specs-feup/clava/api/Joinpoints.js";
-import MetaRegionVariable from "@specs-feup/coral/regionck/MetaRegionVariable";
+
 import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
 import Loan from "@specs-feup/coral/mir/Loan";
+import { PointerType } from "@specs-feup/clava/api/Joinpoints.js";
+import Region from "@specs-feup/coral/regionck/Region";
 
 export default class MetaRefTy implements MetaTy {
-    #metaRegionVar: MetaRegionVariable;
+    #metaRegionVar: MetaRegion;
     #referent: MetaTy;
     #isConst: boolean;
     #jp: PointerType;
 
     constructor(
-        regionVar: MetaRegionVariable,
+        regionVar: MetaRegion,
         referent: MetaTy,
         $jp: PointerType,
         isConst: boolean,
@@ -45,7 +45,7 @@ export default class MetaRefTy implements MetaTy {
         return this.#jp;
     }
 
-    toTy(regionVarMap: Map<string, RegionVariable>): Ty {
+    toTy(regionVarMap: Map<string, Region>): Ty {
         const regionVar = regionVarMap.get(this.#metaRegionVar.name);
         if (regionVar === undefined) {
             throw new Error(

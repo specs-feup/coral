@@ -1,7 +1,7 @@
 import { BuiltinType, EnumDecl } from "@specs-feup/clava/api/Joinpoints.js";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
-import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
+import Region from "@specs-feup/coral/regionck/RegionVariable";
 
 // TODO probably rename, because it can be enum
 export default class BuiltinTy implements Ty, MetaTy {
@@ -15,7 +15,7 @@ export default class BuiltinTy implements Ty, MetaTy {
         this.#isConst = isConst;
     }
 
-    get regionVars(): RegionVariable[] {
+    get regionVars(): Region[] {
         return [];
     }
 

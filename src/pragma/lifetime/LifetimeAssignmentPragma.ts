@@ -237,7 +237,11 @@ export default class LifetimeAssignmentPragma {
 
     static parse(pragmas: CoralPragma[]): LifetimeAssignmentPragma[] {
         return pragmas
-            .filter((p) => p.name === LifetimeAssignmentPragma.keyword)
+            .filter(
+                (p) =>
+                    p.name === LifetimeAssignmentPragma.keyword &&
+                    p.tokens.some((token) => token === "="),
+            )
             .map((p) => new LifetimeAssignmentPragma(p));
     }
 }

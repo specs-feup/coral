@@ -1,4 +1,11 @@
 import ClavaFunctionNode from "@specs-feup/clava-flow/ClavaFunctionNode";
+import { FunctionJp, RecordJp, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
+import Def from "@specs-feup/coral/mir/symbol/Def";
+import Fn from "@specs-feup/coral/mir/symbol/Fn";
+import Region from "@specs-feup/coral/mir/symbol/Region";
+import Ty from "@specs-feup/coral/mir/symbol/Ty";
+import FileSymbolTable from "@specs-feup/coral/symbol/FileSymbolTable";
+import FunctionSymbolTable from "@specs-feup/coral/symbol/FunctionSymbolTable";
 import Node from "@specs-feup/flow/graph/Node";
 
 namespace CoralFunctionNode {
@@ -9,7 +16,24 @@ namespace CoralFunctionNode {
         D extends Data = Data,
         S extends ScratchData = ScratchData,
     > extends ClavaFunctionNode.Class<D, S> {
-        
+        getSymbol($decl: Vardecl): Ty;
+        getSymbol($decl: RecordJp): Def;
+        getSymbol($decl: FunctionJp): Fn;
+        getSymbol($decl: Vardecl | RecordJp | FunctionJp): Ty | Def | Fn {
+            return this.scratchData[TAG].symbolTable.get($decl);
+        }
+
+        generateRegion(kind: Region.Kind) {
+            return this.scratchData[TAG].symbolTable.generateRegion(kind);
+        }
+
+        get staticRegion(): Region {
+            return this.scratchData[TAG].symbolTable.staticRegion;
+        }
+
+        get regions(): Iterable<Region> {
+            return this.scratchData[TAG].symbolTable.regions;
+        }
     }
 
     export class Builder
@@ -21,6 +45,11 @@ namespace CoralFunctionNode {
                 ClavaFunctionNode.ScratchData
             >
     {
+        #fileTable: FileSymbolTable;
+        constructor(fileTable: FileSymbolTable) {
+            this.#fileTable = fileTable;
+        }
+
         buildData(data: ClavaFunctionNode.Data): Data {
             return {
                 ...data,
@@ -32,16 +61,12 @@ namespace CoralFunctionNode {
         }
 
         buildScratchData(scratchData: ClavaFunctionNode.ScratchData): ScratchData {
-            return scratchData;
-
-            // return {
-            //     ...scratchData,
-            //     ...super.buildScratchData(scratchData),
-            //     coral: {
-            //         functions: new Map<string, Regionck>(),
-            //         files: new Map<string, StructDefsMap>(),
-            //     },
-            // };
+            return {
+                ...scratchData,
+                [TAG]: {
+                    symbolTable: new FunctionSymbolTable(this.#fileTable),
+                },
+            };
         }
     }
 
@@ -65,10 +90,9 @@ namespace CoralFunctionNode {
     }
 
     export interface ScratchData extends ClavaFunctionNode.ScratchData {
-        // [TAG]: {
-        //     // functions: Map<string, Regionck>;
-        //     // files: Map<string, StructDefsMap>;
-        // };
+        [TAG]: {
+            symbolTable: FunctionSymbolTable;
+        };
     }
 }
 

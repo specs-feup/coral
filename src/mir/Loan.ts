@@ -1,20 +1,15 @@
 import Path from "@specs-feup/coral/mir/path/Path";
+import Region from "@specs-feup/coral/mir/symbol/Region";
 import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
-import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
 
 class Loan {
     #loanedPath: Path;
-    #regionVar: RegionVariable;
+    #regionVar: Region;
     #reborrow: boolean;
     #leftTy: RefTy;
     #rightTy: RefTy;
 
-    constructor(
-        loanedPath: Path,
-        regionVar: RegionVariable,
-        reborrow: boolean,
-        leftTy: RefTy,
-    ) {
+    constructor(loanedPath: Path, regionVar: Region, reborrow: boolean, leftTy: RefTy) {
         this.#loanedPath = loanedPath;
         this.#regionVar = regionVar;
         this.#reborrow = reborrow;

@@ -22,13 +22,9 @@ import {
     Varref,
 } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
-import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
-import CoralTransformation, {
-    CoralTransformationApplier,
-} from "@specs-feup/coral/graph/CoralTransformation";
+import CoralFunctionWiseTransformation, { CoralFunctionWiseTransformationApplier } from "@specs-feup/coral/graph/CoralFunctionWiseTransformation";
 import Access from "@specs-feup/coral/mir/Access";
 import FunctionCall from "@specs-feup/coral/mir/FunctionCall";
-import Loan from "@specs-feup/coral/mir/Loan";
 import Path from "@specs-feup/coral/mir/path/Path";
 import PathDeref from "@specs-feup/coral/mir/path/PathDeref";
 import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
@@ -38,26 +34,17 @@ import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
 import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
 import LifetimeAssignmentPragma from "@specs-feup/coral/pragma/lifetime/LifetimeAssignmentPragma";
 import LfPath from "@specs-feup/coral/pragma/lifetime/path/LfPath";
-import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
+import Region from "@specs-feup/coral/regionck/Region";
 import Node from "@specs-feup/flow/graph/Node";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 
-export default class ControlFlowAnnotator extends CoralTransformation {
-    applier = ControlFlowAnnotatorApplier;
+export default class ControlFlowAnnotator extends CoralFunctionWiseTransformation {
+    fnApplier = ControlFlowAnnotatorApplier;
 }
 
-class ControlFlowAnnotatorApplier extends CoralTransformationApplier {
+class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier {
     apply(): void {
-        for (const fn of this.graph.functionsToAnalyze) {
-            const coralFn = fn
-                .init(new CoralFunctionNode.Builder())
-                .as(CoralFunctionNode);
-            this.#annotateFunction(coralFn);
-        }
-    }
-
-    #annotateFunction(fn: CoralFunctionNode.Class) {
-        for (const node of fn.controlFlowNodes.filterIs(ClavaControlFlowNode)) {
+        for (const node of this.fn.controlFlowNodes.filterIs(ClavaControlFlowNode)) {
             // TODO
             // if (!node.is(LivenessNode.TypeGuard)) {
             //     node.init(new LivenessNode.Builder());
@@ -101,7 +88,7 @@ class ControlFlowAnnotatorApplier extends CoralTransformationApplier {
         } else {
             node.varsLeavingScope = vars;
             for (const $vardecl of vars) {
-                const ty = this.graph.getSymbol($vardecl);
+                const ty = this.fn.getSymbol($vardecl);
                 node.addAccess(new PathVarRef($vardecl, ty), Access.Kind.STORAGE_DEAD);
             }
         }
@@ -117,7 +104,7 @@ class ControlFlowAnnotatorApplier extends CoralTransformationApplier {
 
         if ($vardecl.hasInit) {
             this.#annotateExpr(node, $vardecl.init);
-            const ty = this.graph.getSymbol($vardecl);
+            const ty = this.fn.getSymbol($vardecl);
             node.addAccess(new PathVarRef($vardecl, ty), Access.Kind.WRITE);
         }
     }
@@ -146,8 +133,6 @@ class ControlFlowAnnotatorApplier extends CoralTransformationApplier {
                 $expr.subExpr.type.isArray
             ) {
                 // TODO
-
-                // TODO make it part of the error stack
                 throw new Error(
                     "Casts to pointers or arrays are not supported\n" + $expr.code,
                 );
@@ -163,8 +148,6 @@ class ControlFlowAnnotatorApplier extends CoralTransformationApplier {
             // TODO Unhandled:
             // ArrayAccess
             // TODO initializer expressions (e.g. `{1, 2}`) are not handled
-
-            // TODO make it part of the error stack
             throw new Error(
                 "Unhandled expression annotation for jp: " +
                     $expr.joinPointType +
@@ -230,7 +213,7 @@ class ControlFlowAnnotatorApplier extends CoralTransformationApplier {
         if ($parent instanceof BinaryOp && $parent.isAssignment) {
             leftTy = this.#parseLvalue($parent.left).ty;
         } else if ($parent instanceof Vardecl) {
-            leftTy = this.graph.getSymbol($parent);
+            leftTy = this.fn.getSymbol($parent);
         } else if ($parent instanceof ReturnStmt) {
             leftTy = this.#regionck!.getReturnTy();
         } else if ($parent instanceof Call) {
@@ -261,60 +244,27 @@ class ControlFlowAnnotatorApplier extends CoralTransformationApplier {
             );
         }
 
-        const regionVar = this.#regionck!.newRegionVar(RegionVariable.Kind.EXISTENTIAL);
+        const regionVar = this.fn.generateRegion(Region.Kind.EXISTENTIAL);
 
         node.addLoan(loanedPath, regionVar, reborrow, leftTy);
         node.addAccess(loanedPath, Access.Kind.fromLoanKind(leftTy.loanKind));
     }
 
     #annotateFunctionCall(node: CoralCfgNode.Class, $call: Call) {
-        const $fn = $call.function;
+        const fnSymbol = this.fn.getSymbol($call.function);
 
-        const coralPragmas = CoralPragma.parse($fn.pragmas);
-        const potentialAssignmentPragmas = coralPragmas.filter(
-            (p) =>
-                p.name === LifetimeAssignmentPragma.keyword &&
-                p.tokens.some((token) => token === "="),
-        );
-        const lifetimeAssignmentPragmas = LifetimeAssignmentPragma.parse(
-            potentialAssignmentPragmas,
-        );
-        let lifetimeAssignments = new Map<
-            string,
-            [LfPath, RegionVariable, LifetimeAssignmentPragma][]
-        >();
-        let lifetimes = new Map<string, RegionVariable>();
-        lifetimes.set("%static", this.#regionck!.staticRegionVar);
-        for (const lifetimeAssignmentPragma of lifetimeAssignmentPragmas) {
-            const lfPath = lifetimeAssignmentPragma.lhs;
-            let regionVar = lifetimes.get(lifetimeAssignmentPragma.rhs);
-            if (regionVar === undefined) {
-                regionVar = this.#regionck!.newRegionVar(RegionVariable.Kind.EXISTENTIAL);
-                lifetimes.set(lifetimeAssignmentPragma.rhs, regionVar);
-            }
-
-            if (lifetimeAssignments.has(lfPath.varName)) {
-                lifetimeAssignments
-                    .get(lfPath.varName)!
-                    .push([lfPath, regionVar, lifetimeAssignmentPragma]);
-            } else {
-                lifetimeAssignments.set(lfPath.varName, [
-                    [lfPath, regionVar, lifetimeAssignmentPragma],
-                ]);
+        const regionVars = new Map<string, Region>();
+        regionVars.set("%static", this.fn.staticRegion);
+        for (const metaRegion of fnSymbol.metaRegions) {
+            if (!regionVars.has(metaRegion.name)) {
+                const region = this.fn.generateRegion(Region.Kind.EXISTENTIAL);
+                // TODO `${newPragmaLhs}.${metaRegionVar.name}` for codegen
+                regionVars.set(metaRegion.name, region);
             }
         }
 
-        const takenLifetimeNames = new Set(lifetimes.keys());
-
-        // Return type
-        const returnTy = this.#parseType(
-            $fn.returnType,
-            lifetimeAssignments.get("return"),
-            RegionVariable.Kind.EXISTENTIAL,
-            takenLifetimeNames,
-            "return",
-        );
-
+        const returnTy = fnSymbol.return.toTy(regionVars);
+        
         if ($fn.returnType.desugarAll.code !== "void") {
             // Normalization implies parent is Vardecl
             let $vardecl = $call.parent;
@@ -326,26 +276,13 @@ class ControlFlowAnnotatorApplier extends CoralTransformationApplier {
             node.addAccess(new PathVarRef($vardecl, returnTy), Access.Kind.WRITE);
         }
 
-        // Params
-        const paramTys: Ty[] = [];
-        for (const $param of $fn.params) {
-            const ty = this.#parseType(
-                $param.type,
-                lifetimeAssignments.get($param.name),
-                RegionVariable.Kind.EXISTENTIAL,
-                takenLifetimeNames,
-                $param.name,
-            );
-            paramTys.push(ty);
-        }
+        const paramTys = fnSymbol.params.map((param) => param.toTy(regionVars));
 
         node.fnCalls.push(new FunctionCall($call, lifetimes, returnTy, paramTys));
 
         for (const $expr of $call.args) {
             this.#annotateExpr(node, $expr);
         }
-
-        return returnTy;
     }
 
     #annotateReadAccess(
@@ -363,7 +300,7 @@ class ControlFlowAnnotatorApplier extends CoralTransformationApplier {
 
     #parseLvalue($expr: Expression): Path {
         if ($expr instanceof Varref) {
-            const ty = this.graph.getSymbol($expr.vardecl);
+            const ty = this.fn.getSymbol($expr.vardecl);
             return new PathVarRef($expr, ty);
         } else if ($expr instanceof ParenExpr) {
             return this.#parseLvalue($expr.subExpr);

@@ -1,27 +1,22 @@
-import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
+import Region from "@specs-feup/coral/regionck/RegionVariable";
 import { PointerType } from "@specs-feup/clava/api/Joinpoints.js";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import Loan from "@specs-feup/coral/mir/Loan";
 
 export default class RefTy implements Ty {
-    #regionVar: RegionVariable;
+    #regionVar: Region;
     #referent: Ty;
     #isConst: boolean;
     #jp: PointerType;
 
-    constructor(
-        regionVar: RegionVariable,
-        referent: Ty,
-        $jp: PointerType,
-        isConst: boolean,
-    ) {
+    constructor(regionVar: Region, referent: Ty, $jp: PointerType, isConst: boolean) {
         this.#referent = referent;
         this.#jp = $jp;
         this.#regionVar = regionVar;
         this.#isConst = isConst;
     }
 
-    get regionVar(): RegionVariable {
+    get regionVar(): Region {
         return this.#regionVar;
     }
 
@@ -29,7 +24,7 @@ export default class RefTy implements Ty {
         return this.#referent;
     }
 
-    get regionVars(): RegionVariable[] {
+    get regionVars(): Region[] {
         return [this.regionVar].concat(this.referent.regionVars);
     }
 

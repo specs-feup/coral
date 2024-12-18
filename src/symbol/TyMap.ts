@@ -1,6 +1,19 @@
-import { BuiltinType, ElaboratedType, EnumDecl, NamedDecl, ParenType, PointerType, QualType, RecordJp, TagType, Type, TypedefType, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
+import {
+    BuiltinType,
+    ElaboratedType,
+    EnumDecl,
+    NamedDecl,
+    ParenType,
+    PointerType,
+    QualType,
+    RecordJp,
+    TagType,
+    Type,
+    TypedefType,
+    Vardecl,
+} from "@specs-feup/clava/api/Joinpoints.js";
+import LifetimeReassignmentError from "@specs-feup/coral/error/struct/LifetimeReassignmentError";
 import UnexpectedLifetimeAssignmentError from "@specs-feup/coral/error/struct/UnexpectedLifetimeAssignmentError";
-import Loan from "@specs-feup/coral/mir/Loan";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import BuiltinTy from "@specs-feup/coral/mir/symbol/ty/BuiltinTy";
 import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
@@ -10,25 +23,21 @@ import LfPath from "@specs-feup/coral/pragma/lifetime/path/LfPath";
 import LfPathDeref from "@specs-feup/coral/pragma/lifetime/path/LfPathDeref";
 import LfPathMemberAccess from "@specs-feup/coral/pragma/lifetime/path/LfPathMemberAccess";
 import LfPathVarRef from "@specs-feup/coral/pragma/lifetime/path/LfPathVarRef";
-import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
-import FileSymbolTable from "@specs-feup/coral/symbol/FileSymbolTable";
+import Region from "@specs-feup/coral/regionck/Region";
+import DefMap from "@specs-feup/coral/symbol/DefMap";
+import RegionMap from "@specs-feup/coral/symbol/RegionMap";
 
 class ParseTypeContext {
-    lifetimeAssignments: [LfPath, RegionVariable, LifetimeAssignmentPragma][];
-    // for generating region variables
-    regionType: RegionVariable.Kind;
-    // for generating region variables
-    takenLifetimeNames: Set<string>;
-    // for generating region variables
-    newPragmaLhs: string;
+    lifetimeAssignments: [LfPath, Region, LifetimeAssignmentPragma][];
+    regionType: Region.Kind;
+    
+    //Approved V
     isConst: boolean;
     isRestrict: boolean;
 
     constructor() {
         this.lifetimeAssignments = [];
-        this.regionType = RegionVariable.Kind.EXISTENTIAL;
-        this.takenLifetimeNames = new Set();
-        this.newPragmaLhs = "";
+        this.regionType = Region.Kind.EXISTENTIAL;
         this.isConst = false;
         this.isRestrict = false;
     }
@@ -42,16 +51,18 @@ export default class TyMap {
     /**
      * Maps {@link NamedDecl} ids to their {@link Ty}.
      */
-    #symbolTable: Map<string, Ty>;
-    #fileSymbolTable: FileSymbolTable;
+    #tyTable: Map<string, Ty>;
+    #defMap: DefMap;
+    #regionMap: RegionMap;
 
-    constructor(fileSymbolTable: FileSymbolTable) {
-        this.#symbolTable = new Map();
-        this.#fileSymbolTable = fileSymbolTable;
+    constructor(defMap: DefMap, regionMap: RegionMap) {
+        this.#tyTable = new Map();
+        this.#defMap = defMap;
+        this.#regionMap = regionMap;
     }
 
     get($decl: Vardecl): Ty {
-        const ty = this.#symbolTable.get($decl.astId);
+        const ty = this.#tyTable.get($decl.astId);
         if (ty !== undefined) {
             return ty;
         }
@@ -61,7 +72,7 @@ export default class TyMap {
         //      is ok
 
         const newTy = this.#parseType($decl.type, new ParseTypeContext());
-        this.#symbolTable.set($decl.astId, newTy);
+        this.#tyTable.set($decl.astId, newTy);
         return newTy;
     }
 
@@ -104,15 +115,17 @@ export default class TyMap {
             //     VariableArrayType;
             // FunctionType;
 
-            
             // TODO error message
             throw new Error("Unhandled parseType: " + $type.joinPointType);
         }
     }
 
-    #parseBuiltin($type: BuiltinType | EnumDecl, name: string, ctx: ParseTypeContext): BuiltinTy {
+    #parseBuiltin(
+        $type: BuiltinType | EnumDecl,
+        name: string,
+        ctx: ParseTypeContext,
+    ): BuiltinTy {
         if (ctx.hasLifetimeAssignments) {
-            // TODO error
             throw new UnexpectedLifetimeAssignmentError(ctx.lifetimeAssignments[0][2]);
         }
         return new BuiltinTy(name, $type, ctx.isConst);
@@ -125,7 +138,7 @@ export default class TyMap {
             .map(
                 ([lfPath, regionVar, pragma]): [
                     LfPath,
-                    RegionVariable,
+                    Region,
                     LifetimeAssignmentPragma,
                 ] => {
                     if (lfPath instanceof LfPathDeref) {
@@ -134,7 +147,7 @@ export default class TyMap {
                         const lfPathInner = lfPath.inner;
                         if (!(lfPathInner instanceof LfPathDeref)) {
                             // TODO error
-                            // throw new UnexpectedLifetimeAssignmentError(pragma);
+                            throw new UnexpectedLifetimeAssignmentError(pragma);
                         }
                         return [
                             new LfPathMemberAccess(lfPathInner.inner, lfPath.member),
@@ -145,14 +158,14 @@ export default class TyMap {
                     throw new Error("Unhandled LfPath");
                 },
             );
-        
-        const inner = this.#parseType($type.pointee,
+
+        const inner = this.#parseType(
+            $type.pointee,
 
             innerLfs,
             regionType,
-            takenLifetimeNames,
-            `(*${newPragmaLhs})`,
         );
+        // TODO `(*${newPragmaLhs})` for codegen
         if (inner.isConst && ctx.isRestrict) {
             throw new Error("Cannot have a restrict pointer to a const type");
         }
@@ -160,25 +173,16 @@ export default class TyMap {
             ([lfPath]) => lfPath instanceof LfPathVarRef,
         );
         if (outer.length > 1) {
-            // TODO error
-            // throw new LifetimeReassignmentError(outer[0][2], outer[0][2]);
+            throw new LifetimeReassignmentError(outer[0][2], outer[0][2]);
         }
-        let regionVar: RegionVariable;
+        let regionVar: Region;
         if (outer.length === 0) {
-            regionVar = this.#generateRegionVar(
-                regionType,
-                takenLifetimeNames,
-                newPragmaLhs,
-            );
+            regionVar = this.#regionMap.generate(ctx.regionType);
+            // TODO newPragmaLhs for codegen
         } else {
             regionVar = outer[0][1];
         }
-        return new RefTy(
-            regionVar,
-            inner,
-            $type,
-            ctx.isConst,
-        );
+        return new RefTy(regionVar, inner, $type, ctx.isConst);
     }
 
     #parseStruct($decl: RecordJp, ctx: ParseTypeContext): StructTy {
@@ -186,22 +190,20 @@ export default class TyMap {
             ([lfPath]) => !(lfPath instanceof LfPathMemberAccess),
         );
         if (invalidMetaRegionVarAssignment !== undefined) {
-            // TODO error
-            // throw new UnexpectedLifetimeAssignmentError(
-            //     invalidMetaRegionVarAssignment[2],
-            // );
+            throw new UnexpectedLifetimeAssignmentError(
+                invalidMetaRegionVarAssignment[2],
+            );
         }
 
-        const structDef = this.#fileSymbolTable.get($decl);
+        const structDef = this.#defMap.get($decl);
 
-        const regionVars = new Map<string, RegionVariable>();
+        const regionVars = new Map<string, Region>();
 
         for (const [lfPath, regionVar, pragma] of ctx.lifetimeAssignments) {
             const memberAccess = lfPath as LfPathMemberAccess;
             const memberAccessInner = memberAccess.inner;
             if (!(memberAccessInner instanceof LfPathVarRef)) {
-                // TODO error
-                // throw new UnexpectedLifetimeAssignmentError(pragma);
+                throw new UnexpectedLifetimeAssignmentError(pragma);
             }
 
             regionVars.set(memberAccess.member, regionVar);
@@ -209,12 +211,9 @@ export default class TyMap {
 
         for (const metaRegionVar of structDef.metaRegionVars) {
             if (!regionVars.has(metaRegionVar.name)) {
-                const regionVar = this.#generateRegionVar(
-                    regionType,
-                    takenLifetimeNames,
-                    `${newPragmaLhs}.${metaRegionVar.name}`,
-                );
-                regionVars.set(metaRegionVar.name, regionVar);
+                const region = this.#regionMap.generate(ctx.regionType);
+                // TODO `${newPragmaLhs}.${metaRegionVar.name}` for codegen
+                regionVars.set(metaRegionVar.name, region);
             }
         }
 

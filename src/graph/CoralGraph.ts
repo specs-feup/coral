@@ -1,13 +1,13 @@
 import ClavaFlowGraph from "@specs-feup/clava-flow/ClavaFlowGraph";
-import ClavaFunctionNode from "@specs-feup/clava-flow/ClavaFunctionNode";
-import { FunctionJp, RecordJp, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
+import {
+    FileJp,
+    FunctionJp,
+} from "@specs-feup/clava/api/Joinpoints.js";
 import { CoralConfig } from "@specs-feup/coral/Coral";
-import Def from "@specs-feup/coral/mir/symbol/Def";
-import Ty from "@specs-feup/coral/mir/symbol/Ty";
+import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
 import FileSymbolTable from "@specs-feup/coral/symbol/FileSymbolTable";
 import Graph from "@specs-feup/flow/graph/Graph";
 import { NodeCollection } from "@specs-feup/flow/graph/NodeCollection";
-
 
 namespace CoralGraph {
     export const TAG = "__coral__coral_graph";
@@ -16,21 +16,31 @@ namespace CoralGraph {
     export class Class<
         D extends Data = Data,
         S extends ScratchData = ScratchData,
-        > extends ClavaFlowGraph.Class<D, S> {
-        get functionsToAnalyze(): NodeCollection<ClavaFunctionNode.Class> {
-            return this.clavaFunctions.filter(fn => this.data[TAG].functionsToAnalyze.includes(fn.jp.name));
+    > extends ClavaFlowGraph.Class<D, S> {
+        get functionsToAnalyze(): NodeCollection<CoralFunctionNode.Class> {
+            const fns = this.clavaFunctions.filter((fn) =>
+                this.data[TAG].functionsToAnalyze.includes(fn.jp.name),
+            );
+            for (const fn of fns) {
+                if (fn.is(CoralFunctionNode)) {
+                    continue;
+                }
+                const symbolTable = this.#getFileSymbolTable(
+                    fn.jp.getAncestor("file") as FileJp,
+                );
+                fn.init(new CoralFunctionNode.Builder(symbolTable));
+            }
+
+            return fns.expectAll(CoralFunctionNode, "All elements were just initialized");
         }
 
-        getSymbol($decl: Vardecl): Ty;
-        getSymbol($decl: RecordJp): Def;
-        getSymbol($decl: Vardecl | RecordJp): Ty | Def {
-            const symbolTable = this.scratchData[TAG].symbolTable;
-            let fileSymbolTable = symbolTable.get($decl.getAncestor("file").astId);
+        #getFileSymbolTable(file: FileJp): FileSymbolTable {
+            let fileSymbolTable = this.scratchData[TAG].symbolTable.get(file.astId);
             if (fileSymbolTable === undefined) {
                 fileSymbolTable = new FileSymbolTable();
-                symbolTable.set($decl.filepath, fileSymbolTable);
+                this.scratchData[TAG].symbolTable.set(file.astId, fileSymbolTable);
             }
-            return fileSymbolTable.get($decl);
+            return fileSymbolTable;
         }
 
         // getRegionck(functionEntry: FunctionEntryNode.Class): Regionck {
@@ -59,14 +69,20 @@ namespace CoralGraph {
     }
 
     export class Builder
-        implements Graph.Builder<Data, ScratchData, ClavaFlowGraph.Data, ClavaFlowGraph.ScratchData>
+        implements
+            Graph.Builder<
+                Data,
+                ScratchData,
+                ClavaFlowGraph.Data,
+                ClavaFlowGraph.ScratchData
+            >
     {
         #config: CoralConfig;
         #functionsToAnalyze: string[];
 
         constructor(config: CoralConfig, functionsToAnalyze: FunctionJp[]) {
             this.#config = config;
-            this.#functionsToAnalyze = functionsToAnalyze.map(fn => fn.signature);
+            this.#functionsToAnalyze = functionsToAnalyze.map((fn) => fn.signature);
         }
 
         buildData(data: ClavaFlowGraph.Data): Data {
@@ -95,7 +111,10 @@ namespace CoralGraph {
         VERSION,
         (sData) => {
             const sd = sData as ClavaFlowGraph.ScratchData;
-            return typeof sd[ClavaFlowGraph.TAG] === "object" && typeof sd[ClavaFlowGraph.TAG].jpToNodeMap === "object";
+            return (
+                typeof sd[ClavaFlowGraph.TAG] === "object" &&
+                typeof sd[ClavaFlowGraph.TAG].jpToNodeMap === "object"
+            );
             // TODO add more tests ?
         },
     );

@@ -1,15 +1,15 @@
 import Ty from "@specs-feup/coral/mir/ty/Ty";
-import OutlivesConstraint from "@specs-feup/coral/regionck/OutlivesConstraint";
-import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
+import RegionConstraint from "@specs-feup/coral/regionck/OutlivesConstraint";
+import Region from "@specs-feup/coral/regionck/RegionVariable";
 import LifetimeBoundPragma from "@specs-feup/coral/pragma/lifetime/LifetimeBoundPragma";
 import InferLifetimeBounds from "@specs-feup/coral/pass/InferLifetimeBounds";
 
 export default class Regionck {
     // List of constraints that must be satisfied based on the regionck analysis.
-    constraints: OutlivesConstraint[];
+    constraints: RegionConstraint[];
     // List of meta region variable constraints that can be set via pragmas by the user.
     bounds: LifetimeBoundPragma[];
-    #regionVars: RegionVariable[];
+    #regionVars: Region[];
     #returnTy?: Ty;
 
     // Should go to FunctionNode
@@ -30,27 +30,8 @@ export default class Regionck {
         return this.#returnTy;
     }
 
-    newRegionVar(kind: RegionVariable.Kind, name?: string): RegionVariable {
-        const id = this.#regionVars.length;
-        if (name === undefined) {
-            if (kind === RegionVariable.Kind.UNIVERSAL) {
-                name = `%${id}_U`;
-            } else {
-                name = `%${id}`;
-            }
-        }
-
-        const regionVar = new RegionVariable(id.toString(), kind, name);
-        this.#regionVars.push(regionVar);
-        return regionVar;
-    }
-
-    get staticRegionVar(): RegionVariable {
-        return this.#regionVars.find((r) => r.name === "%static")!;
-    }
-
-    get universalRegionVars(): RegionVariable[] {
-        return this.#regionVars.filter((r) => r.kind === RegionVariable.Kind.UNIVERSAL);
+    get universalRegionVars(): Region[] {
+        return this.#regionVars.filter((r) => r.kind === Region.Kind.UNIVERSAL);
     }
 
     reset(): void {

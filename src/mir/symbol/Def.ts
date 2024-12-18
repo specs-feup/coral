@@ -1,7 +1,7 @@
 import { FunctionJp, RecordJp } from "@specs-feup/clava/api/Joinpoints.js";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
-import MetaRegionVariable from "@specs-feup/coral/regionck/MetaRegionVariable";
+import MetaRegion from "@specs-feup/coral/regionck/MetaRegionVariable";
 import MetaRegionVariableBound from "@specs-feup/coral/regionck/MetaRegionVariableBound";
 
 /**
@@ -21,7 +21,7 @@ export default class Def {
     #isComplete: boolean;
     #semantics: Ty.Semantics;
     #fields: Map<string, MetaTy>;
-    #metaRegionVars: MetaRegionVariable[];
+    #metaRegionVars: MetaRegion[]; // TODO does it include %static?
     #bounds: MetaRegionVariableBound[];
     #dropFunction?: FunctionJp;
 
@@ -30,7 +30,7 @@ export default class Def {
         isComplete: boolean,
         semantics: Ty.Semantics,
         fields: Map<string, MetaTy>,
-        metaRegionVars: MetaRegionVariable[],
+        metaRegionVars: MetaRegion[],
         bounds: MetaRegionVariableBound[],
         dropFunction?: FunctionJp,
     ) {
@@ -43,7 +43,7 @@ export default class Def {
         this.#dropFunction = dropFunction;
     }
 
-    get $jp(): RecordJp {
+    get jp(): RecordJp {
         return this.#jp;
     }
 
@@ -54,12 +54,12 @@ export default class Def {
     get semantics(): Ty.Semantics {
         return this.#semantics;
     }
-    
+
     get fields(): Map<string, MetaTy> {
         return this.#fields;
     }
 
-    get metaRegionVars(): MetaRegionVariable[] {
+    get metaRegionVars(): MetaRegion[] {
         return this.#metaRegionVars;
     }
 

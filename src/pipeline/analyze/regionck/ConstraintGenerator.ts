@@ -1,5 +1,5 @@
-import OutlivesConstraint from "@specs-feup/coral/regionck/OutlivesConstraint";
-import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
+import RegionConstraint from "@specs-feup/coral/regionck/OutlivesConstraint";
+import Region from "@specs-feup/coral/regionck/RegionVariable";
 import Regionck from "@specs-feup/coral/regionck/Regionck";
 import PathDeref from "@specs-feup/coral/mir/path/PathDeref";
 import Ty from "@specs-feup/coral/mir/ty/Ty";
@@ -234,8 +234,8 @@ export default class ConstraintGenerator implements GraphTransformation {
     }
 
     #relateRegions(
-        region1: RegionVariable,
-        region2: RegionVariable,
+        region1: Region,
+        region2: Region,
         variance: Variance,
         successor: CoralNode.Class,
         $jp: Joinpoint,
@@ -243,20 +243,20 @@ export default class ConstraintGenerator implements GraphTransformation {
         switch (variance) {
             case Variance.COVARIANT: // "a Co b" == "a <= b"
                 this.#regionck!.constraints.push(
-                    new OutlivesConstraint(region2, region1, successor, $jp),
+                    new RegionConstraint(region2, region1, successor, $jp),
                 );
                 break;
             case Variance.CONTRA: // "a Contra b" == "a >= b"
                 this.#regionck!.constraints.push(
-                    new OutlivesConstraint(region1, region2, successor, $jp),
+                    new RegionConstraint(region1, region2, successor, $jp),
                 );
                 break;
             case Variance.IN: // "a In b" == "a == b"
                 this.#regionck!.constraints.push(
-                    new OutlivesConstraint(region2, region1, successor, $jp),
+                    new RegionConstraint(region2, region1, successor, $jp),
                 );
                 this.#regionck!.constraints.push(
-                    new OutlivesConstraint(region1, region2, successor, $jp),
+                    new RegionConstraint(region1, region2, successor, $jp),
                 );
                 break;
         }

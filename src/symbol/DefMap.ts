@@ -22,6 +22,7 @@ import LifetimeReassignmentError from "@specs-feup/coral/error/struct/LifetimeRe
 import StructCannotBeCopyError from "@specs-feup/coral/error/struct/StructCannotBeCopyError";
 import UnexpectedLifetimeAssignmentError from "@specs-feup/coral/error/struct/UnexpectedLifetimeAssignmentError";
 import Def from "@specs-feup/coral/mir/symbol/Def";
+import MetaRegionBound from "@specs-feup/coral/mir/symbol/MetaRegionBound";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import BuiltinTy from "@specs-feup/coral/mir/symbol/ty/BuiltinTy";
 import MetaRefTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaRefTy";
@@ -34,27 +35,28 @@ import LfPath from "@specs-feup/coral/pragma/lifetime/path/LfPath";
 import LfPathDeref from "@specs-feup/coral/pragma/lifetime/path/LfPathDeref";
 import LfPathMemberAccess from "@specs-feup/coral/pragma/lifetime/path/LfPathMemberAccess";
 import LfPathVarRef from "@specs-feup/coral/pragma/lifetime/path/LfPathVarRef";
-import MetaRegionVariable from "@specs-feup/coral/regionck/MetaRegionVariable";
 import MetaRegionVariableBound from "@specs-feup/coral/regionck/MetaRegionVariableBound";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 
 export default class DefMap {
-    #symbolTable: Map<string, Def>;
+    #defTable: Map<string, Def>;
 
     constructor() {
-        this.#symbolTable = new Map();
+        this.#defTable = new Map();
     }
 
     get($struct: RecordJp): Def {
-        const def = this.#symbolTable.get($struct.name);
+        const def = this.#defTable.get($struct.name);
         if (def !== undefined) {
             return def;
         }
 
-        const $structs = Query
-            .searchFrom($struct.getAncestor("file"), RecordJp, $s => $s.name === $struct.name)
-            .get();
-        
+        const $structs = Query.searchFrom(
+            $struct.getAncestor("file"),
+            RecordJp,
+            ($s) => $s.name === $struct.name,
+        ).get();
+
         // Give priority to complete structs
         const $canonicalStruct =
             $structs.find(($s) => $s.fields.length > 0) ?? $structs.at(0);
@@ -68,7 +70,7 @@ export default class DefMap {
         // TODO doesnt this crash for incomplete structs?
 
         const newDef = this.#parseStruct($canonicalStruct);
-        this.#symbolTable.set($struct.name, newDef);
+        this.#defTable.set($struct.name, newDef);
         return newDef;
     }
 
@@ -223,13 +225,11 @@ export default class DefMap {
             }
         }
 
-        const metaRegionVars = Array.from(lifetimesSet).map(
-            (name) => new MetaRegionVariable(name),
-        );
+        const metaRegions = Array.from(lifetimesSet);
 
         const bounds = lifetimes
             .filter((p) => p.bound !== undefined)
-            .map((p) => new MetaRegionVariableBound(p.name, p.bound!));
+            .map((p) => new MetaRegionBound(p));
 
         const fields = new Map<string, MetaTy>();
         for (const $field of $struct.fields) {
@@ -286,7 +286,7 @@ export default class DefMap {
             isComplete,
             semantics,
             fields,
-            metaRegionVars,
+            metaRegions,
             bounds,
             $dropFn,
         );
@@ -402,12 +402,7 @@ export default class DefMap {
             if ((outer[0][0] as LfPathVarRef).identifier !== name) {
                 throw new UnexpectedLifetimeAssignmentError(outer[0][2]);
             }
-            return new MetaRefTy(
-                new MetaRegionVariable(outer[0][1]),
-                inner,
-                $type,
-                isConst,
-            );
+            return new MetaRefTy(new MetaRegion(outer[0][1]), inner, $type, isConst);
         } else if ($type instanceof TypedefType) {
             return this.#parseMetaType(
                 $field,
@@ -450,7 +445,7 @@ export default class DefMap {
                     );
                 }
 
-                const regionVarMap = new Map<string, MetaRegionVariable>();
+                const regionVarMap = new Map<string, MetaRegion>();
 
                 for (const [lfPath, regionVar, pragma] of metaRegionVarAssignments) {
                     const memberAccess = lfPath as LfPathMemberAccess;
@@ -463,10 +458,7 @@ export default class DefMap {
                         throw new UnexpectedLifetimeAssignmentError(pragma);
                     }
 
-                    regionVarMap.set(
-                        memberAccess.member,
-                        new MetaRegionVariable(regionVar),
-                    );
+                    regionVarMap.set(memberAccess.member, new MetaRegion(regionVar));
                 }
 
                 return new MetaStructTy($decl, this, regionVarMap, isConst);

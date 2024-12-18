@@ -1,20 +1,20 @@
 import { FunctionJp, RecordJp } from "@specs-feup/clava/api/Joinpoints.js";
 import Def from "@specs-feup/coral/mir/symbol/Def";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
-import RegionVariable from "@specs-feup/coral/regionck/RegionVariable";
+import Region from "@specs-feup/coral/regionck/RegionVariable";
 
 export default class StructTy implements Ty {
     #def: Def;
-    #regionVarMap: Map<string, RegionVariable>;
+    #regionVarMap: Map<string, Region>;
     #isConst: boolean;
 
-    constructor(def: Def, regionVarMap: Map<string, RegionVariable>, isConst: boolean) {
+    constructor(def: Def, regionVarMap: Map<string, Region>, isConst: boolean) {
         this.#def = def;
         this.#regionVarMap = regionVarMap;
         this.#isConst = isConst;
     }
 
-    get regionVars(): RegionVariable[] {
+    get regionVars(): Region[] {
         return Array.from(this.regionVarMap.values());
     }
 
@@ -27,14 +27,14 @@ export default class StructTy implements Ty {
     }
 
     get jp(): RecordJp {
-        return this.#def.$jp;
+        return this.#def.jp;
     }
 
     get isComplete(): boolean {
         return this.#def.isComplete;
     }
 
-    get regionVarMap(): Map<string, RegionVariable> {
+    get regionVarMap(): Map<string, Region> {
         return this.#regionVarMap;
     }
 
