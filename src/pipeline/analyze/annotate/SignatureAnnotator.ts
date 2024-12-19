@@ -1,6 +1,6 @@
 
 import CoralFunctionWiseTransformation, { CoralFunctionWiseTransformationApplier } from "@specs-feup/coral/graph/CoralFunctionWiseTransformation";
-import Region from "@specs-feup/coral/regionck/Region";
+import Region from "@specs-feup/coral/mir/symbol/Region";
 
 export default class SignatureAnnotator extends CoralFunctionWiseTransformation {
     fnApplier = SignatureAnnotatorApplier;
@@ -26,9 +26,7 @@ class SignatureAnnotatorApplier extends CoralFunctionWiseTransformationApplier {
                 InferLifetimeBounds.FunctionState.NOT_VISITED;
         }
 
-        const returnTy = fnSymbol.return.toTy(regionVars);
-        this.#regionck!.registerReturnTy(returnTy);
-
+        this.fn.returnTy = fnSymbol.return.toTy(regionVars);
         const paramTys = fnSymbol.params.map((param) => param.toTy(regionVars));
 
         for (const $param of fnSymbol.params) {

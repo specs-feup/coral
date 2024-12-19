@@ -42,30 +42,6 @@ namespace CoralGraph {
             }
             return fileSymbolTable;
         }
-
-        // getRegionck(functionEntry: FunctionEntryNode.Class): Regionck {
-        //     let regionck = this.scratchData.coral.functions.get(functionEntry.jp.name);
-
-        //     let $file: Joinpoint = functionEntry.jp;
-        //     while (!($file instanceof FileJp)) {
-        //         $file = $file.parent;
-        //     }
-
-        //     if (regionck === undefined) {
-        //         regionck = new Regionck(functionEntry, this.getStructDefsMap($file));
-        //         this.scratchData.coral.functions.set(functionEntry.jp.name, regionck);
-        //     }
-        //     return regionck;
-        // }
-
-        // getStructDefsMap(file: FileJp): StructDefsMap {
-        //     let structDefs = this.scratchData.coral.files.get(file.astId);
-        //     if (structDefs === undefined) {
-        //         structDefs = new StructDefsMap(file);
-        //         this.scratchData.coral.files.set(file.astId, structDefs);
-        //     }
-        //     return structDefs;
-        // }
     }
 
     export class Builder

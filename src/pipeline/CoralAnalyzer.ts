@@ -3,6 +3,7 @@ import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
 import { CoralConfig } from "@specs-feup/coral/Coral";
 import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
 import CoralAnnotator from "@specs-feup/coral/pipeline/analyze/annotate/CoralAnnotator";
+import MoveAnalyser from "@specs-feup/coral/pipeline/analyze/move/MoveAnalyser";
 import Graph from "@specs-feup/flow/graph/Graph";
 import IncrementingIdGenerator from "@specs-feup/flow/graph/id/IncrementingIdGenerator";
 
@@ -31,21 +32,19 @@ export default class CoralAnalyzer {
             //             !node.is(CommentNode.TypeGuard) && !node.is(PragmaNode.TypeGuard),
             //     ),
             // )
-            .apply(new CoralAnnotator());
-
-        
-        // .apply(new MoveAnalyser())
-        // .apply(new AddDrops())
-        // // TODO liveness analysis does not handle structs correctly
-        // .apply(
-        //     new InferLiveness().customComputeDefsAndUses(
-        //         CustomLivenessComputation.computeDefsAndUses,
-        //     ),
-        // )
-        // .apply(
-        //     new InferLifetimeBounds(this.#inferFunctionLifetimes, this.#iterationLimit),
-        // )
-        // .apply(new RegionckPipeline(this.#debug))
-        // .apply(new DropElaboration());
+            .apply(new CoralAnnotator())
+            .apply(new MoveAnalyser())
+            .apply(new AddDrops())
+            // TODO liveness analysis does not handle structs correctly
+            .apply(
+                new InferLiveness().customComputeDefsAndUses(
+                    CustomLivenessComputation.computeDefsAndUses,
+                ),
+            )
+            .apply(
+                new InferLifetimeBounds(this.#inferFunctionLifetimes, this.#iterationLimit),
+            )
+            .apply(new RegionckPipeline(this.#debug))
+            .apply(new DropElaboration());
     }
 }

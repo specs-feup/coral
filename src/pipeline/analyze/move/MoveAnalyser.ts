@@ -1,42 +1,25 @@
-import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
-import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
-import BaseGraph from "clava-flow/graph/BaseGraph";
-import { GraphTransformation } from "clava-flow/graph/Graph";
 import { MemberAccess, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import MergeInconsistentStructError from "@specs-feup/coral/error/drop/MergeInconsistentStructError";
-import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
-import CoralNode from "@specs-feup/coral/graph/CoralNode";
+import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
+import CoralFunctionWiseTransformation, { CoralFunctionWiseTransformationApplier } from "@specs-feup/coral/graph/CoralFunctionWiseTransformation";
 import MoveTable from "@specs-feup/coral/mir/MoveTable";
 import Path from "@specs-feup/coral/mir/path/Path";
 import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
 import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
-import Regionck from "@specs-feup/coral/regionck/Regionck";
+import ControlFlowEdge from "@specs-feup/flow/flow/ControlFlowEdge";
 
-export default class MoveAnalyser implements GraphTransformation {
-    apply(graph: BaseGraph.Class): void {
-        if (!graph.is(CoralGraph.TypeGuard)) {
-            throw new Error("MoveAnalyser can only be applied to CoralGraphs");
-        }
+export default class MoveAnalyser extends CoralFunctionWiseTransformation {
+    fnApplier = MoveAnalyserApplier;
+}
 
-        const coralGraph = graph.as(CoralGraph.Class);
-
-        for (const functionEntry of coralGraph.functions) {
-            this.#processFunction(functionEntry, coralGraph.getRegionck(functionEntry));
-        }
-    }
-
-    #processFunction(functionEntry: FunctionEntryNode.Class, regionck: Regionck): void {
+class MoveAnalyserApplier extends CoralFunctionWiseTransformationApplier {
+    apply(): void {
         let changed = true;
         while (changed) {
             changed = false;
-            for (const [node, path] of functionEntry.bfs((e) =>
-                e.is(ControlFlowEdge.TypeGuard),
-            )) {
-                if (!node.is(CoralNode.TypeGuard)) {
-                    continue;
-                }
-
-                const coralNode = node.as(CoralNode.Class);
+            // TODO ControlFlow BFS
+            for (const { node, path } of this.fn.cfgEntryNode!.bfs(e => e.is(ControlFlowEdge))) {
+                const coralNode = node.expect(CoralCfgNode, "Nodes were previously inited as CoralCfgNode");
 
                 const previousMoveTable = coralNode.moveTable;
 
@@ -44,23 +27,17 @@ export default class MoveAnalyser implements GraphTransformation {
                     this.#enterVars(
                         functionEntry.jp.params,
                         coralNode.moveTable,
-                        regionck,
                         MoveTable.State.VALID,
                     );
                 } else {
                     try {
                         coralNode.moveTable = MoveTable.merge(
                             node.incomers
-                                .filter((e) => e.is(ControlFlowEdge.TypeGuard))
-                                .map((e) => e.source)
-                                .map((n) => {
-                                    if (!n.is(CoralNode.TypeGuard)) {
-                                        throw new Error(
-                                            "Expected node to be a CoralNode.",
-                                        );
-                                    }
-                                    return n.as(CoralNode.Class).moveTable;
-                                }),
+                                .filterIs(ControlFlowEdge)
+                                .sources
+                                .expectAll(CoralCfgNode, "Nodes were previously inited as CoralCfgNode")
+                                .toArray()
+                                .map(n => n.moveTable),
                         );
                     } catch (e) {
                         if (!(e instanceof MergeInconsistentStructError.Stub)) {
@@ -69,7 +46,7 @@ export default class MoveAnalyser implements GraphTransformation {
 
                         let path: Path = new PathVarRef(
                             e.vardecl!,
-                            regionck.getTy(e.vardecl!)!,
+                            this.fn.getSymbol(e.vardecl!),
                         );
                         let fields = [];
                         let holder: MoveTable.StateHolder | undefined = e.holder;
@@ -95,7 +72,6 @@ export default class MoveAnalyser implements GraphTransformation {
                 this.#enterVars(
                     coralNode.varsEnteringScope,
                     coralNode.moveTable,
-                    regionck,
                 );
 
                 for (const access of coralNode.accesses) {
@@ -112,15 +88,10 @@ export default class MoveAnalyser implements GraphTransformation {
     #enterVars(
         decls: Vardecl[],
         moveTable: MoveTable,
-        regionck: Regionck,
         state: MoveTable.State = MoveTable.State.UNINIT,
     ): void {
         for (const $decl of decls) {
-            const ty = regionck.getTy($decl);
-            if (ty === undefined) {
-                throw new Error("Expected ty to be defined.");
-            }
-            moveTable.enterVar($decl, ty, state);
+            moveTable.enterVar($decl, this.fn.getSymbol($decl), state);
         }
     }
 }

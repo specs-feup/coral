@@ -29,12 +29,9 @@ import Path from "@specs-feup/coral/mir/path/Path";
 import PathDeref from "@specs-feup/coral/mir/path/PathDeref";
 import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
 import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
+import Region from "@specs-feup/coral/mir/symbol/Region";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
-import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
-import LifetimeAssignmentPragma from "@specs-feup/coral/pragma/lifetime/LifetimeAssignmentPragma";
-import LfPath from "@specs-feup/coral/pragma/lifetime/path/LfPath";
-import Region from "@specs-feup/coral/regionck/Region";
 import Node from "@specs-feup/flow/graph/Node";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 
@@ -215,7 +212,7 @@ class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier
         } else if ($parent instanceof Vardecl) {
             leftTy = this.fn.getSymbol($parent);
         } else if ($parent instanceof ReturnStmt) {
-            leftTy = this.#regionck!.getReturnTy();
+            leftTy = this.fn.returnTy;
         } else if ($parent instanceof Call) {
             const fnCall = node.fnCalls.find(
                 (fnCall) => fnCall.$callJp.astId === $parent.astId,
@@ -265,20 +262,21 @@ class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier
 
         const returnTy = fnSymbol.return.toTy(regionVars);
         
-        if ($fn.returnType.desugarAll.code !== "void") {
+        if ($call.function.returnType.desugarAll.code !== "void") {
             // Normalization implies parent is Vardecl
             let $vardecl = $call.parent;
             while (!($vardecl instanceof Vardecl)) {
                 $vardecl = $vardecl.parent;
             }
 
+            // TODO maybe if vardecl creates itself, we won't need this
             this.#regionck!.registerTy($vardecl, returnTy);
             node.addAccess(new PathVarRef($vardecl, returnTy), Access.Kind.WRITE);
         }
 
         const paramTys = fnSymbol.params.map((param) => param.toTy(regionVars));
 
-        node.fnCalls.push(new FunctionCall($call, lifetimes, returnTy, paramTys));
+        node.fnCalls.push(new FunctionCall($call, regionVars, returnTy, paramTys));
 
         for (const $expr of $call.args) {
             this.#annotateExpr(node, $expr);

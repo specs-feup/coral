@@ -34,6 +34,14 @@ namespace CoralFunctionNode {
         get regions(): Iterable<Region> {
             return this.scratchData[TAG].symbolTable.regions;
         }
+
+        get returnTy(): Ty {
+            return this.scratchData[TAG].symbolTable.returnTy;
+        }
+
+        set returnTy(ret: Ty) {
+            this.scratchData[TAG].symbolTable.returnTy = ret;
+        }
     }
 
     export class Builder

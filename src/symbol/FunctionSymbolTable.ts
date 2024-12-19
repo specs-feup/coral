@@ -14,6 +14,7 @@ export default class FunctionSymbolTable {
     #defMap: DefMap;
     #fnMap: FnMap;
     #regionMap: RegionMap;
+    #returnTy?: Ty;
 
     constructor(fileTable: FileSymbolTable) {
         this.#defMap = fileTable.defMap;
@@ -45,5 +46,19 @@ export default class FunctionSymbolTable {
 
     generateRegion(kind: Region.Kind) {
         return this.#regionMap.generate(kind);
+    }
+
+    // TODO instead of this set, put it in the constructor
+    //      this would require initializing the symbol table
+    //      before the function node
+    set returnTy($return: Ty) {
+        this.#returnTy = $return;
+    }
+
+    get returnTy() {
+        if (this.#returnTy === undefined) {
+            throw new Error("returnTy not set");
+        }
+        return this.#returnTy;
     }
 }

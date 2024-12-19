@@ -1,24 +1,4 @@
-import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
-import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
-import InstructionNode from "clava-flow/flow/node/instruction/InstructionNode";
-import ScopeEndNode from "clava-flow/flow/node/instruction/ScopeEndNode";
-import ScopeStartNode from "clava-flow/flow/node/instruction/ScopeStartNode";
-import UnknownInstructionNode from "clava-flow/flow/node/instruction/UnknownInstructionNode";
-import LivenessNode from "clava-flow/flow/transformation/liveness/LivenessNode";
-import BaseGraph from "clava-flow/graph/BaseGraph";
-import { GraphTransformation } from "clava-flow/graph/Graph";
-import { MemberAccess, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
-import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
-import DropInconsistentStructError from "@specs-feup/coral/error/drop/DropInconsistentStructError";
-import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
-import CoralNode from "@specs-feup/coral/graph/CoralNode";
-import DropNode from "@specs-feup/coral/graph/DropNode";
-import Access from "@specs-feup/coral/mir/Access";
-import MoveTable from "@specs-feup/coral/mir/MoveTable";
-import Path from "@specs-feup/coral/mir/path/Path";
-import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
-import StructTy from "@specs-feup/coral/mir/ty/StructTy";
-import Regionck from "@specs-feup/coral/regionck/Regionck";
+
 
 export default class AddDrops implements GraphTransformation {
     #dropsToHandle: [

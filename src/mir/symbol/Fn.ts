@@ -5,6 +5,7 @@ import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
 export default class Fn {
     #jp: FunctionJp;
     #bounds: MetaRegionBound[];
+    // TODO should probably be set
     #metaRegions: MetaRegion[];
     #return: MetaTy;
     #params: MetaTy[];

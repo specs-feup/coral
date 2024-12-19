@@ -1,20 +1,4 @@
-import MutateWhileBorrowedError from "@specs-feup/coral/error/borrow/MutateWhileBorrowedError";
-import UseWhileMutBorrowedError from "@specs-feup/coral/error/borrow/UseWhileMutBorrowedError";
-import MoveWhileBorrowedError from "@specs-feup/coral/error/move/MoveWhileBorrowedError";
-import Loan from "@specs-feup/coral/mir/Loan";
-import Access from "@specs-feup/coral/mir/Access";
-import Loan.Kind from "@specs-feup/coral/mir/ty/Loan.Kind";
-import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
-import MutableBorrowWhileBorrowedError from "@specs-feup/coral/error/borrow/MutableBorrowWhileBorrowedError";
-import { GraphTransformation } from "clava-flow/graph/Graph";
-import BaseGraph from "clava-flow/graph/BaseGraph";
-import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
-import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
-import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
-import CoralNode from "@specs-feup/coral/graph/CoralNode";
-import DanglingReferenceError from "@specs-feup/coral/error/borrow/DanglingReferenceError";
-import Regionck from "@specs-feup/coral/regionck/Regionck";
-import MissingLifetimeBoundError from "@specs-feup/coral/error/borrow/MissingLifetimeBoundError";
+
 
 export default class RegionckErrorReporting implements GraphTransformation {
     #shouldCheckUniversalRegions: boolean;

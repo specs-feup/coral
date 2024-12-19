@@ -1,19 +1,4 @@
-import ControlFlowEdge from "clava-flow/flow/edge/ControlFlowEdge";
-import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
-import BaseGraph from "clava-flow/graph/BaseGraph";
-import { GraphTransformation } from "clava-flow/graph/Graph";
-import { Joinpoint, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
-import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
-import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
-import CoralNode from "@specs-feup/coral/graph/CoralNode";
-import DropNode from "@specs-feup/coral/graph/DropNode";
-import Access from "@specs-feup/coral/mir/Access";
-import Path from "@specs-feup/coral/mir/path/Path";
-import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
-import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
-import StructTy from "@specs-feup/coral/mir/ty/StructTy";
-import Ty from "@specs-feup/coral/mir/ty/Ty";
-import Query from "@specs-feup/lara/api/weaver/Query.js";
+
 
 class DropElaboration implements GraphTransformation {
     #dropFlags: Map<string, DropElaboration.DropFlagHolder>;

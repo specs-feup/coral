@@ -1,22 +1,4 @@
-import RegionConstraint from "@specs-feup/coral/regionck/OutlivesConstraint";
-import Region from "@specs-feup/coral/regionck/RegionVariable";
-import Regionck from "@specs-feup/coral/regionck/Regionck";
-import PathDeref from "@specs-feup/coral/mir/path/PathDeref";
-import Ty from "@specs-feup/coral/mir/ty/Ty";
-import RefTy from "@specs-feup/coral/mir/ty/RefTy";
-import BuiltinTy from "@specs-feup/coral/mir/ty/BuiltinTy";
-import StructTy from "@specs-feup/coral/mir/ty/StructTy";
-import Variance from "@specs-feup/coral/mir/ty/Variance";
-import Loan.Kind from "@specs-feup/coral/mir/ty/Loan.Kind";
-import Loan from "@specs-feup/coral/mir/Loan";
-import { GraphTransformation } from "clava-flow/graph/Graph";
-import BaseGraph from "clava-flow/graph/BaseGraph";
-import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
-import FunctionEntryNode from "clava-flow/flow/node/instruction/FunctionEntryNode";
-import CoralNode from "@specs-feup/coral/graph/CoralNode";
-import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
-import LifetimeBoundPragma from "@specs-feup/coral/pragma/lifetime/LifetimeBoundPragma";
-import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
+
 
 export default class ConstraintGenerator implements GraphTransformation {
     #regionck?: Regionck;

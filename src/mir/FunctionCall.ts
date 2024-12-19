@@ -4,7 +4,7 @@ import Ty from "@specs-feup/coral/mir/symbol/Ty";
 
 export default class FunctionCall {
     #jp: Call;
-    #lifetimes: Map<string, Region>; // TODO must include %static
+    #lifetimes: Map<string, Region>;
     #returnTy: Ty;
     #paramTys: Ty[];
 
