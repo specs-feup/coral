@@ -1,4 +1,4 @@
-import Region from "@specs-feup/coral/regionck/Region";
+import Region from "@specs-feup/coral/mir/symbol/Region";
 
 function* existentialNameGenerator(): Generator<string, never, unknown> {
     let i = 0;

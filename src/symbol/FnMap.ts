@@ -1,12 +1,9 @@
 import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
 import Fn from "@specs-feup/coral/mir/symbol/Fn";
 import MetaRegionBound from "@specs-feup/coral/mir/symbol/MetaRegionBound";
-import Region from "@specs-feup/coral/mir/symbol/Region";
-import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
 import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
 import LifetimeAssignmentPragma from "@specs-feup/coral/pragma/lifetime/LifetimeAssignmentPragma";
 import LifetimeBoundPragma from "@specs-feup/coral/pragma/lifetime/LifetimeBoundPragma";
-import LfPath from "@specs-feup/coral/pragma/lifetime/path/LfPath";
 
 
 export default class FnMap {

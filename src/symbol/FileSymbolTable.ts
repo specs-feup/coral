@@ -1,5 +1,3 @@
-import { RecordJp } from "@specs-feup/clava/api/Joinpoints.js";
-import Def from "@specs-feup/coral/mir/symbol/Def";
 import DefMap from "@specs-feup/coral/symbol/DefMap";
 import FnMap from "@specs-feup/coral/symbol/FnMap";
 

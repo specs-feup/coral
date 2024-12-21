@@ -1,8 +1,8 @@
 import { FunctionJp, RecordJp, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import Def from "@specs-feup/coral/mir/symbol/Def";
 import Fn from "@specs-feup/coral/mir/symbol/Fn";
+import Region from "@specs-feup/coral/mir/symbol/Region";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
-import Region from "@specs-feup/coral/regionck/Region";
 import DefMap from "@specs-feup/coral/symbol/DefMap";
 import FileSymbolTable from "@specs-feup/coral/symbol/FileSymbolTable";
 import FnMap from "@specs-feup/coral/symbol/FnMap";

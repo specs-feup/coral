@@ -14,7 +14,7 @@ export default class WriteFieldOfPotentiallyDroppedTypeError extends CoralError 
             )
                 .code(
                     pathWithDrop.vardecl,
-                    `'${pathWithDrop.toString()}' has type '${pathWithDrop.#ty.name}' with drop function '${(pathWithDrop.#ty as StructTy).dropFunction!.name}'`,
+                    `'${pathWithDrop.toString()}' has type '${pathWithDrop.ty.name}' with drop function '${(pathWithDrop.ty as StructTy).dropFunction!.name}'`,
                 )
                 .code(exampleMove.#path.$jp, "variable might have been moved here")
                 .code(write.#path.$jp, "writing to field of potentially dropped variable")

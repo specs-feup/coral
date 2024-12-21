@@ -1,8 +1,6 @@
 import {
     BinaryOp,
-    ExprStmt,
     FunctionJp,
-    Joinpoint,
     Vardecl,
 } from "@specs-feup/clava/api/Joinpoints.js";
 import MergeInconsistentStructError from "@specs-feup/coral/error/drop/MergeInconsistentStructError";
@@ -10,13 +8,13 @@ import WriteFieldOfPotentiallyDroppedTypeError from "@specs-feup/coral/error/dro
 import MoveBehindReferenceError from "@specs-feup/coral/error/move/MoveBehindReferenceError";
 import UseBeforeInitError from "@specs-feup/coral/error/move/UseBeforeInitError";
 import UseWhileMovedError from "@specs-feup/coral/error/move/UseWhileMovedError";
-import Access from "@specs-feup/coral/mir/Access";
+import Access from "@specs-feup/coral/mir/action/Access";
 import Path from "@specs-feup/coral/mir/path/Path";
 import PathDeref from "@specs-feup/coral/mir/path/PathDeref";
 import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
 import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
-import StructTy from "@specs-feup/coral/mir/ty/StructTy";
-import Ty from "@specs-feup/coral/mir/ty/Ty";
+import Ty from "@specs-feup/coral/mir/symbol/Ty";
+import StructTy from "@specs-feup/coral/mir/symbol/ty/StructTy";
 
 class MoveTable {
     #states: Map<string, MoveTable.StateHolder>;
@@ -54,7 +52,7 @@ class MoveTable {
     }
 
     updateAccess(access: Access): void {
-        const path = access.#path;
+        const path = access.path;
         const holder = this.#pathToStateHolder(path);
         const state = holder?.state ?? MoveTable.State.UNINIT;
         const $vardecl = this.#pathToVardecl(path);
@@ -65,7 +63,7 @@ class MoveTable {
                 state === MoveTable.State.UNINIT ||
                 state === MoveTable.State.MAYBE_UNINIT
             ) {
-                throw new UseBeforeInitError(path.$jp, $vardecl, access);
+                throw new UseBeforeInitError(path.jp, $vardecl, access);
             }
 
             if (
@@ -77,7 +75,7 @@ class MoveTable {
                 }
 
                 throw new UseWhileMovedError(
-                    path.$jp,
+                    path.jp,
                     $vardecl,
                     access,
                     holder.exampleMoveAccess!,
@@ -85,14 +83,14 @@ class MoveTable {
             }
 
             if (access.isMove) {
-                throw new MoveBehindReferenceError(path.$jp, access);
+                throw new MoveBehindReferenceError(path.jp, access);
             }
         } else {
             if (holder === undefined) {
                 throw new Error("State holder not found");
             }
 
-            switch (access.#type) {
+            switch (access.kind) {
                 case Access.Kind.READ:
                 case Access.Kind.BORROW:
                 case Access.Kind.MUTABLE_BORROW: {
@@ -106,13 +104,13 @@ class MoveTable {
                         state === MoveTable.State.MAYBE_MOVED
                     ) {
                         throw new UseWhileMovedError(
-                            path.$jp,
+                            path.jp,
                             $vardecl,
                             access,
                             holder.exampleMoveAccess!,
                         );
                     } else {
-                        throw new UseBeforeInitError(path.$jp, $vardecl, access);
+                        throw new UseBeforeInitError(path.jp, $vardecl, access);
                     }
                     break;
                 }
@@ -127,7 +125,7 @@ class MoveTable {
     }
 
     checkDrop(access: Access): [MoveTable.DropKind, MoveTable.StateHolder?] {
-        const path = access.#path;
+        const path = access.path;
         const holder = this.#pathToStateHolder(path);
         const $vardecl = this.#pathToVardecl(path);
 
@@ -136,14 +134,14 @@ class MoveTable {
         }
 
         let currentState: MoveTable.StateHolder;
-        switch (access.#type) {
+        switch (access.kind) {
             case Access.Kind.READ:
                 if (access.isMove) {
                     currentState = holder.copy();
                     holder.state = MoveTable.State.MOVED;
                     holder.exampleMoveAccess = access;
 
-                    let $parent = access.#path.$jp.parent;
+                    let $parent = access.path.jp.parent;
                     while (true) {
                         if ($parent instanceof FunctionJp) {
                             return [MoveTable.DropKind.DROP_AFTER, currentState];
@@ -165,7 +163,7 @@ class MoveTable {
                     let parent = holder.parent;
                     let parentPath: Path | undefined = path;
                     if (path instanceof PathMemberAccess) {
-                        parentPath = path.#inner;
+                        parentPath = path.inner;
                     }
                     let outerWithDropFunction: MoveTable.FieldStates | undefined;
                     let outerWithDropFunctionPath: Path | undefined;
@@ -179,7 +177,7 @@ class MoveTable {
                         }
                         parent = parent.parent;
                         if (parentPath instanceof PathMemberAccess) {
-                            parentPath = parentPath.#inner;
+                            parentPath = parentPath.inner;
                         } else {
                             parentPath = undefined;
                         }
@@ -212,11 +210,11 @@ class MoveTable {
 
     #pathToVardecl(path: Path): Vardecl {
         if (path instanceof PathVarRef) {
-            return path.$vardecl;
+            return path.vardecl;
         } else if (path instanceof PathDeref) {
-            return this.#pathToVardecl(path.#inner);
+            return this.#pathToVardecl(path.inner);
         } else if (path instanceof PathMemberAccess) {
-            return this.#pathToVardecl(path.#inner);
+            return this.#pathToVardecl(path.inner);
         } else {
             throw new Error("Unsupported path type");
         }
@@ -224,13 +222,13 @@ class MoveTable {
 
     #pathToStateHolder(path: Path): MoveTable.StateHolder | undefined {
         if (path instanceof PathVarRef) {
-            return this.#states.get(path.$vardecl.astId);
+            return this.#states.get(path.vardecl.astId);
         } else if (path instanceof PathDeref) {
-            return this.#pathToStateHolder(path.#inner);
+            return this.#pathToStateHolder(path.inner);
         } else if (path instanceof PathMemberAccess) {
-            const inner = this.#pathToStateHolder(path.#inner);
+            const inner = this.#pathToStateHolder(path.inner);
             if (inner instanceof MoveTable.FieldStates) {
-                return inner.get(path.#fieldName);
+                return inner.get(path.fieldName);
             } else {
                 return inner;
             }
@@ -243,7 +241,7 @@ class MoveTable {
         if (path instanceof PathDeref) {
             return true;
         } else if (path instanceof PathMemberAccess) {
-            return this.#hasDeref(path.#inner);
+            return this.#hasDeref(path.inner);
         } else {
             return false;
         }

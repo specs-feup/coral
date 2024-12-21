@@ -14,6 +14,7 @@ import {
 } from "@specs-feup/clava/api/Joinpoints.js";
 import LifetimeReassignmentError from "@specs-feup/coral/error/struct/LifetimeReassignmentError";
 import UnexpectedLifetimeAssignmentError from "@specs-feup/coral/error/struct/UnexpectedLifetimeAssignmentError";
+import Region from "@specs-feup/coral/mir/symbol/Region";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import BuiltinTy from "@specs-feup/coral/mir/symbol/ty/BuiltinTy";
 import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
@@ -23,7 +24,6 @@ import LfPath from "@specs-feup/coral/pragma/lifetime/path/LfPath";
 import LfPathDeref from "@specs-feup/coral/pragma/lifetime/path/LfPathDeref";
 import LfPathMemberAccess from "@specs-feup/coral/pragma/lifetime/path/LfPathMemberAccess";
 import LfPathVarRef from "@specs-feup/coral/pragma/lifetime/path/LfPathVarRef";
-import Region from "@specs-feup/coral/regionck/Region";
 import DefMap from "@specs-feup/coral/symbol/DefMap";
 import RegionMap from "@specs-feup/coral/symbol/RegionMap";
 

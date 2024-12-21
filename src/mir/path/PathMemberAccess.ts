@@ -30,6 +30,14 @@ export default class PathMemberAccess implements Path {
         }
     }
 
+    get inner(): Path {
+        return this.#inner;
+    }
+
+    get fieldName(): string {
+        return this.#fieldName;
+    }
+
     toString(): string {
         if (this.#inner instanceof PathDeref) {
             return `(${this.#inner.toString()}).${this.#fieldName}`;

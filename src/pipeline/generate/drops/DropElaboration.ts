@@ -1,3 +1,6 @@
+import Path from "@specs-feup/coral/mir/path/Path";
+import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
+import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
 
 
 class DropElaboration implements GraphTransformation {
@@ -86,11 +89,11 @@ class DropElaboration implements GraphTransformation {
                 return holder;
             }
 
-            const newHolder = DropElaboration.DropFlagHolder.create(path.#ty);
+            const newHolder = DropElaboration.DropFlagHolder.create(path.ty);
             this.#dropFlags.set(path.$vardecl.astId, newHolder);
             return newHolder;
         } else if (path instanceof PathMemberAccess) {
-            const inner = this.#pathToDropFlagHolder(path.#inner);
+            const inner = this.#pathToDropFlagHolder(path.inner);
             if (inner instanceof DropElaboration.FieldDropFlags) {
                 return inner.get(path.#fieldName);
             } else {

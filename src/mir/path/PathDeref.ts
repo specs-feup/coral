@@ -1,5 +1,5 @@
 import { UnaryOp, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
-import Loan from "@specs-feup/coral/mir/Loan";
+import Loan from "@specs-feup/coral/mir/action/Loan";
 import Path from "@specs-feup/coral/mir/path/Path";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
@@ -29,6 +29,10 @@ export default class PathDeref implements Path {
                 "Cannot dereference non-reference type " + inner.ty.toString(),
             );
         }
+    }
+
+    get inner(): Path {
+        return this.#inner;
     }
 
     toString(): string {

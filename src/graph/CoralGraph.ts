@@ -42,6 +42,10 @@ namespace CoralGraph {
             }
             return fileSymbolTable;
         }
+
+        get isDebug(): boolean {
+            return this.data[TAG].config.debug;
+        }
     }
 
     export class Builder

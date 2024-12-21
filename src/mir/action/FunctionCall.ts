@@ -1,16 +1,16 @@
-import { Call, FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
+import { Call } from "@specs-feup/clava/api/Joinpoints.js";
 import Region from "@specs-feup/coral/mir/symbol/Region";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 
 export default class FunctionCall {
     #jp: Call;
-    #lifetimes: Map<string, Region>;
+    #regions: Map<string, Region>;
     #returnTy: Ty;
     #paramTys: Ty[];
 
-    constructor($jp: Call, lifetimes: Map<string, Region>, returnTy: Ty, paramTys: Ty[]) {
+    constructor($jp: Call, regions: Map<string, Region>, returnTy: Ty, paramTys: Ty[]) {
         this.#jp = $jp;
-        this.#lifetimes = lifetimes;
+        this.#regions = regions;
         this.#returnTy = returnTy;
         this.#paramTys = paramTys;
     }

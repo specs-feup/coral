@@ -1,59 +1,53 @@
+import { MemberAccess, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
+import DropInconsistentStructError from "@specs-feup/coral/error/drop/DropInconsistentStructError";
+import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
+import CoralFunctionWiseTransformation, { CoralFunctionWiseTransformationApplier } from "@specs-feup/coral/graph/CoralFunctionWiseTransformation";
+import DropNode from "@specs-feup/coral/graph/DropNode";
+import Access from "@specs-feup/coral/mir/action/Access";
+import Path from "@specs-feup/coral/mir/path/Path";
+import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
+import StructTy from "@specs-feup/coral/mir/symbol/ty/StructTy";
+import MoveTable from "@specs-feup/coral/symbol/MoveTable";
+import ControlFlowEdge from "@specs-feup/flow/flow/ControlFlowEdge";
 
+export default class AddDrops extends CoralFunctionWiseTransformation {
+    fnApplier = AddDropsApplier;
+}
 
-export default class AddDrops implements GraphTransformation {
-    #dropsToHandle: [
-        CoralNode.Class,
-        Path,
-        DropNode.DropInsertLocation,
-        MoveTable.StateHolder,
-    ][] = [];
+class AddDropsApplier extends CoralFunctionWiseTransformationApplier {    
+    // TODO this is too similar to move analyser
+    apply(): void {
+        // TODO ControlFlow BFS
+        const dropsToHandle: [
+            CoralNode.Class,
+            Path,
+            DropNode.InsertLocation,
+            MoveTable.StateHolder,
+        ][] = [];
 
-    apply(graph: BaseGraph.Class): void {
-        if (!graph.is(CoralGraph.TypeGuard)) {
-            throw new Error("AddDrops can only be applied to CoralGraphs");
-        }
-
-        const coralGraph = graph.as(CoralGraph.Class);
-
-        for (const functionEntry of coralGraph.functions) {
-            this.#processFunction(functionEntry, coralGraph.getRegionck(functionEntry));
-        }
-    }
-
-    #processFunction(functionEntry: FunctionEntryNode.Class, regionck: Regionck): void {
-        for (const [node, path] of functionEntry.bfs((e) =>
-            e.is(ControlFlowEdge.TypeGuard),
-        )) {
-            if (!node.is(CoralNode.TypeGuard)) {
-                continue;
-            }
-
-            const coralNode = node.as(CoralNode.Class);
+        for (const { node, path } of this.fn.cfgEntryNode!.bfs(e => e.is(ControlFlowEdge))) {
+            const coralNode = node.expect(CoralCfgNode, "Nodes were previously inited as CoralCfgNode");
 
             let moveTable = new MoveTable();
 
             if (path.length === 0) {
                 this.#enterVars(
-                    functionEntry.jp.params,
+                    this.fn.jp.params,
                     moveTable,
-                    regionck,
                     MoveTable.State.VALID,
                 );
             } else {
                 moveTable = MoveTable.merge(
                     node.incomers
-                        .filter((e) => e.is(ControlFlowEdge.TypeGuard))
-                        .map((e) => e.source)
-                        .map((n) => {
-                            if (!n.is(CoralNode.TypeGuard)) {
-                                throw new Error("Expected node to be a CoralNode.");
-                            }
-                            return n.as(CoralNode.Class).moveTable;
-                        }),
+                        .filterIs(ControlFlowEdge)
+                        .sources
+                        .expectAll(CoralCfgNode, "Nodes were previously inited as CoralCfgNode")
+                        .toArray()
+                        .map(n => n.moveTable),
                 );
             }
 
-            this.#enterVars(coralNode.varsEnteringScope, moveTable, regionck);
+            this.#enterVars(coralNode.varsEnteringScope, moveTable);
 
             for (const access of coralNode.accesses) {
                 const [dropKind, stateHolder] = moveTable.checkDrop(access);
@@ -62,18 +56,18 @@ export default class AddDrops implements GraphTransformation {
                     case MoveTable.DropKind.NO_DROP:
                         break;
                     case MoveTable.DropKind.DROP_AFTER:
-                        this.#dropsToHandle.push([
+                        dropsToHandle.push([
                             coralNode,
                             access.path,
-                            DropNode.DropInsertLocation.AFTER_TARGET,
+                            DropNode.InsertLocation.AFTER_TARGET,
                             stateHolder!,
                         ]);
                         break;
                     case MoveTable.DropKind.DROP_BEFORE:
-                        this.#dropsToHandle.push([
+                        dropsToHandle.push([
                             coralNode,
                             access.path,
-                            DropNode.DropInsertLocation.BEFORE_TARGET,
+                            DropNode.InsertLocation.BEFORE_TARGET,
                             stateHolder!,
                         ]);
                         break;
@@ -83,7 +77,7 @@ export default class AddDrops implements GraphTransformation {
             }
         }
 
-        for (const [coralNode, path, dropLocation, stateHolder] of this.#dropsToHandle) {
+        for (const [coralNode, path, dropLocation, stateHolder] of dropsToHandle) {
             this.#handleDrop(coralNode, path, dropLocation, stateHolder);
         }
     }
@@ -91,26 +85,21 @@ export default class AddDrops implements GraphTransformation {
     #enterVars(
         decls: Vardecl[],
         moveTable: MoveTable,
-        regionck: Regionck,
         state: MoveTable.State = MoveTable.State.UNINIT,
     ): void {
         for (const $decl of decls) {
-            const ty = regionck.getTy($decl);
-            if (ty === undefined) {
-                throw new Error("Expected ty to be defined.");
-            }
-            moveTable.enterVar($decl, ty, state);
+            moveTable.enterVar($decl, this.fn.getSymbol($decl), state);
         }
     }
 
     #handleDrop(
         coralNode: CoralNode.Class,
         path: Path,
-        dropLocation: DropNode.DropInsertLocation,
+        dropLocation: DropNode.InsertLocation,
         stateHolder: MoveTable.StateHolder,
     ): void {
         if (stateHolder instanceof MoveTable.SingleState) {
-            if (!(path.#ty instanceof StructTy)) {
+            if (!(path.ty instanceof StructTy)) {
                 return;
             }
 
@@ -123,16 +112,16 @@ export default class AddDrops implements GraphTransformation {
                 this.#addDrops(coralNode, path, dropLocation, true);
             }
         } else if (stateHolder instanceof MoveTable.FieldStates) {
-            if (!(path.#ty instanceof StructTy)) {
+            if (!(path.ty instanceof StructTy)) {
                 throw new Error("Expected path to be a struct.");
             }
 
-            if (path.#ty.dropFunction !== undefined) {
+            if (path.ty.dropFunction !== undefined) {
                 if (!stateHolder.isConsistentState()) {
                     throw new DropInconsistentStructError(
                         coralNode.jp,
                         path,
-                        path.#ty.dropFunction,
+                        path.ty.dropFunction,
                     );
                 }
 
@@ -145,9 +134,9 @@ export default class AddDrops implements GraphTransformation {
                     this.#addDrops(coralNode, path, dropLocation, true);
                 }
             } else {
-                for (const field of path.#ty.fields.keys()) {
+                for (const field of path.ty.fields.keys()) {
                     const subStateHolder = stateHolder.get(field);
-                    const $subPathJp = path.#$jp as MemberAccess; //TODO// ClavaJoinPoints.memberAccess(path.$jp, field);
+                    const $subPathJp = path.jp as MemberAccess; //TODO// ClavaJoinPoints.memberAccess(path.$jp, field);
                     const subPath = new PathMemberAccess($subPathJp, path, field);
                     this.#handleDrop(coralNode, subPath, dropLocation, subStateHolder);
                 }
@@ -160,16 +149,16 @@ export default class AddDrops implements GraphTransformation {
     #addDrops(
         coralNode: CoralNode.Class,
         path: Path,
-        dropLocation: DropNode.DropInsertLocation,
+        dropLocation: DropNode.InsertLocation,
         maybe: boolean,
     ) {
-        if (!(path.#ty instanceof StructTy)) {
+        if (!(path.ty instanceof StructTy)) {
             return;
         }
 
-        if (dropLocation === DropNode.DropInsertLocation.AFTER_TARGET) {
+        if (dropLocation === DropNode.InsertLocation.AFTER_TARGET) {
             this.#addDropFields(
-                Array.from(path.#ty.fields.keys()).reverse(),
+                Array.from(path.ty.fields.keys()).reverse(),
                 coralNode,
                 path,
                 dropLocation,
@@ -177,13 +166,13 @@ export default class AddDrops implements GraphTransformation {
             );
         }
 
-        if (path.#ty.dropFunction !== undefined) {
+        if (path.ty.dropFunction !== undefined) {
             this.#addDrop(coralNode, path, dropLocation, maybe);
         }
 
-        if (dropLocation === DropNode.DropInsertLocation.BEFORE_TARGET) {
+        if (dropLocation === DropNode.InsertLocation.BEFORE_TARGET) {
             this.#addDropFields(
-                Array.from(path.#ty.fields.keys()),
+                Array.from(path.ty.fields.keys()),
                 coralNode,
                 path,
                 dropLocation,
@@ -196,7 +185,7 @@ export default class AddDrops implements GraphTransformation {
         fields: string[],
         coralNode: CoralNode.Class,
         path: Path,
-        dropLocation: DropNode.DropInsertLocation,
+        dropLocation: DropNode.InsertLocation,
         maybe: boolean,
     ) {
         for (const field of fields) {
@@ -209,7 +198,7 @@ export default class AddDrops implements GraphTransformation {
     #addDrop(
         coralNode: CoralNode.Class,
         path: Path,
-        dropLocation: DropNode.DropInsertLocation,
+        dropLocation: DropNode.InsertLocation,
         maybe: boolean,
     ) {
         if (this.#isNormalFlow(coralNode)) {
@@ -224,7 +213,7 @@ export default class AddDrops implements GraphTransformation {
                 .as(DropNode.Class);
 
             nodeAsDrop.accesses.push(
-                new Access(path, Access.Kind.MUTABLE_BORROW, Access.Depth.DEEP),
+                new Access(path, Access.Kind.MUTABLE_BORROW),
             );
 
             if (!coralNode.is(InstructionNode.TypeGuard)) {

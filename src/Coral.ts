@@ -1,5 +1,5 @@
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
-import { FunctionJp, Program } from "@specs-feup/clava/api/Joinpoints.js";
+import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralAnalyzer from "@specs-feup/coral/pipeline/CoralAnalyzer";
 import CoralNormalizer from "@specs-feup/coral/pipeline/CoralNormalizer";
 import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";

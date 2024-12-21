@@ -35,7 +35,6 @@ import LfPath from "@specs-feup/coral/pragma/lifetime/path/LfPath";
 import LfPathDeref from "@specs-feup/coral/pragma/lifetime/path/LfPathDeref";
 import LfPathMemberAccess from "@specs-feup/coral/pragma/lifetime/path/LfPathMemberAccess";
 import LfPathVarRef from "@specs-feup/coral/pragma/lifetime/path/LfPathVarRef";
-import MetaRegionVariableBound from "@specs-feup/coral/regionck/MetaRegionVariableBound";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 
 export default class DefMap {

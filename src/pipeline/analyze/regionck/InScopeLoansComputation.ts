@@ -1,44 +1,38 @@
+import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
+import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
+import CoralTransformation, { CoralTransformationApplier } from "@specs-feup/coral/graph/CoralTransformation";
+import Loan from "@specs-feup/coral/mir/action/Loan";
 
+interface InScopeLoansComputationArgs {
+    target: CoralFunctionNode.Class;
+}
 
-export default class InScopeLoansComputation implements GraphTransformation {
-    #targetFunction: FunctionEntryNode.Class;
+export default class InScopeLoansComputation extends CoralTransformation<InScopeLoansComputationArgs> {
+    applier = InScopeLoansComputationApplier;
+}
 
-    constructor(targetFunction: FunctionEntryNode.Class) {
-        this.#targetFunction = targetFunction;
-    }
-
-    apply(graph: BaseGraph.Class): void {
-        if (!graph.is(CoralGraph.TypeGuard)) {
-            throw new Error("InScopeLoansComputation can only be applied to CoralGraphs");
-        }
-
-        const coralGraph = graph.as(CoralGraph.Class);
-
-        this.#processFunction(this.#targetFunction);
-    }
-
-    #processFunction(functionEntry: FunctionEntryNode.Class) {
+class InScopeLoansComputationApplier extends CoralTransformationApplier<InScopeLoansComputationArgs> {
+    apply(): void {
         // Worklist is FIFO Queue
-        const worklist = new Set(functionEntry.reachableNodes);
+        // TODO maybe should only have been reachable nodes?
+        const nodes = this.args.target.controlFlowNodes.expectAll(
+            CoralCfgNode,
+            "Nodes were previously inited as CoralCfgNode",
+        );
+        const worklist = new Set(nodes);
 
         while (worklist.size > 0) {
-            const node = worklist.values().next().value as FlowNode.Class;
+            const node = worklist.values().next().value!;
             worklist.delete(node);
-
-            if (!node.is(CoralNode.TypeGuard)) {
-                throw new Error("InScopeLoansComputation: node is not a CoralNode");
-            }
-
-            const coralNode = node.as(CoralNode.Class);
 
             const inSet: Set<Loan> = new Set();
 
             // Union of all incoming edges
             for (const inNode of node.previousNodes) {
-                if (!inNode.is(CoralNode.TypeGuard)) {
+                if (!inNode.is(CoralCfgNode)) {
                     throw new Error("InScopeLoansComputation: node is not a CoralNode");
                 }
-                const inCoralNode = inNode.as(CoralNode.Class);
+                const inCoralNode = inNode.as(CoralCfgNode);
                 const inner: Set<Loan> = new Set(inCoralNode.inScopeLoans);
 
                 // Kills from assignment paths
@@ -75,10 +69,10 @@ export default class InScopeLoansComputation implements GraphTransformation {
 
             // Compare for changes
             let changed = false;
-            if (coralNode.inScopeLoans.size !== inSet.size) {
+            if (node.inScopeLoans.size !== inSet.size) {
                 changed = true;
             } else {
-                for (const loan of coralNode.inScopeLoans) {
+                for (const loan of node.inScopeLoans) {
                     if (!inSet.has(loan)) {
                         changed = true;
                         break;
@@ -88,7 +82,7 @@ export default class InScopeLoansComputation implements GraphTransformation {
 
             // Update real values and add successors to worklist
             if (changed) {
-                coralNode.inScopeLoans = inSet;
+                node.inScopeLoans = inSet;
                 for (const out of node.nextNodes) {
                     if (!worklist.has(out)) {
                         worklist.add(out);

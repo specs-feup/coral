@@ -1,4 +1,4 @@
-import { Decl, Joinpoint, Pragma, RecordJp, Statement } from "@specs-feup/clava/api/Joinpoints.js";
+import { Decl, Joinpoint, Statement } from "@specs-feup/clava/api/Joinpoints.js";
 
 class CodeLineHint {
     #jpCode: string;

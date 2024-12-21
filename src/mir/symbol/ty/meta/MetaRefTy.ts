@@ -2,9 +2,9 @@
 import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
-import Loan from "@specs-feup/coral/mir/Loan";
 import { PointerType } from "@specs-feup/clava/api/Joinpoints.js";
-import Region from "@specs-feup/coral/regionck/Region";
+import Loan from "@specs-feup/coral/mir/action/Loan";
+import Region from "@specs-feup/coral/mir/symbol/Region";
 
 export default class MetaRefTy implements MetaTy {
     #metaRegionVar: MetaRegion;

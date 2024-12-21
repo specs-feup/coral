@@ -29,6 +29,10 @@ class Loan {
     get kind(): Loan.Kind {
         return this.#leftTy.loanKind;
     }
+
+    get isReborrow(): boolean {
+        return this.#reborrow;
+    }
 }
 
 namespace Loan {

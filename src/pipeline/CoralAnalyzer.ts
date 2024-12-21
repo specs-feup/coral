@@ -3,7 +3,9 @@ import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
 import { CoralConfig } from "@specs-feup/coral/Coral";
 import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
 import CoralAnnotator from "@specs-feup/coral/pipeline/analyze/annotate/CoralAnnotator";
+import AddDrops from "@specs-feup/coral/pipeline/analyze/drops/AddDrops";
 import MoveAnalyser from "@specs-feup/coral/pipeline/analyze/move/MoveAnalyser";
+import RegionckPipeline from "@specs-feup/coral/pipeline/analyze/regionck/RegionckPipeline";
 import Graph from "@specs-feup/flow/graph/Graph";
 import IncrementingIdGenerator from "@specs-feup/flow/graph/id/IncrementingIdGenerator";
 
@@ -41,10 +43,6 @@ export default class CoralAnalyzer {
                     CustomLivenessComputation.computeDefsAndUses,
                 ),
             )
-            .apply(
-                new InferLifetimeBounds(this.#inferFunctionLifetimes, this.#iterationLimit),
-            )
-            .apply(new RegionckPipeline(this.#debug))
-            .apply(new DropElaboration());
+            .apply(new RegionckPipeline());
     }
 }

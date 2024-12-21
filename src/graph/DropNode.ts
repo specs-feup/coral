@@ -1,31 +1,30 @@
-import FlowNode from "clava-flow/flow/node/FlowNode";
-import BaseNode from "clava-flow/graph/BaseNode";
-import { NodeBuilder, NodeTypeGuard } from "clava-flow/graph/Node";
-import CoralNode from "@specs-feup/coral/graph/CoralNode";
+import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
+import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
+import Node from "@specs-feup/flow/graph/Node";
 
 namespace DropNode {
+    export const TAG = "__coral__drop_node";
+    export const VERSION = "1";
+
     export class Class<
         D extends Data = Data,
         S extends ScratchData = ScratchData,
-    > extends CoralNode.Class<D, S> {
-        get dropIsConditional(): boolean {
-            return this.data.coral.dropIsConditional;
+    > extends CoralCfgNode.Class<D, S> {
+        get isDropConditional(): boolean {
+            return this.data[TAG].isDropConditional;
         }
 
-        get dropInsertLocation(): DropInsertLocation {
-            return this.data.coral.dropInsertLocation;
+        get isDropElaborated(): boolean {
+            return this.data[TAG].isDropElaborated;
         }
 
-        get elaborated(): boolean {
-            return this.data.coral.elaborated;
+        get dropInsertLocation(): InsertLocation {
+            return this.data[TAG].dropInsertLocation;
         }
 
         insertDropCallBefore($call: string): void {
             let targetNode: FlowNode.Class = this;
-            while (
-                targetNode.is(DropNode.TypeGuard) &&
-                !targetNode.as(DropNode.Class).elaborated
-            ) {
+            while (targetNode.tryAs(DropNode)?.isDropElaborated) {
                 const nextNodes = targetNode.nextNodes;
                 if (nextNodes.length !== 1) {
                     throw new Error(
@@ -38,15 +37,12 @@ namespace DropNode {
                 throw new Error("Target node must have a joinpoint");
             }
             this.scratchData.$jp = targetNode.jp.insertBefore($call);
-            this.data.coral.elaborated = true;
+            this.data[TAG].isDropElaborated = true;
         }
 
         insertDropCallAfter($call: string): void {
             let targetNode: FlowNode.Class = this;
-            while (
-                targetNode.is(DropNode.TypeGuard) &&
-                !targetNode.as(DropNode.Class).elaborated
-            ) {
+            while (targetNode.tryAs(DropNode)?.isDropElaborated) {
                 const previousNodes = targetNode.previousNodes;
                 if (previousNodes.length !== 1) {
                     throw new Error(
@@ -60,84 +56,66 @@ namespace DropNode {
             }
 
             this.scratchData.$jp = targetNode.jp.insertAfter($call);
-            this.data.coral.elaborated = true;
+            this.data[TAG].isDropElaborated = true;
         }
     }
 
     export class Builder
-        extends CoralNode.Builder
-        implements NodeBuilder<Data, ScratchData>
+        implements
+            Node.Builder<
+                Data,
+                ScratchData,
+                ClavaControlFlowNode.Data,
+                ClavaControlFlowNode.ScratchData
+            >
     {
         #isConditional: boolean;
-        #insertLocation: DropInsertLocation;
-
-        constructor(isConditional: boolean, insertLocation: DropInsertLocation) {
-            super();
+        #insertLocation: InsertLocation;
+        
+        constructor(isConditional: boolean, insertLocation: InsertLocation) {
             this.#isConditional = isConditional;
             this.#insertLocation = insertLocation;
         }
 
-        override buildData(data: BaseNode.Data): Data {
+        buildData(data: ClavaControlFlowNode.Data): Data {
             return {
-                ...super.buildData(data),
-                coral: {
-                    dropIsConditional: this.#isConditional,
+                ...data,
+                [TAG]: {
+                    version: VERSION,
+                    isDropConditional: this.#isConditional,
+                    isDropElaborated: false,
                     dropInsertLocation: this.#insertLocation,
-                    elaborated: false,
                 },
             };
         }
 
-        override buildScratchData(scratchData: BaseNode.ScratchData): ScratchData {
+        buildScratchData(scratchData: ClavaControlFlowNode.ScratchData): ScratchData {
             return {
-                ...super.buildScratchData(scratchData),
+                ...scratchData,
             };
         }
     }
 
-    export const TypeGuard: NodeTypeGuard<Data, ScratchData> = {
-        isDataCompatible(data: BaseNode.Data): data is Data {
-            if (!CoralNode.TypeGuard.isDataCompatible(data)) return false;
-            const sData = data as Data;
-            if (sData.coral === undefined) return false;
-            if (
-                !(
-                    sData.coral.dropIsConditional === true ||
-                    sData.coral.dropIsConditional === false
-                )
-            )
-                return false;
-            if (
-                !(
-                    sData.coral.dropInsertLocation === DropInsertLocation.BEFORE_TARGET ||
-                    sData.coral.dropInsertLocation === DropInsertLocation.AFTER_TARGET
-                )
-            )
-                return false;
-            return true;
+    export const TypeGuard = Node.TagTypeGuard<Data, ScratchData>(
+        TAG,
+        VERSION,
+        (sData) => {
+            return CoralCfgNode.TypeGuard.isScratchDataCompatible(sData);
         },
+    );
 
-        isScratchDataCompatible(
-            scratchData: BaseNode.ScratchData,
-        ): scratchData is ScratchData {
-            if (!CoralNode.TypeGuard.isScratchDataCompatible(scratchData)) return false;
-            return true;
-        },
-    };
-
-    export interface Data extends CoralNode.Data {
-        coral: {
-            dropIsConditional: boolean;
-            dropInsertLocation: DropInsertLocation;
-            elaborated: boolean;
+    export interface Data extends CoralCfgNode.Data {
+        [TAG]: {
+            version: typeof VERSION;
+            isDropConditional: boolean;
+            isDropElaborated: boolean;
+            dropInsertLocation: InsertLocation;
         };
     }
 
-    export interface ScratchData extends CoralNode.ScratchData {}
+    export interface ScratchData extends CoralCfgNode.ScratchData {}
 
-    // ------------------------------
-
-    export enum DropInsertLocation {
+    export enum InsertLocation {
         BEFORE_TARGET = "before",
         AFTER_TARGET = "after",
     }

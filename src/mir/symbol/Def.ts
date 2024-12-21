@@ -1,8 +1,7 @@
 import { FunctionJp, RecordJp } from "@specs-feup/clava/api/Joinpoints.js";
+import MetaRegionBound from "@specs-feup/coral/mir/symbol/MetaRegionBound";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
-import MetaRegion from "@specs-feup/coral/regionck/MetaRegionVariable";
-import MetaRegionVariableBound from "@specs-feup/coral/regionck/MetaRegionVariableBound";
 
 /**
  * #pragma coral lf %a
@@ -22,7 +21,7 @@ export default class Def {
     #semantics: Ty.Semantics;
     #fields: Map<string, MetaTy>;
     #metaRegionVars: MetaRegion[]; // TODO does it include %static?
-    #bounds: MetaRegionVariableBound[];
+    #bounds: MetaRegionBound[];
     #dropFunction?: FunctionJp;
 
     constructor(
@@ -31,7 +30,7 @@ export default class Def {
         semantics: Ty.Semantics,
         fields: Map<string, MetaTy>,
         metaRegionVars: MetaRegion[],
-        bounds: MetaRegionVariableBound[],
+        bounds: MetaRegionBound[],
         dropFunction?: FunctionJp,
     ) {
         this.#jp = $jp;
@@ -63,7 +62,7 @@ export default class Def {
         return this.#metaRegionVars;
     }
 
-    get bounds(): MetaRegionVariableBound[] {
+    get bounds(): MetaRegionBound[] {
         return this.#bounds;
     }
 

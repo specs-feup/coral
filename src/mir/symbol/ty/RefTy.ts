@@ -1,7 +1,7 @@
-import Region from "@specs-feup/coral/regionck/RegionVariable";
 import { PointerType } from "@specs-feup/clava/api/Joinpoints.js";
+import Loan from "@specs-feup/coral/mir/action/Loan";
+import Region from "@specs-feup/coral/mir/symbol/Region";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
-import Loan from "@specs-feup/coral/mir/Loan";
 
 export default class RefTy implements Ty {
     #regionVar: Region;

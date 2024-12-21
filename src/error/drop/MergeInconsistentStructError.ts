@@ -14,7 +14,7 @@ class MergeInconsistentStructError extends CoralError {
             )
                 .code(
                     path.vardecl,
-                    `'${path.toString()}' has type '${path.#ty.name}' with drop function '${(path.#ty as StructTy).dropFunction!.name}'`,
+                    `'${path.toString()}' has type '${path.ty.name}' with drop function '${(path.ty as StructTy).dropFunction!.name}'`,
                 )
                 .codeString(
                     $mergeLocation.originNode.code.trim().split("\n").reverse()[0],

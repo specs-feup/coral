@@ -1,11 +1,13 @@
 import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
-import { Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
-import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
-import Access from "@specs-feup/coral/mir/Access";
-import Loan from "@specs-feup/coral/mir/Loan";
+import { Call, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
+import Access from "@specs-feup/coral/mir/action/Access";
+import FunctionCall from "@specs-feup/coral/mir/action/FunctionCall";
+import Loan from "@specs-feup/coral/mir/action/Loan";
 import Path from "@specs-feup/coral/mir/path/Path";
+import Region from "@specs-feup/coral/mir/symbol/Region";
+import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
-import Region from "@specs-feup/coral/regionck/Region";
+import MoveTable from "@specs-feup/coral/symbol/MoveTable";
 import Node from "@specs-feup/flow/graph/Node";
 
 namespace CoralCfgNode {
@@ -15,15 +17,37 @@ namespace CoralCfgNode {
     export class Class<
         D extends Data = Data,
         S extends ScratchData = ScratchData,
-    > extends ClavaControlFlowNode.Class<D, S> {
+        > extends ClavaControlFlowNode.Class<D, S> {
+        get moveTable(): MoveTable {
+            return this.scratchData[TAG].moveTable;
+        }
+
         addAccess(path: Path, kind: Access.Kind) {
             this.scratchData[TAG].accesses.push(new Access(path, kind));
+        }
+
+        get accesses(): Access[] {
+            return this.scratchData[TAG].accesses;
         }
 
         addLoan(loanedPath: Path, regionVar: Region, reborrow: boolean, leftTy: RefTy) {
             this.scratchData[TAG].loans.push(
                 new Loan(loanedPath, regionVar, reborrow, leftTy),
             );
+        }
+
+        get loans(): Loan[] {
+            return this.scratchData[TAG].loans;
+        }
+
+        addCall($jp: Call, regions: Map<string, Region>, returnTy: Ty, paramTys: Ty[]) {
+            this.scratchData[TAG].fnCalls.push(
+                new FunctionCall($jp, regions, returnTy, paramTys)
+            );
+        }
+
+        get calls(): FunctionCall[] {
+            return this.scratchData[TAG].fnCalls;
         }
 
         get varsEnteringScope(): Vardecl[] {
@@ -67,8 +91,10 @@ namespace CoralCfgNode {
                 [TAG]: {
                     varsEnteringScope: [],
                     varsLeavingScope: [],
+                    moveTable: new MoveTable(),
                     accesses: [],
                     loans: [],
+                    fnCalls: [],
                 },
             };
         }
@@ -94,8 +120,10 @@ namespace CoralCfgNode {
         [TAG]: {
             varsEnteringScope: Vardecl[];
             varsLeavingScope: Vardecl[];
+            moveTable: MoveTable;
             accesses: Access[];
             loans: Loan[];
+            fnCalls: FunctionCall[];
         };
     }
 }

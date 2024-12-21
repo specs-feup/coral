@@ -1,8 +1,10 @@
 import ClavaFunctionNode from "@specs-feup/clava-flow/ClavaFunctionNode";
-import { FunctionJp, RecordJp, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
+import { FunctionJp, Joinpoint, RecordJp, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
+import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
 import Def from "@specs-feup/coral/mir/symbol/Def";
 import Fn from "@specs-feup/coral/mir/symbol/Fn";
 import Region from "@specs-feup/coral/mir/symbol/Region";
+import RegionConstraint, { Variance } from "@specs-feup/coral/mir/symbol/RegionConstraint";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import FileSymbolTable from "@specs-feup/coral/symbol/FileSymbolTable";
 import FunctionSymbolTable from "@specs-feup/coral/symbol/FunctionSymbolTable";
@@ -42,6 +44,39 @@ namespace CoralFunctionNode {
         set returnTy(ret: Ty) {
             this.scratchData[TAG].symbolTable.returnTy = ret;
         }
+
+        get regionConstraints(): RegionConstraint[] {
+            return this.scratchData[TAG].constraints;
+        }
+
+        addConstraint(
+            region1: Region,
+            region2: Region,
+            variance: Variance,
+            node: CoralCfgNode.Class,
+            $jp: Joinpoint,
+        ): void {
+            switch (variance) {
+                case Variance.CO: // "a Co b" == "a <= b"
+                    this.scratchData[TAG].constraints.push(
+                        new RegionConstraint(region2, region1, node, $jp),
+                    );
+                    break;
+                case Variance.CONTRA: // "a Contra b" == "a >= b"
+                    this.scratchData[TAG].constraints.push(
+                        new RegionConstraint(region1, region2, node, $jp),
+                    );
+                    break;
+                case Variance.IN: // "a In b" == "a == b"
+                    this.scratchData[TAG].constraints.push(
+                        new RegionConstraint(region2, region1, node, $jp),
+                    );
+                    this.scratchData[TAG].constraints.push(
+                        new RegionConstraint(region1, region2, node, $jp),
+                    );
+                    break;
+            }
+        }
     }
 
     export class Builder
@@ -73,6 +108,7 @@ namespace CoralFunctionNode {
                 ...scratchData,
                 [TAG]: {
                     symbolTable: new FunctionSymbolTable(this.#fileTable),
+                    constraints: [],
                 },
             };
         }
@@ -93,13 +129,13 @@ namespace CoralFunctionNode {
     export interface Data extends ClavaFunctionNode.Data {
         [TAG]: {
             version: typeof VERSION;
-            
         };
     }
 
     export interface ScratchData extends ClavaFunctionNode.ScratchData {
         [TAG]: {
             symbolTable: FunctionSymbolTable;
+            constraints: RegionConstraint[];
         };
     }
 }

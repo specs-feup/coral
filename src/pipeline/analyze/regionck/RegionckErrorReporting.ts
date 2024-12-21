@@ -1,118 +1,79 @@
+import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
+import DanglingReferenceError from "@specs-feup/coral/error/borrow/DanglingReferenceError";
+import MutableBorrowWhileBorrowedError from "@specs-feup/coral/error/borrow/MutableBorrowWhileBorrowedError";
+import MutateWhileBorrowedError from "@specs-feup/coral/error/borrow/MutateWhileBorrowedError";
+import UseWhileMutBorrowedError from "@specs-feup/coral/error/borrow/UseWhileMutBorrowedError";
+import MoveWhileBorrowedError from "@specs-feup/coral/error/move/MoveWhileBorrowedError";
+import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
+import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
+import CoralTransformation, { CoralTransformationApplier } from "@specs-feup/coral/graph/CoralTransformation";
+import Access from "@specs-feup/coral/mir/action/Access";
+import Loan from "@specs-feup/coral/mir/action/Loan";
+import ControlFlowEdge from "@specs-feup/flow/flow/ControlFlowEdge";
 
 
-export default class RegionckErrorReporting implements GraphTransformation {
-    #shouldCheckUniversalRegions: boolean;
+interface RegionckErrorReportingArgs {
+    target: CoralFunctionNode.Class;
+}
 
-    constructor(checkUniversalRegions: boolean = true) {
-        this.#shouldCheckUniversalRegions = checkUniversalRegions;
-    }
+export default class RegionckErrorReporting extends CoralTransformation<RegionckErrorReportingArgs> {
+    applier = RegionckErrorReportingApplier;
+}
 
-    apply(graph: BaseGraph.Class): void {
-        if (!graph.is(CoralGraph.TypeGuard)) {
-            throw new Error("RegionckErrorReporting can only be applied to CoralGraphs");
-        }
-
-        const coralGraph = graph.as(CoralGraph.Class);
-
-        for (const functionEntry of coralGraph.functions) {
-            this.#checkAccessViolations(functionEntry);
-            if (this.#shouldCheckUniversalRegions) {
-                this.#checkUniversalRegions(coralGraph.getRegionck(functionEntry));
-            }
-        }
-    }
-
-    #checkUniversalRegions(regionck: Regionck) {
-        for (const region of regionck.universalRegionVars) {
-            if (!isNaN(Number(region.name.slice(1)))) {
-                continue;
-            }
-
-            const ends = Array.from(region.points)
-                .filter((point) => point.startsWith("end("))
-                .map((point) => point.slice(4, -1));
-
-            for (const end of ends) {
-                if (region.name === end) {
-                    continue;
-                }
-
-                const hasBound = regionck.bounds.some(
-                    (b) => b.name === region.name && b.bound === end,
-                );
-
-                if (!hasBound) {
-                    const relevantConstraint = regionck.constraints.find(
-                        (c) =>
-                            c.sup.name === region.name && c.addedEnds.has(`end(${end})`),
-                    );
-                    if (!relevantConstraint) {
-                        throw new Error("No relevant constraint found");
-                    }
-                    throw new MissingLifetimeBoundError(
-                        region,
-                        end,
-                        relevantConstraint,
-                        regionck.functionEntry.jp,
-                    );
+class RegionckErrorReportingApplier extends CoralTransformationApplier<RegionckErrorReportingArgs> {
+    apply(): void {
+        // TODO maybe should only have been reachable nodes?
+        const nodes = this.args.target.controlFlowNodes.expectAll(
+            CoralCfgNode,
+            "Nodes were previously inited as CoralCfgNode",
+        );
+        for (const node of nodes) {
+            for (const access of node.accesses) {
+                for (const loan of this.#relevantLoans(node, access)) {
+                    this.#checkAccess(node, access, loan);
                 }
             }
         }
     }
 
-    #checkAccessViolations(functionEntry: FunctionEntryNode.Class) {
-        for (const node of functionEntry.reachableNodes) {
-            if (!node.is(CoralNode.TypeGuard)) {
-                continue;
-            }
-
-            const coralNode = node.as(CoralNode.Class);
-            for (const access of coralNode.accesses) {
-                for (const loan of this.#relevantLoans(coralNode, access)) {
-                    this.#checkAccess(coralNode, access, loan);
-                }
-            }
-        }
-    }
-
-    #relevantLoans(node: CoralNode.Class, access: Access): Loan[] {
+    #relevantLoans(node: CoralCfgNode.Class, access: Access): Loan[] {
         switch (access.depth) {
             case Access.Depth.SHALLOW:
                 return Array.from(node.inScopeLoans).filter(
                     (loan) =>
-                        access.#path.equals(loan.loanedPath) ||
-                        access.#path.prefixes.some((prefix) =>
+                        access.path.equals(loan.loanedPath) ||
+                        access.path.prefixes.some((prefix) =>
                             prefix.equals(loan.loanedPath),
                         ) ||
                         loan.loanedPath.shallowPrefixes.some((prefix) =>
-                            prefix.equals(access.#path),
+                            prefix.equals(access.path),
                         ),
                 );
             case Access.Depth.DEEP:
                 return Array.from(node.inScopeLoans).filter(
                     (loan) =>
-                        access.#path.equals(loan.loanedPath) ||
-                        access.#path.prefixes.some((prefix) =>
+                        access.path.equals(loan.loanedPath) ||
+                        access.path.prefixes.some((prefix) =>
                             prefix.equals(loan.loanedPath),
                         ) ||
                         loan.loanedPath.supportingPrefixes.some((prefix) =>
-                            prefix.equals(access.#path),
+                            prefix.equals(access.path),
                         ),
                 );
         }
     }
 
-    #checkAccess(node: CoralNode.Class, access: Access, loan: Loan) {
-        if (access.#type === Access.Kind.STORAGE_DEAD) {
+    #checkAccess(node: CoralCfgNode.Class, access: Access, loan: Loan) {
+        if (access.kind === Access.Kind.STORAGE_DEAD) {
             const $nextUse = this.#findNextUse(node, loan);
             throw new DanglingReferenceError(node.jp, loan, $nextUse, access);
         } else if (loan.kind === Loan.Kind.MUTABLE) {
             const $nextUse = this.#findNextUse(node, loan);
             throw new UseWhileMutBorrowedError(node.jp, loan, $nextUse, access);
-        } else if (access.#type === Access.Kind.WRITE) {
+        } else if (access.kind === Access.Kind.WRITE) {
             const $nextUse = this.#findNextUse(node, loan);
             throw new MutateWhileBorrowedError(node.jp, loan, $nextUse, access);
-        } else if (access.#type === Access.Kind.MUTABLE_BORROW) {
+        } else if (access.kind === Access.Kind.MUTABLE_BORROW) {
             const $nextUse = this.#findNextUse(node, loan);
             throw new MutableBorrowWhileBorrowedError(node.jp, loan, $nextUse, access);
         } else if (access.isMove) {
@@ -121,16 +82,16 @@ export default class RegionckErrorReporting implements GraphTransformation {
         }
     }
 
-    #findNextUse(node: CoralNode.Class, loan: Loan): Joinpoint | undefined {
-        for (const [vNode, path] of node.bfs((e) => e.is(ControlFlowEdge.TypeGuard))) {
+    #findNextUse(node: CoralCfgNode.Class, loan: Loan): Joinpoint | undefined {
+        for (const { node: vNode, path } of node.bfs((e) => e.is(ControlFlowEdge))) {
             if (path.length == 0) continue;
             const previousNode = path[path.length - 1].source;
             if (
                 loan.regionVar.points.has(previousNode.id) &&
                 !loan.regionVar.points.has(vNode.id)
             ) {
-                if (previousNode.is(CoralNode.TypeGuard)) {
-                    return previousNode.as(CoralNode.Class).jp;
+                if (previousNode.is(CoralCfgNode)) {
+                    return previousNode.as(CoralCfgNode).jp;
                 }
             }
         }

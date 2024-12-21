@@ -1,39 +1,35 @@
+import { Call, FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
+import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
+import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
+import CoralTransformation, { CoralTransformationApplier } from "@specs-feup/coral/graph/CoralTransformation";
+import ConstraintGenerator from "@specs-feup/coral/pipeline/analyze/regionck/ConstraintGenerator";
+import InScopeLoansComputation from "@specs-feup/coral/pipeline/analyze/regionck/InScopeLoansComputation";
+import RegionckErrorReporting from "@specs-feup/coral/pipeline/analyze/regionck/RegionckErrorReporting";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
 
+interface InferLifetimeBoundsArgs {
+    iterationLimit?: number;
+}
 
-class InferLifetimeBounds implements GraphTransformation {
-    #inferFunctionLifetimes: boolean;
-    #iterationLimit?: number;
+class InferLifetimeBounds extends CoralTransformation<InferLifetimeBoundsArgs> {
+    applier = InferLifetimeBoundsApplier;
+}
 
-    constructor(inferFunctionLifetimes = true, iterationLimit?: number) {
-        this.#inferFunctionLifetimes = inferFunctionLifetimes;
-        this.#iterationLimit = iterationLimit;
-    }
-
-    apply(graph: BaseGraph.Class): void {
-        if (!graph.is(CoralGraph.TypeGuard)) {
-            throw new Error("InferLifetimeBounds can only be applied to CoralGraphs");
-        }
-
-        const coralGraph = graph.as(CoralGraph.Class);
-
-        if (this.#inferFunctionLifetimes) {
-            this.#inferLifetimes(coralGraph);
-        }
-    }
-
-    #inferLifetimes(coralGraph: CoralGraph.Class) {
+class InferLifetimeBoundsApplier extends CoralTransformationApplier<InferLifetimeBoundsArgs> {
+    apply(): void {
         let state = InferLifetimeBounds.State.PRIORITIZE_LEAFS;
         let changed;
         let iterationNumber = 0;
         while (
-            this.#iterationLimit === undefined ||
-            iterationNumber < this.#iterationLimit
+            this.args.iterationLimit === undefined ||
+            iterationNumber < this.args.iterationLimit
         ) {
             changed = false;
 
-            for (const functionEntry of coralGraph.functions) {
-                console.log("Inferring lifetimes of function", functionEntry.jp.name);
-                const regionck = coralGraph.getRegionck(functionEntry);
+            for (const functionEntry of this.graph.functionsToAnalyze) {
+                if (this.graph.isDebug) {
+                    console.log("Inferring lifetimes of function", functionEntry.jp.name);
+                }
 
                 if (
                     regionck.inferLifetimeBoundsState !==
@@ -44,7 +40,7 @@ class InferLifetimeBounds implements GraphTransformation {
 
                 if (
                     state === InferLifetimeBounds.State.PRIORITIZE_LEAFS &&
-                    this.#hasUnvisitedCall(coralGraph, functionEntry)
+                    this.#hasUnvisitedCall(functionEntry)
                 ) {
                     continue;
                 }
@@ -52,19 +48,16 @@ class InferLifetimeBounds implements GraphTransformation {
                 regionck.inferLifetimeBoundsState =
                     InferLifetimeBounds.FunctionState.VISITED;
 
-                coralGraph
-                    .apply(new ConstraintGenerator(functionEntry))
-                    .apply(new InScopeLoansComputation(functionEntry))
-                    .apply(new RegionckErrorReporting(false));
+                this.graph
+                    .apply(new ConstraintGenerator({ target: functionEntry }))
+                    .apply(new InScopeLoansComputation({ target: functionEntry }))
+                    .apply(new RegionckErrorReporting({ target: functionEntry }));
 
-                const thisChanged = this.#addMissingUniversalRegions(
-                    functionEntry.jp,
-                    regionck,
-                );
+                const thisChanged = this.#addMissingUniversalRegions(functionEntry.jp);
                 changed ||= thisChanged;
 
                 if (thisChanged) {
-                    this.#propagateUnvisited(coralGraph, functionEntry.jp.calls);
+                    this.#propagateUnvisited(functionEntry.jp.calls);
                 }
 
                 regionck.reset();
@@ -85,17 +78,13 @@ class InferLifetimeBounds implements GraphTransformation {
         }
     }
 
-    #hasUnvisitedCall(
-        coralGraph: CoralGraph.Class,
-        functionEntry: FunctionEntryNode.Class,
-    ): boolean {
-        const calls = Query.searchFrom(functionEntry.jp, "call").get() as Call[];
-        for (const call of calls) {
-            const calleeNode = coralGraph.getFunction(call.name);
+    #hasUnvisitedCall(functionEntry: CoralFunctionNode.Class): boolean {
+        // TODO I think this doesn't support nested functions
+        for (const call of Query.searchFrom(functionEntry.jp, Call)) {
+            const calleeNode = this.graph.getFunction(call.function);
             if (calleeNode === undefined) {
                 continue;
             }
-            const calleeRegionck = coralGraph.getRegionck(calleeNode);
             if (
                 calleeRegionck.inferLifetimeBoundsState !==
                 InferLifetimeBounds.FunctionState.NOT_VISITED
@@ -109,7 +98,7 @@ class InferLifetimeBounds implements GraphTransformation {
         return false;
     }
 
-    #addMissingUniversalRegions($fn: FunctionJp, regionck: Regionck): boolean {
+    #addMissingUniversalRegions($fn: FunctionJp): boolean {
         let changed = false;
         for (const region of regionck.universalRegionVars) {
             if (!isNaN(Number(region.name.slice(1)))) {
@@ -131,8 +120,9 @@ class InferLifetimeBounds implements GraphTransformation {
 
                 if (!hasBound) {
                     changed = true;
-                    const pragma = new Pragma(`#pragma coral lf ${region.name}: ${end}`);
-                    $fn.insertBefore(pragma);
+                    // TODO generate this code
+                    // const pragma = new Pragma(`#pragma coral lf ${region.name}: ${end}`);
+                    // $fn.insertBefore(pragma);
                     regionck.bounds.push(
                         LifetimeBoundPragma.parse(
                             CoralPragma.parse([$fn.pragmas[$fn.pragmas.length - 1]]),
@@ -145,14 +135,13 @@ class InferLifetimeBounds implements GraphTransformation {
         return changed;
     }
 
-    #propagateUnvisited(coralGraph: CoralGraph.Class, calls: Call[]) {
+    #propagateUnvisited(calls: Call[]) {
         for (const $call of calls) {
             const callerNode = coralGraph.getFunction($call.function.name);
             if (callerNode === undefined) {
                 continue;
             }
 
-            const callerRegionck = coralGraph.getRegionck(callerNode);
             if (
                 callerRegionck.inferLifetimeBoundsState ===
                 InferLifetimeBounds.FunctionState.VISITED

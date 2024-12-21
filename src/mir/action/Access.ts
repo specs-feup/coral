@@ -1,4 +1,4 @@
-import Loan from "@specs-feup/coral/mir/Loan";
+import Loan from "@specs-feup/coral/mir/action/Loan";
 import Path from "@specs-feup/coral/mir/path/Path";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 

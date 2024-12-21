@@ -2,10 +2,10 @@ import { MemberAccess, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import MergeInconsistentStructError from "@specs-feup/coral/error/drop/MergeInconsistentStructError";
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
 import CoralFunctionWiseTransformation, { CoralFunctionWiseTransformationApplier } from "@specs-feup/coral/graph/CoralFunctionWiseTransformation";
-import MoveTable from "@specs-feup/coral/mir/MoveTable";
 import Path from "@specs-feup/coral/mir/path/Path";
 import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
 import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
+import MoveTable from "@specs-feup/coral/symbol/MoveTable";
 import ControlFlowEdge from "@specs-feup/flow/flow/ControlFlowEdge";
 
 export default class MoveAnalyser extends CoralFunctionWiseTransformation {
@@ -25,7 +25,7 @@ class MoveAnalyserApplier extends CoralFunctionWiseTransformationApplier {
 
                 if (path.length === 0) {
                     this.#enterVars(
-                        functionEntry.jp.params,
+                        this.fn.jp.params,
                         coralNode.moveTable,
                         MoveTable.State.VALID,
                     );
@@ -59,7 +59,7 @@ class MoveAnalyserApplier extends CoralFunctionWiseTransformationApplier {
                         fields = fields.reverse();
                         for (const field of fields) {
                             path = new PathMemberAccess(
-                                path.#$jp as MemberAccess,
+                                path.jp as MemberAccess,
                                 path,
                                 field,
                             );

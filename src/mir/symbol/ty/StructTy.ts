@@ -1,7 +1,7 @@
 import { FunctionJp, RecordJp } from "@specs-feup/clava/api/Joinpoints.js";
 import Def from "@specs-feup/coral/mir/symbol/Def";
+import Region from "@specs-feup/coral/mir/symbol/Region";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
-import Region from "@specs-feup/coral/regionck/RegionVariable";
 
 export default class StructTy implements Ty {
     #def: Def;

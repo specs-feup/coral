@@ -23,8 +23,7 @@ import {
 } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
 import CoralFunctionWiseTransformation, { CoralFunctionWiseTransformationApplier } from "@specs-feup/coral/graph/CoralFunctionWiseTransformation";
-import Access from "@specs-feup/coral/mir/Access";
-import FunctionCall from "@specs-feup/coral/mir/FunctionCall";
+import Access from "@specs-feup/coral/mir/action/Access";
 import Path from "@specs-feup/coral/mir/path/Path";
 import PathDeref from "@specs-feup/coral/mir/path/PathDeref";
 import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
@@ -276,7 +275,7 @@ class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier
 
         const paramTys = fnSymbol.params.map((param) => param.toTy(regionVars));
 
-        node.fnCalls.push(new FunctionCall($call, regionVars, returnTy, paramTys));
+        node.addCall($call, regionVars, returnTy, paramTys);
 
         for (const $expr of $call.args) {
             this.#annotateExpr(node, $expr);
