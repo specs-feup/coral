@@ -1,91 +1,80 @@
+import ConditionNode from "@specs-feup/clava-flow/cfg/node/condition/ConditionNode";
+import ExpressionNode from "@specs-feup/clava-flow/cfg/node/ExpressionNode";
+import ReturnNode from "@specs-feup/clava-flow/cfg/node/ReturnNode";
+import VariableDeclarationNode from "@specs-feup/clava-flow/cfg/node/VariableDeclarationNode";
+import { BinaryOp, Expression, Varref } from "@specs-feup/clava/api/Joinpoints.js";
+import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
+import CoralFunctionWiseTransformation, { CoralFunctionWiseTransformationApplier } from "@specs-feup/coral/graph/CoralFunctionWiseTransformation";
+import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
+import DropNode from "@specs-feup/coral/graph/DropNode";
+import Graph from "@specs-feup/flow/graph/Graph";
+import Node from "@specs-feup/flow/graph/Node";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
 
-
-export default class CustomLivenessComputation {
-    static computeDefsAndUses(node: LivenessNode.Class) {
-        if (node.is(DropNode.TypeGuard)) {
-            const dropNode = node.as(DropNode.Class);
+export default class CustomLivenessComputation
+    implements Graph.Transformation<CoralGraph.Class, CoralGraph.Class>
+{
+    static computeDefsAndUses(node: CoralCfgNode.Class) {
+        if (node.is(DropNode)) {
+            const dropNode = node.as(DropNode);
             for (const access of dropNode.accesses) {
-                node.addUse(access.path.innerVardecl);
+                node.addUse(access.path.vardecl);
             }
         }
+    }
+
+    apply(graph: CoralGraph.Class): CoralGraph.Class {
+        return graph.apply(
+            new InferLiveness({
+                customComputeDefsAndUses: CustomLivenessComputation.computeDefsAndUses,
+            }),
+        );
     }
 }
 
-class InferLiveness implements GraphTransformation {
-    #customComputeDefsAndUses?: (node: LivenessNode.Class) => void;
+interface InferLivenessArgs {
+    customComputeDefsAndUses?: (node: CoralCfgNode.Class) => void;
+}
 
-    customComputeDefsAndUses(
-        callback: (node: LivenessNode.Class) => void,
-    ): InferLiveness {
-        this.#customComputeDefsAndUses = callback;
-        return this;
+class InferLiveness extends CoralFunctionWiseTransformation<InferLivenessArgs> {
+    fnApplier = InferLivenessApplier;
+}
+
+class InferLivenessApplier extends CoralFunctionWiseTransformationApplier<InferLivenessArgs> {
+    apply(): void {
+        this.#computeDefsAndUses();
+        this.#computeLiveInOut();
     }
 
-    apply(graph: BaseGraph.Class): void {
-        for (const node of graph.nodes) {
-            if (node.is(FlowNode.TypeGuard)) {
-                node.init(new LivenessNode.Builder());
-            }
-        }
+    #computeDefsAndUses() {
+        for (const node of this.fn.controlFlowNodes.expectAll(CoralCfgNode, "Nodes were previously inited as CoralCfgNode")) {
+            node.switch(
+                Node.Case(VariableDeclarationNode, n => {
+                    if (n.jp.hasInit) {
+                        node.addDef(n.jp);
+                        this.#computeDefAndUse(node, n.jp.init!);
+                    }
+                }),
+                Node.Case(ExpressionNode, n => this.#computeDefAndUse(node, n.jp)),
+                Node.Case(ReturnNode, n => this.#computeDefAndUse(node, n.jp.returnExpr)),
+                Node.Case(ConditionNode, n => this.#computeDefAndUse(node, n.condition)),
+            );
 
-        this.#computeDefsAndUses(graph);
-        this.#computeLiveInOut(graph);
-    }
-
-    #computeDefsAndUses(graph: BaseGraph.Class) {
-        for (const node of graph.nodes) {
-            if (!node.is(LivenessNode.TypeGuard)) {
-                continue;
-            }
-
-            const nodeAsLiveness = node.as(LivenessNode.Class);
-
-            if (node.is(ConditionNode.TypeGuard)) {
-                const conditionNode = node.as(ConditionNode.Class);
-                const $jp = conditionNode.jp;
-                if ($jp instanceof If) {
-                    this.#computeDefAndUse(nodeAsLiveness, $jp.cond);
-                } else if ($jp instanceof Loop) {
-                    this.#computeDefAndUse(nodeAsLiveness, $jp.cond);
-                }
-            } else if (node.is(VarDeclarationNode.TypeGuard)) {
-                const varDeclarationNode = node.as(VarDeclarationNode.Class);
-                const $varDecl = varDeclarationNode.jp;
-                if (varDeclarationNode.jp.hasInit) {
-                    nodeAsLiveness.addDef($varDecl);
-                }
-                this.#computeDefAndUse(nodeAsLiveness, $varDecl.init);
-            } else if (node.is(ExpressionNode.TypeGuard)) {
-                const expressionNode = node.as(ExpressionNode.Class);
-                this.#computeDefAndUse(nodeAsLiveness, expressionNode.jp);
-            } else if (node.is(SwitchNode.TypeGuard)) {
-                const switchNode = node.as(SwitchNode.Class);
-                this.#computeDefAndUse(nodeAsLiveness, switchNode.jp.condition);
-            } else if (node.is(ReturnNode.TypeGuard)) {
-                const returnNode = node.as(ReturnNode.Class);
-                this.#computeDefAndUse(nodeAsLiveness, returnNode.jp.returnExpr);
-            }
-
-            if (this.#customComputeDefsAndUses !== undefined) {
-                this.#customComputeDefsAndUses(nodeAsLiveness);
+            if (this.args.customComputeDefsAndUses !== undefined) {
+                this.args.customComputeDefsAndUses(node);
             }
         }
     }
 
-    #computeDefAndUse(node: LivenessNode.Class, $jp: Statement | Expression | undefined) {
-        if ($jp === undefined) {
-            return;
-        }
-
+    #computeDefAndUse(node: CoralCfgNode.Class, $jp: Expression) {
         const assignedVars = new Set<string>();
 
         const $assignments = Query.searchFromInclusive($jp, BinaryOp, {
             isAssignment: true,
-            left: (left: LaraJoinPoint) => left instanceof Varref,
+            left: (left) => left instanceof Varref,
         });
-        for (const $jp of $assignments) {
-            const $assignment = $jp as BinaryOp;
-            const $vardecl = ($assignment.left as Varref).vardecl;
+        for (const $assignment of $assignments) {
+            const $vardecl = $assignment.left.vardecl;
 
             if ($vardecl === undefined || $vardecl.isGlobal) {
                 continue;
@@ -96,10 +85,8 @@ class InferLiveness implements GraphTransformation {
             node.addDef($vardecl);
         }
 
-        const $varRefs = Query.searchFromInclusive($jp, "varref");
-        for (const $jp of $varRefs) {
-            const $varRef = $jp as Varref;
-
+        const $varRefs = Query.searchFromInclusive($jp, Varref);
+        for (const $varRef of $varRefs) {
             if ($varRef.vardecl === undefined || $varRef.vardecl.isGlobal) {
                 continue;
             }
@@ -112,24 +99,19 @@ class InferLiveness implements GraphTransformation {
         }
     }
 
-    #computeLiveInOut(graph: BaseGraph.Class) {
+    #computeLiveInOut() {
         let liveChanged;
         do {
             liveChanged = false;
-            for (const node of graph.nodes) {
-                if (!node.is(LivenessNode.TypeGuard)) {
-                    continue;
-                }
+            for (const node of this.fn.controlFlowNodes.expectAll(CoralCfgNode, "Nodes were previously inited as CoralCfgNode")) {
+                const oldLiveIn = new Set(node.liveIn.map((v) => v.astId));
+                const oldLiveOut = new Set(node.liveOut.map((v) => v.astId));
 
-                const nodeAsLiveness = node.as(LivenessNode.Class);
-                const oldLiveIn = new Set(nodeAsLiveness.liveIn.map((v) => v.astId));
-                const oldLiveOut = new Set(nodeAsLiveness.liveOut.map((v) => v.astId));
+                node.updateLiveIn();
+                node.updateLiveOut();
 
-                nodeAsLiveness.updateLiveIn();
-                nodeAsLiveness.updateLiveOut();
-
-                const newLiveIn = new Set(nodeAsLiveness.liveIn.map((v) => v.astId));
-                const newLiveOut = new Set(nodeAsLiveness.liveOut.map((v) => v.astId));
+                const newLiveIn = new Set(node.liveIn.map((v) => v.astId));
+                const newLiveOut = new Set(node.liveOut.map((v) => v.astId));
 
                 if (
                     oldLiveIn.size !== newLiveIn.size ||

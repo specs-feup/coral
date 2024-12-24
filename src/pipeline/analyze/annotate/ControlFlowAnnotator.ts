@@ -213,8 +213,8 @@ class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier
         } else if ($parent instanceof ReturnStmt) {
             leftTy = this.fn.returnTy;
         } else if ($parent instanceof Call) {
-            const fnCall = node.fnCalls.find(
-                (fnCall) => fnCall.$callJp.astId === $parent.astId,
+            const fnCall = node.calls.find(
+                (fnCall) => fnCall.jp.astId === $parent.astId,
             );
             if (fnCall === undefined) {
                 throw new Error("Function call not found");
@@ -268,12 +268,11 @@ class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier
                 $vardecl = $vardecl.parent;
             }
 
-            // TODO maybe if vardecl creates itself, we won't need this
-            this.#regionck!.registerTy($vardecl, returnTy);
+            this.fn.registerSymbol($vardecl, returnTy);
             node.addAccess(new PathVarRef($vardecl, returnTy), Access.Kind.WRITE);
         }
 
-        const paramTys = fnSymbol.params.map((param) => param.toTy(regionVars));
+        const paramTys = fnSymbol.params.map((param) => param.ty.toTy(regionVars));
 
         node.addCall($call, regionVars, returnTy, paramTys);
 

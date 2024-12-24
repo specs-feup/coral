@@ -1,5 +1,6 @@
 import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
+import ControlFlowEdge from "@specs-feup/flow/flow/ControlFlowEdge";
 import Node from "@specs-feup/flow/graph/Node";
 
 namespace DropNode {
@@ -23,9 +24,9 @@ namespace DropNode {
         }
 
         insertDropCallBefore($call: string): void {
-            let targetNode: FlowNode.Class = this;
+            let targetNode: CoralCfgNode.Class = this;
             while (targetNode.tryAs(DropNode)?.isDropElaborated) {
-                const nextNodes = targetNode.nextNodes;
+                const nextNodes = targetNode.outgoers.filterIs(ControlFlowEdge).targets.filterIs(CoralCfgNode);
                 if (nextNodes.length !== 1) {
                     throw new Error(
                         "Drop nodes with insertBefore must have exactly one successor",
@@ -41,9 +42,9 @@ namespace DropNode {
         }
 
         insertDropCallAfter($call: string): void {
-            let targetNode: FlowNode.Class = this;
+            let targetNode: CoralCfgNode.Class = this;
             while (targetNode.tryAs(DropNode)?.isDropElaborated) {
-                const previousNodes = targetNode.previousNodes;
+                const previousNodes = targetNode.incomers.filterIs(ControlFlowEdge).sources.filterIs(CoralCfgNode);
                 if (previousNodes.length !== 1) {
                     throw new Error(
                         "Drop nodes with insertAfter must have exactly one predecessor",

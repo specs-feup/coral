@@ -41,22 +41,22 @@ class RegionckErrorReportingApplier extends CoralTransformationApplier<RegionckE
             case Access.Depth.SHALLOW:
                 return Array.from(node.inScopeLoans).filter(
                     (loan) =>
-                        access.path.equals(loan.loanedPath) ||
+                        access.path.equals(loan.path) ||
                         access.path.prefixes.some((prefix) =>
-                            prefix.equals(loan.loanedPath),
+                            prefix.equals(loan.path),
                         ) ||
-                        loan.loanedPath.shallowPrefixes.some((prefix) =>
+                        loan.path.shallowPrefixes.some((prefix) =>
                             prefix.equals(access.path),
                         ),
                 );
             case Access.Depth.DEEP:
                 return Array.from(node.inScopeLoans).filter(
                     (loan) =>
-                        access.path.equals(loan.loanedPath) ||
+                        access.path.equals(loan.path) ||
                         access.path.prefixes.some((prefix) =>
-                            prefix.equals(loan.loanedPath),
+                            prefix.equals(loan.path),
                         ) ||
-                        loan.loanedPath.supportingPrefixes.some((prefix) =>
+                        loan.path.supportingPrefixes.some((prefix) =>
                             prefix.equals(access.path),
                         ),
                 );
@@ -87,8 +87,8 @@ class RegionckErrorReportingApplier extends CoralTransformationApplier<RegionckE
             if (path.length == 0) continue;
             const previousNode = path[path.length - 1].source;
             if (
-                loan.regionVar.points.has(previousNode.id) &&
-                !loan.regionVar.points.has(vNode.id)
+                loan.region.points.has(previousNode.id) &&
+                !loan.region.points.has(vNode.id)
             ) {
                 if (previousNode.is(CoralCfgNode)) {
                     return previousNode.as(CoralCfgNode).jp;

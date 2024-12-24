@@ -61,6 +61,10 @@ export default class TyMap {
         this.#regionMap = regionMap;
     }
 
+    register($decl: Vardecl, ty: Ty): void {
+        this.#tyTable.set($decl.astId, ty);
+    }
+
     get($decl: Vardecl): Ty {
         const ty = this.#tyTable.get($decl.astId);
         if (ty !== undefined) {

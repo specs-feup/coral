@@ -32,7 +32,9 @@ export default class FnMap {
     #parseFn($fn: FunctionJp): Fn {
         const coralPragmas = CoralPragma.parse($fn.pragmas);
 
-        const bounds = LifetimeBoundPragma.parse(coralPragmas)
+
+        const boundsOrDecl = LifetimeBoundPragma.parse(coralPragmas);
+        const bounds = boundsOrDecl
             .filter((p) => p.bound !== undefined)
             .map((p) => new MetaRegionBound(p));
         
@@ -63,6 +65,8 @@ export default class FnMap {
             $param.name,
         ));
 
-        return new Fn($fn, bounds, lifetimes, paramTys, returnTy);
+        const hasLifetimePragmas = boundsOrDecl.length > 0 || assignments.length > 0;
+
+        return new Fn($fn, bounds, lifetimes, paramTys, returnTy, hasLifetimePragmas);
     }
 }

@@ -1,6 +1,8 @@
-
-import CoralFunctionWiseTransformation, { CoralFunctionWiseTransformationApplier } from "@specs-feup/coral/graph/CoralFunctionWiseTransformation";
+import CoralFunctionWiseTransformation, {
+    CoralFunctionWiseTransformationApplier,
+} from "@specs-feup/coral/graph/CoralFunctionWiseTransformation";
 import Region from "@specs-feup/coral/mir/symbol/Region";
+import InferLifetimeBounds from "@specs-feup/coral/pipeline/analyze/regionck/InferLifetimeBounds";
 
 export default class SignatureAnnotator extends CoralFunctionWiseTransformation {
     fnApplier = SignatureAnnotatorApplier;
@@ -21,16 +23,14 @@ class SignatureAnnotatorApplier extends CoralFunctionWiseTransformationApplier {
         }
 
         // Inference is only done if there are explicit no pragmas
-        if (lifetimeAssignmentPragmas.length === 0 && lifetimeBoundPragmas.length === 0) {
-            this.#regionck!.inferLifetimeBoundsState =
+        if (fnSymbol.hasLifetimePragmas) {
+            this.fn.inferRegionBoundsState =
                 InferLifetimeBounds.FunctionState.NOT_VISITED;
         }
 
         this.fn.returnTy = fnSymbol.return.toTy(regionVars);
-        const paramTys = fnSymbol.params.map((param) => param.toTy(regionVars));
-
-        for (const $param of fnSymbol.params) {
-            this.#regionck!.registerTy($param, $param.toTy(regionVars));
+        for (const param of fnSymbol.params) {
+            this.fn.registerSymbol(param.jp, param.ty.toTy(regionVars));
         }
     }
 }

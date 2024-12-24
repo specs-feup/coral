@@ -1,7 +1,9 @@
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
 import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
 import CoralTransformation, { CoralTransformationApplier } from "@specs-feup/coral/graph/CoralTransformation";
+import Access from "@specs-feup/coral/mir/action/Access";
 import Loan from "@specs-feup/coral/mir/action/Loan";
+import ControlFlowEdge from "@specs-feup/flow/flow/ControlFlowEdge";
 
 interface InScopeLoansComputationArgs {
     target: CoralFunctionNode.Class;
@@ -28,25 +30,22 @@ class InScopeLoansComputationApplier extends CoralTransformationApplier<InScopeL
             const inSet: Set<Loan> = new Set();
 
             // Union of all incoming edges
-            for (const inNode of node.previousNodes) {
-                if (!inNode.is(CoralCfgNode)) {
-                    throw new Error("InScopeLoansComputation: node is not a CoralNode");
-                }
-                const inCoralNode = inNode.as(CoralCfgNode);
-                const inner: Set<Loan> = new Set(inCoralNode.inScopeLoans);
+            const previousNodes = node.incomers.filterIs(ControlFlowEdge).sources.filterIs(CoralCfgNode);
+            for (const inNode of previousNodes) {
+                const inner: Set<Loan> = new Set(inNode.inScopeLoans);
 
                 // Kills from assignment paths
-                for (const assignment of inCoralNode.assignments) {
+                for (const assignment of inNode.accesses.filter(a => a.kind === Access.Kind.WRITE)) {
                     const prefixes = assignment.path.prefixes;
-                    for (const loan of inCoralNode.inScopeLoans) {
-                        if (prefixes.some((prefix) => loan.loanedPath.equals(prefix))) {
+                    for (const loan of inNode.inScopeLoans) {
+                        if (prefixes.some((prefix) => loan.path.equals(prefix))) {
                             inner.delete(loan);
                         }
                     }
                 }
 
                 // Gen from new loan
-                for (const loan of inCoralNode.loans) {
+                for (const loan of inNode.loans) {
                     inner.add(loan);
                 }
 
@@ -59,7 +58,7 @@ class InScopeLoansComputationApplier extends CoralTransformationApplier<InScopeL
             // Kills from loans going out of scope in current node (?)
             const toKill: Set<Loan> = new Set();
             for (const loan of inSet) {
-                if (!loan.regionVar.points.has(node.id)) {
+                if (!loan.region.points.has(node.id)) {
                     toKill.add(loan);
                 }
             }
@@ -83,7 +82,8 @@ class InScopeLoansComputationApplier extends CoralTransformationApplier<InScopeL
             // Update real values and add successors to worklist
             if (changed) {
                 node.inScopeLoans = inSet;
-                for (const out of node.nextNodes) {
+                const nextNodes = node.outgoers.filterIs(ControlFlowEdge).targets.filterIs(CoralCfgNode);
+                for (const out of nextNodes) {
                     if (!worklist.has(out)) {
                         worklist.add(out);
                     }

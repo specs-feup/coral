@@ -1,14 +1,33 @@
-import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
+import { FunctionJp, Param } from "@specs-feup/clava/api/Joinpoints.js";
 import MetaRegionBound from "@specs-feup/coral/mir/symbol/MetaRegionBound";
 import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
+
+export class FnParam {
+    #jp: Param;
+    #ty: MetaTy;
+
+    constructor($jp: Param, ty: MetaTy) {
+        this.#jp = $jp;
+        this.#ty = ty;
+    }
+
+    get jp(): Param {
+        return this.#jp;
+    }
+
+    get ty(): MetaTy {
+        return this.#ty;
+    }
+}
 
 export default class Fn {
     #jp: FunctionJp;
     #bounds: MetaRegionBound[];
-    // TODO should probably be set
+    // TODO should probably be Set
     #metaRegions: MetaRegion[];
     #return: MetaTy;
-    #params: MetaTy[];
+    #params: FnParam[];
+    #hasLifetimePragmas: boolean;
 
     constructor(
         $jp: FunctionJp,
@@ -16,12 +35,14 @@ export default class Fn {
         metaRegions: MetaRegion[],
         $return: MetaTy,
         params: MetaTy[],
+        hasLifetimePragmas: boolean,
     ) {
         this.#jp = $jp;
         this.#bounds = bounds;
         this.#metaRegions = metaRegions;
         this.#return = $return;
         this.#params = params;
+        this.#hasLifetimePragmas = hasLifetimePragmas;
     }
 
     get jp(): FunctionJp {
@@ -40,7 +61,11 @@ export default class Fn {
         return this.#return;
     }
 
-    get params(): MetaTy[] {
+    get params(): FnParam[] {
         return this.#params;
+    }
+
+    get hasLifetimePragmas(): boolean {
+        return this.#hasLifetimePragmas;
     }
 }

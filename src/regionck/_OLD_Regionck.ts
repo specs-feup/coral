@@ -6,15 +6,8 @@ import InferLifetimeBounds from "@specs-feup/coral/pass/InferLifetimeBounds";
 
 export default class Regionck {
     // List of meta region variable constraints that can be set via pragmas by the user.
+    // Prolly use MetaRegionBound instead 
     bounds: LifetimeBoundPragma[];
-
-    // Should go to FunctionNode
-    inferLifetimeBoundsState: InferLifetimeBounds.FunctionState;
-
-    constructor() {
-        this.bounds = [];
-        this.inferLifetimeBoundsState = InferLifetimeBounds.FunctionState.IGNORE;
-    }
 
     get universalRegionVars(): Region[] {
         return this.#regionVars.filter((r) => r.kind === Region.Kind.UNIVERSAL);

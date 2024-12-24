@@ -5,6 +5,7 @@ import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
 import CoralAnnotator from "@specs-feup/coral/pipeline/analyze/annotate/CoralAnnotator";
 import AddDrops from "@specs-feup/coral/pipeline/analyze/drops/AddDrops";
 import MoveAnalyser from "@specs-feup/coral/pipeline/analyze/move/MoveAnalyser";
+import CustomLivenessComputation from "@specs-feup/coral/pipeline/analyze/regionck/CustomLivenessComputation";
 import RegionckPipeline from "@specs-feup/coral/pipeline/analyze/regionck/RegionckPipeline";
 import Graph from "@specs-feup/flow/graph/Graph";
 import IncrementingIdGenerator from "@specs-feup/flow/graph/id/IncrementingIdGenerator";
@@ -37,12 +38,7 @@ export default class CoralAnalyzer {
             .apply(new CoralAnnotator())
             .apply(new MoveAnalyser())
             .apply(new AddDrops())
-            // TODO liveness analysis does not handle structs correctly
-            .apply(
-                new InferLiveness().customComputeDefsAndUses(
-                    CustomLivenessComputation.computeDefsAndUses,
-                ),
-            )
+            .apply(new CustomLivenessComputation())
             .apply(new RegionckPipeline());
     }
 }

@@ -119,12 +119,12 @@ class ConstraintGeneratorApplier extends CoralTransformationApplier<ConstraintGe
     }
 
     #reborrowConstraints(loan: Loan, successor: CoralCfgNode.Class, $jp: Joinpoint) {
-        for (const path of loan.loanedPath.supportingPrefixes) {
+        for (const path of loan.path.supportingPrefixes) {
             if (!(path instanceof PathDeref)) continue;
 
             this.args.target.addConstraint(
                 path.#innerTy.regionVar,
-                loan.regionVar,
+                loan.region,
                 Variance.CONTRA,
                 successor,
                 $jp,

@@ -1,11 +1,19 @@
 import ClavaFunctionNode from "@specs-feup/clava-flow/ClavaFunctionNode";
-import { FunctionJp, Joinpoint, RecordJp, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
+import {
+    FunctionJp,
+    Joinpoint,
+    RecordJp,
+    Vardecl,
+} from "@specs-feup/clava/api/Joinpoints.js";
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
 import Def from "@specs-feup/coral/mir/symbol/Def";
 import Fn from "@specs-feup/coral/mir/symbol/Fn";
 import Region from "@specs-feup/coral/mir/symbol/Region";
-import RegionConstraint, { Variance } from "@specs-feup/coral/mir/symbol/RegionConstraint";
+import RegionConstraint, {
+    Variance,
+} from "@specs-feup/coral/mir/symbol/RegionConstraint";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
+import InferLifetimeBounds from "@specs-feup/coral/pipeline/analyze/regionck/InferLifetimeBounds";
 import FileSymbolTable from "@specs-feup/coral/symbol/FileSymbolTable";
 import FunctionSymbolTable from "@specs-feup/coral/symbol/FunctionSymbolTable";
 import Node from "@specs-feup/flow/graph/Node";
@@ -23,6 +31,10 @@ namespace CoralFunctionNode {
         getSymbol($decl: FunctionJp): Fn;
         getSymbol($decl: Vardecl | RecordJp | FunctionJp): Ty | Def | Fn {
             return this.scratchData[TAG].symbolTable.get($decl);
+        }
+
+        registerSymbol($decl: Vardecl, ty: Ty) {
+            this.scratchData[TAG].symbolTable.register($decl, ty);
         }
 
         generateRegion(kind: Region.Kind) {
@@ -77,6 +89,14 @@ namespace CoralFunctionNode {
                     break;
             }
         }
+
+        get inferRegionBoundsState(): InferLifetimeBounds.FunctionState {
+            return this.scratchData[TAG].inferLifetimeBoundsState;
+        }
+
+        set inferRegionBoundsState(state: InferLifetimeBounds.FunctionState) {
+            this.scratchData[TAG].inferLifetimeBoundsState = state;
+        }
     }
 
     export class Builder
@@ -98,7 +118,6 @@ namespace CoralFunctionNode {
                 ...data,
                 [TAG]: {
                     version: VERSION,
-                    
                 },
             };
         }
@@ -109,6 +128,7 @@ namespace CoralFunctionNode {
                 [TAG]: {
                     symbolTable: new FunctionSymbolTable(this.#fileTable),
                     constraints: [],
+                    inferLifetimeBoundsState: InferLifetimeBounds.FunctionState.IGNORE,
                 },
             };
         }
@@ -119,9 +139,7 @@ namespace CoralFunctionNode {
         VERSION,
         (sData) => {
             const sd = sData as CoralFunctionNode.ScratchData;
-            return (
-                ClavaFunctionNode.TypeGuard.isScratchDataCompatible(sData)
-            );
+            return ClavaFunctionNode.TypeGuard.isScratchDataCompatible(sData);
             // TODO add more tests ?
         },
     );
@@ -136,6 +154,7 @@ namespace CoralFunctionNode {
         [TAG]: {
             symbolTable: FunctionSymbolTable;
             constraints: RegionConstraint[];
+            inferLifetimeBoundsState: InferLifetimeBounds.FunctionState;
         };
     }
 }

@@ -44,6 +44,10 @@ export default class FunctionSymbolTable {
         return this.#fnMap.get($decl);
     }
 
+    register($decl: Vardecl, ty: Ty) {
+        this.#tyMap.register($decl, ty);
+    }
+
     generateRegion(kind: Region.Kind) {
         return this.#regionMap.generate(kind);
     }
