@@ -1,31 +1,33 @@
 import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
+import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
 import Region from "@specs-feup/coral/mir/symbol/Region";
 
 /**
  * A constraint that lifetime 'sup' outlives lifetime 'sub' at node 'node'.
  */
 export default class RegionConstraint {
-    sup: Region;
-    sub: Region;
-    node: CoralNode.Class;
+    #sup: Region;
+    #sub: Region;
+    #node: CoralCfgNode.Class;
     // "end()" points added to the sup region variable due to this constraint.
     // This is relevant for producing error messages for universal region variables.
-    addedEnds: Set<string>;
-    $jp: Joinpoint;
+    #addedEnds: Set<string>;
+    #jp: Joinpoint;
 
-    constructor(sup: Region, sub: Region, node: CoralNode.Class, $jp: Joinpoint) {
-        this.sup = sup;
-        this.sub = sub;
-        this.node = node;
-        this.addedEnds = new Set();
-        this.$jp = $jp;
+    constructor(sup: Region, sub: Region, node: CoralCfgNode.Class, jp: Joinpoint) {
+        this.#sup = sup;
+        this.#sub = sub;
+        this.#node = node;
+        this.#addedEnds = new Set();
+        this.#jp = jp;
     }
 
     toString(): string {
-        return `[${this.node.id}] ${this.sup.name}: ${this.sub.name}`;
+        return `${this.#sup.name}: ${this.#sub.name} @ ${this.#node.id}`;
     }
 
     apply(): boolean {
+        // this.#sub.constrain(this.#sup);
         if (this.sub.kind === Region.Kind.EXISTENTIAL) {
             return this.applyExistential();
         } else {

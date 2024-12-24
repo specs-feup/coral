@@ -34,7 +34,7 @@ export default class Fn {
         bounds: MetaRegionBound[],
         metaRegions: MetaRegion[],
         $return: MetaTy,
-        params: MetaTy[],
+        params: FnParam[],
         hasLifetimePragmas: boolean,
     ) {
         this.#jp = $jp;

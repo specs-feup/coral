@@ -3,7 +3,7 @@ import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
 import { CoralConfig } from "@specs-feup/coral/Coral";
 import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
 import CoralAnnotator from "@specs-feup/coral/pipeline/analyze/annotate/CoralAnnotator";
-import AddDrops from "@specs-feup/coral/pipeline/analyze/drops/AddDrops";
+import AddDrops from "@specs-feup/coral/pipeline/analyze/move/AddDrops";
 import MoveAnalyser from "@specs-feup/coral/pipeline/analyze/move/MoveAnalyser";
 import CustomLivenessComputation from "@specs-feup/coral/pipeline/analyze/regionck/CustomLivenessComputation";
 import RegionckPipeline from "@specs-feup/coral/pipeline/analyze/regionck/RegionckPipeline";

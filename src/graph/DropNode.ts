@@ -1,6 +1,9 @@
 import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
+import ClavaNode from "@specs-feup/clava-flow/ClavaNode";
+import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
 import ControlFlowEdge from "@specs-feup/flow/flow/ControlFlowEdge";
+import ControlFlowNode from "@specs-feup/flow/flow/ControlFlowNode";
 import Node from "@specs-feup/flow/graph/Node";
 
 namespace DropNode {
@@ -34,10 +37,7 @@ namespace DropNode {
                 }
                 targetNode = nextNodes[0];
             }
-            if (targetNode.jp === undefined) {
-                throw new Error("Target node must have a joinpoint");
-            }
-            this.scratchData.$jp = targetNode.jp.insertBefore($call);
+            this.jp = targetNode.jp.insertBefore($call);
             this.data[TAG].isDropElaborated = true;
         }
 
@@ -52,11 +52,7 @@ namespace DropNode {
                 }
                 targetNode = previousNodes[0];
             }
-            if (targetNode.jp === undefined) {
-                throw new Error("Target node must have a joinpoint");
-            }
-
-            this.scratchData.$jp = targetNode.jp.insertAfter($call);
+            this.jp = targetNode.jp.insertAfter($call);
             this.data[TAG].isDropElaborated = true;
         }
     }
@@ -66,8 +62,8 @@ namespace DropNode {
             Node.Builder<
                 Data,
                 ScratchData,
-                ClavaControlFlowNode.Data,
-                ClavaControlFlowNode.ScratchData
+                CoralCfgNode.Data,
+                CoralCfgNode.ScratchData
             >
     {
         #isConditional: boolean;
@@ -78,7 +74,7 @@ namespace DropNode {
             this.#insertLocation = insertLocation;
         }
 
-        buildData(data: ClavaControlFlowNode.Data): Data {
+        buildData(data: CoralCfgNode.Data): Data {
             return {
                 ...data,
                 [TAG]: {
@@ -90,7 +86,7 @@ namespace DropNode {
             };
         }
 
-        buildScratchData(scratchData: ClavaControlFlowNode.ScratchData): ScratchData {
+        buildScratchData(scratchData: CoralCfgNode.ScratchData): ScratchData {
             return {
                 ...scratchData,
             };
