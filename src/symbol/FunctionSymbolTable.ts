@@ -31,6 +31,10 @@ export default class FunctionSymbolTable {
         return this.#regionMap.regions;
     }
 
+    get universalRegions() {
+        return this.#regionMap.universalRegions;
+    }
+
     get($decl: Vardecl): Ty;
     get($decl: RecordJp): Def;
     get($decl: FunctionJp): Fn;

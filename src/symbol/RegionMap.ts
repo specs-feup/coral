@@ -52,6 +52,12 @@ export default class RegionMap {
         return this.#regionTable.values();
     }
 
+    get universalRegions(): Iterable<Region> {
+        return Array.from(this.#regionTable.values()).filter(
+            (region) => region.kind === Region.Kind.UNIVERSAL,
+        );
+    }
+
     generate(kind: Region.Kind): Region {
         const generator = this.#getGenerator(kind);
         let name;

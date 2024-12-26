@@ -58,7 +58,7 @@ class InScopeLoansComputationApplier extends CoralTransformationApplier<InScopeL
             // Kills from loans going out of scope in current node (?)
             const toKill: Set<Loan> = new Set();
             for (const loan of inSet) {
-                if (!loan.region.points.has(node.id)) {
+                if (!loan.region.has(node)) {
                     toKill.add(loan);
                 }
             }

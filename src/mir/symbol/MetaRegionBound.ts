@@ -4,17 +4,23 @@ import LifetimeBoundPragma from "@specs-feup/coral/pragma/lifetime/LifetimeBound
  * A meta-constraint that lifetime 'sup' outlives lifetime 'sub'.
  */
 export default class MetaRegionBound {
-    #pragma: LifetimeBoundPragma;
+    #sup: string;
+    #sub: string;
 
-    constructor(pragma: LifetimeBoundPragma) {
-        this.#pragma = pragma;
+    constructor(sup: string, sub: string) {
+        this.#sup = sup;
+        this.#sub = sub;
+    }
+
+    static fromPragma(pragma: LifetimeBoundPragma) {
+        return new MetaRegionBound(pragma.name, pragma.bound!);
     }
 
     get sup(): string {
-        return this.#pragma.name;
+        return this.#sup;
     }
 
     get sub(): string {
-        return this.#pragma.bound!;
+        return this.#sub;
     }
 }

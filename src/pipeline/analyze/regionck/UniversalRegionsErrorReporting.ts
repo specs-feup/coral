@@ -13,39 +13,19 @@ export default class UniversalRegionsErrorReporting extends CoralTransformation<
 
 class UniversalRegionsErrorReportingApplier extends CoralTransformationApplier<UniversalRegionsErrorReportingArgs> {
     apply(): void {
-        for (const region of this.args.target.universalRegionVars) {
-            if (!isNaN(Number(region.name.slice(1)))) {
-                continue;
-            }
-
-            const ends = Array.from(region.points)
-                .filter((point) => point.startsWith("end("))
-                .map((point) => point.slice(4, -1));
-
-            for (const end of ends) {
-                if (region.name === end) {
-                    continue;
-                }
-
-                const hasBound = regionck.bounds.some(
-                    (b) => b.name === region.name && b.bound === end,
+        for (const region of this.args.target.universalRegions) {
+            for (const bound of region.missingBounds(this.args.target.bounds)) {
+                const relevantConstraint = this.args.target.regionConstraints.find(
+                    (c) => c.sup.name === bound.sup && c.addedEnds.has(bound.sub),
                 );
-
-                if (!hasBound) {
-                    const relevantConstraint = this.args.target.regionConstraints.find(
-                        (c) =>
-                            c.sup.name === region.name && c.addedEnds.has(`end(${end})`),
-                    );
-                    if (!relevantConstraint) {
-                        throw new Error("No relevant constraint found");
-                    }
-                    throw new MissingLifetimeBoundError(
-                        region,
-                        end,
-                        relevantConstraint,
-                        this.args.target.jp,
-                    );
+                if (!relevantConstraint) {
+                    throw new Error("No relevant constraint found");
                 }
+                throw new MissingLifetimeBoundError(
+                    bound,
+                    relevantConstraint,
+                    this.args.target.jp,
+                );
             }
         }
     }

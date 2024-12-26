@@ -1,16 +1,12 @@
+import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralError from "@specs-feup/coral/error/CoralError";
 import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
-import Access from "@specs-feup/coral/mir/Access";
-import Loan from "@specs-feup/coral/mir/Loan";
-import { FunctionJp, Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
-import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
-import Region from "@specs-feup/coral/regionck/RegionVariable";
-import RegionConstraint from "@specs-feup/coral/regionck/OutlivesConstraint";
+import MetaRegionBound from "@specs-feup/coral/mir/symbol/MetaRegionBound";
+import RegionConstraint from "@specs-feup/coral/mir/symbol/RegionConstraint";
 
 export default class MissingLifetimeBoundError extends CoralError {
     constructor(
-        region: Region,
-        requiredBound: string,
+        requiredBound: MetaRegionBound,
         relevantConstraint: RegionConstraint,
         $fn: FunctionJp,
     ) {
@@ -20,12 +16,12 @@ export default class MissingLifetimeBoundError extends CoralError {
         )
             .codeString(
                 $fn.originNode.code.split("\n")[0],
-                `consider adding '#pragma coral lf ${region.name}: ${requiredBound}'`,
+                `consider adding '#pragma coral lf ${requiredBound.sup}: ${requiredBound.sub}'`,
                 $fn.originNode.line,
             )
             .code(
                 relevantConstraint.$jp,
-                `'${region.name}' must outlive '${requiredBound}'`,
+                `'${requiredBound.sup}' must outlive '${requiredBound.sub}'`,
             );
 
         super(builder.toString());

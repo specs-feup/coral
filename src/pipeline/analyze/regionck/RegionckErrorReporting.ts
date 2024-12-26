@@ -30,7 +30,11 @@ class RegionckErrorReportingApplier extends CoralTransformationApplier<RegionckE
         for (const node of nodes) {
             for (const access of node.accesses) {
                 for (const loan of this.#relevantLoans(node, access)) {
-                    this.#checkAccess(node, access, loan);
+                    const ErrorType = this.#getError(access, loan);
+                    if (ErrorType !== undefined) {
+                        const $nextUse = this.#findNextUse(node, loan);
+                        throw new ErrorType(node.jp, loan, $nextUse, access);
+                    }
                 }
             }
         }
@@ -42,9 +46,7 @@ class RegionckErrorReportingApplier extends CoralTransformationApplier<RegionckE
                 return Array.from(node.inScopeLoans).filter(
                     (loan) =>
                         access.path.equals(loan.path) ||
-                        access.path.prefixes.some((prefix) =>
-                            prefix.equals(loan.path),
-                        ) ||
+                        access.path.prefixes.some((prefix) => prefix.equals(loan.path)) ||
                         loan.path.shallowPrefixes.some((prefix) =>
                             prefix.equals(access.path),
                         ),
@@ -53,9 +55,7 @@ class RegionckErrorReportingApplier extends CoralTransformationApplier<RegionckE
                 return Array.from(node.inScopeLoans).filter(
                     (loan) =>
                         access.path.equals(loan.path) ||
-                        access.path.prefixes.some((prefix) =>
-                            prefix.equals(loan.path),
-                        ) ||
+                        access.path.prefixes.some((prefix) => prefix.equals(loan.path)) ||
                         loan.path.supportingPrefixes.some((prefix) =>
                             prefix.equals(access.path),
                         ),
@@ -63,36 +63,30 @@ class RegionckErrorReportingApplier extends CoralTransformationApplier<RegionckE
         }
     }
 
-    #checkAccess(node: CoralCfgNode.Class, access: Access, loan: Loan) {
+    #getError(access: Access, loan: Loan) {
         if (access.kind === Access.Kind.STORAGE_DEAD) {
-            const $nextUse = this.#findNextUse(node, loan);
-            throw new DanglingReferenceError(node.jp, loan, $nextUse, access);
+            return DanglingReferenceError;
         } else if (loan.kind === Loan.Kind.MUTABLE) {
-            const $nextUse = this.#findNextUse(node, loan);
-            throw new UseWhileMutBorrowedError(node.jp, loan, $nextUse, access);
+            return UseWhileMutBorrowedError;
         } else if (access.kind === Access.Kind.WRITE) {
-            const $nextUse = this.#findNextUse(node, loan);
-            throw new MutateWhileBorrowedError(node.jp, loan, $nextUse, access);
+            return MutateWhileBorrowedError;
         } else if (access.kind === Access.Kind.MUTABLE_BORROW) {
-            const $nextUse = this.#findNextUse(node, loan);
-            throw new MutableBorrowWhileBorrowedError(node.jp, loan, $nextUse, access);
+            return MutableBorrowWhileBorrowedError;
         } else if (access.isMove) {
-            const $nextUse = this.#findNextUse(node, loan);
-            throw new MoveWhileBorrowedError(node.jp, loan, $nextUse, access);
+            return MoveWhileBorrowedError;
         }
     }
 
-    #findNextUse(node: CoralCfgNode.Class, loan: Loan): Joinpoint | undefined {
-        for (const { node: vNode, path } of node.bfs((e) => e.is(ControlFlowEdge))) {
+    #findNextUse(fromNode: CoralCfgNode.Class, loan: Loan): Joinpoint | undefined {
+        for (const { node, path } of fromNode.bfs((e) => e.is(ControlFlowEdge))) {
             if (path.length == 0) continue;
-            const previousNode = path[path.length - 1].source;
+            const previousNode = path[path.length - 1].source.expect(CoralCfgNode);
+
             if (
-                loan.region.points.has(previousNode.id) &&
-                !loan.region.points.has(vNode.id)
+                loan.region.has(previousNode) &&
+                !loan.region.has(node.expect(CoralCfgNode))
             ) {
-                if (previousNode.is(CoralCfgNode)) {
-                    return previousNode.as(CoralCfgNode).jp;
-                }
+                return previousNode.jp;
             }
         }
 

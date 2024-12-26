@@ -3,9 +3,11 @@ import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
 import CoralTransformation, {
     CoralTransformationApplier,
 } from "@specs-feup/coral/graph/CoralTransformation";
+import Region from "@specs-feup/coral/mir/symbol/Region";
 import ConstraintGenerator from "@specs-feup/coral/pipeline/analyze/regionck/ConstraintGenerator";
 import InScopeLoansComputation from "@specs-feup/coral/pipeline/analyze/regionck/InScopeLoansComputation";
 import RegionckErrorReporting from "@specs-feup/coral/pipeline/analyze/regionck/RegionckErrorReporting";
+import FunctionNode from "@specs-feup/flow/flow/FunctionNode";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 
 interface InferLifetimeBoundsArgs {
@@ -54,14 +56,14 @@ class InferLifetimeBoundsApplier extends CoralTransformationApplier<InferLifetim
                     .apply(new InScopeLoansComputation({ target: fn }))
                     .apply(new RegionckErrorReporting({ target: fn }));
 
-                const thisChanged = this.#addMissingUniversalRegions(fn.jp);
+                const thisChanged = this.#addMissingUniversalRegions(fn);
                 changed ||= thisChanged;
 
                 if (thisChanged) {
                     this.#propagateUnvisited(fn.jp.calls);
                 }
 
-                regionck.reset();
+                fn.resetRegionck();
             }
 
             if (changed) {
@@ -99,37 +101,16 @@ class InferLifetimeBoundsApplier extends CoralTransformationApplier<InferLifetim
         return false;
     }
 
-    #addMissingUniversalRegions($fn: FunctionJp): boolean {
+    #addMissingUniversalRegions(fn: CoralFunctionNode.Class): boolean {
         let changed = false;
-        for (const region of regionck.universalRegionVars) {
-            if (!isNaN(Number(region.name.slice(1)))) {
-                continue;
-            }
 
-            const ends = Array.from(region.points)
-                .filter((point) => point.startsWith("end("))
-                .map((point) => point.slice(4, -1));
-
-            for (const end of ends) {
-                if (region.name === end) {
-                    continue;
-                }
-
-                const hasBound = regionck.bounds.some(
-                    (b) => b.name === region.name && b.bound === end,
-                );
-
-                if (!hasBound) {
-                    changed = true;
-                    // TODO generate this code
-                    // const pragma = new Pragma(`#pragma coral lf ${region.name}: ${end}`);
-                    // $fn.insertBefore(pragma);
-                    regionck.bounds.push(
-                        LifetimeBoundPragma.parse(
-                            CoralPragma.parse([$fn.pragmas[$fn.pragmas.length - 1]]),
-                        )[0],
-                    );
-                }
+        for (const region of fn.universalRegions) {
+            for (const bound of region.missingBounds(fn.bounds)) {
+                changed = true;
+                // TODO generate this code
+                // const pragma = new Pragma(`#pragma coral lf ${region.name}: ${end}`);
+                // $fn.insertBefore(pragma);
+                fn.addBound(bound);
             }
         }
 

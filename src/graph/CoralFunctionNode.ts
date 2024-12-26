@@ -8,6 +8,7 @@ import {
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
 import Def from "@specs-feup/coral/mir/symbol/Def";
 import Fn from "@specs-feup/coral/mir/symbol/Fn";
+import MetaRegionBound from "@specs-feup/coral/mir/symbol/MetaRegionBound";
 import Region from "@specs-feup/coral/mir/symbol/Region";
 import RegionConstraint, {
     Variance,
@@ -49,12 +50,24 @@ namespace CoralFunctionNode {
             return this.scratchData[TAG].symbolTable.regions;
         }
 
+        get universalRegions(): Iterable<Region> {
+            return this.scratchData[TAG].symbolTable.universalRegions;
+        }
+
         get returnTy(): Ty {
             return this.scratchData[TAG].symbolTable.returnTy;
         }
 
         set returnTy(ret: Ty) {
             this.scratchData[TAG].symbolTable.returnTy = ret;
+        }
+
+        get bounds(): MetaRegionBound[] {
+            return this.scratchData[TAG].symbolTable.get(this.jp).bounds;
+        }
+
+        addBound(bound: MetaRegionBound) {
+            this.scratchData[TAG].symbolTable.get(this.jp).addBound(bound);
         }
 
         get regionConstraints(): RegionConstraint[] {
@@ -87,6 +100,13 @@ namespace CoralFunctionNode {
                         new RegionConstraint(region1, region2, node, $jp),
                     );
                     break;
+            }
+        }
+
+        resetRegionck() {
+            this.scratchData[TAG].constraints = [];
+            for (const region of this.scratchData[TAG].symbolTable.regions) {
+                region.reset();
             }
         }
 

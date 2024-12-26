@@ -228,7 +228,7 @@ export default class DefMap {
 
         const bounds = lifetimes
             .filter((p) => p.bound !== undefined)
-            .map((p) => new MetaRegionBound(p));
+            .map(MetaRegionBound.fromPragma);
 
         const fields = new Map<string, MetaTy>();
         for (const $field of $struct.fields) {

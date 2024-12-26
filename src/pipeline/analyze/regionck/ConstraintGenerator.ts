@@ -38,8 +38,9 @@ class ConstraintGeneratorApplier extends CoralTransformationApplier<ConstraintGe
     }
 
     #processFunction() {
-        for (const region of this.args.target.universalRegionVars) {
-            region.points.add(`end(${region.name})`);
+        // TODO this should be done inside region
+        for (const region of this.args.target.universalRegions) {
+            region.addEnd(region);
         }
 
         const nodes = this.args.target.controlFlowNodes.expectAll(
@@ -48,8 +49,8 @@ class ConstraintGeneratorApplier extends CoralTransformationApplier<ConstraintGe
         );
         for (const node of nodes) {
             // Insert CFG into universal regions
-            for (const region of this.args.target.universalRegionVars) {
-                region.points.add(node.id);
+            for (const region of this.args.target.universalRegions) {
+                region.add(node);
             }
 
             // Lifetime constraints
@@ -61,7 +62,7 @@ class ConstraintGeneratorApplier extends CoralTransformationApplier<ConstraintGe
                     );
                 }
                 for (const region of ty.regionVars) {
-                    region.points.add(node.id);
+                    region.add(node);
                 }
             }
 
@@ -202,8 +203,7 @@ class ConstraintGeneratorApplier extends CoralTransformationApplier<ConstraintGe
     debugInfo(): string {
         let result = "\t| Regions:\n";
         for (const region of this.args.target.regions) {
-            const points = Array.from(region.points).sort();
-            result += `\t|\t${region.name}: {${points.join(", ")}}\n`;
+            result += `\t|\t${region.name}: ${region.toString()}\n`;
         }
 
         result += "\t|\n\t| Constraints:\n";

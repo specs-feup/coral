@@ -22,7 +22,8 @@ export class FnParam {
 
 export default class Fn {
     #jp: FunctionJp;
-    #bounds: MetaRegionBound[];
+    #baseBounds: MetaRegionBound[];
+    #addedBounds: MetaRegionBound[];
     // TODO should probably be Set
     #metaRegions: MetaRegion[];
     #return: MetaTy;
@@ -38,7 +39,8 @@ export default class Fn {
         hasLifetimePragmas: boolean,
     ) {
         this.#jp = $jp;
-        this.#bounds = bounds;
+        this.#baseBounds = bounds;
+        this.#addedBounds = [];
         this.#metaRegions = metaRegions;
         this.#return = $return;
         this.#params = params;
@@ -50,7 +52,11 @@ export default class Fn {
     }
 
     get bounds(): MetaRegionBound[] {
-        return this.#bounds;
+        return [...this.#baseBounds, ...this.#addedBounds];
+    }
+
+    addBound(bound: MetaRegionBound): void {
+        this.#addedBounds.push(bound);
     }
 
     get metaRegions(): MetaRegion[] {

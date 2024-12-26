@@ -23,6 +23,7 @@ export default class RegionConstraint {
     }
 
     toString(): string {
+        // TODO instead of ID, use something more recognizable, like line/location
         return `${this.#sup.name}: ${this.#sub.name} @ ${this.#node.id}`;
     }
 

@@ -36,7 +36,7 @@ export default class FnMap {
         const boundsOrDecl = LifetimeBoundPragma.parse(coralPragmas);
         const bounds = boundsOrDecl
             .filter((p) => p.bound !== undefined)
-            .map((p) => new MetaRegionBound(p));
+            .map(MetaRegionBound.fromPragma);
         
         const assignments = LifetimeAssignmentPragma.parse(coralPragmas);
         const lifetimeAssignments = new Map<string, LifetimeAssignmentPragma[]>();
