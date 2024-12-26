@@ -27,57 +27,7 @@ export default class RegionConstraint {
     }
 
     apply(): boolean {
-        // this.#sub.constrain(this.#sup);
-        if (this.sub.kind === Region.Kind.EXISTENTIAL) {
-            return this.applyExistential();
-        } else {
-            return this.applyUniversal();
-        }
-    }
-
-    applyUniversal(): boolean {
-        let changed = false;
-        if (this.sup.kind !== Region.Kind.UNIVERSAL) {
-            changed = true;
-            this.sup.kind = Region.Kind.UNIVERSAL;
-        }
-
-        for (const point of this.sub.points) {
-            if (this.sup.points.has(point)) {
-                continue;
-            }
-            this.sup.points.add(point);
-            this.addedEnds.add(point);
-            changed = true;
-        }
-
-        return changed;
-    }
-
-    applyExistential(): boolean {
-        let changed = false;
-
-        let nodes;
-        if (this.sub.points.has(this.node.id)) {
-            nodes = this.node.bfs(
-                (edge) =>
-                    edge.is(ControlFlowEdge.TypeGuard) &&
-                    this.sub.points.has(edge.target.id),
-            );
-        } else {
-            nodes = [];
-        }
-
-        for (const [node] of nodes) {
-            const alreadyContains = this.sup.points.has(node.id);
-            if (alreadyContains) {
-                continue;
-            }
-            this.sup.points.add(node.id);
-            changed = true;
-        }
-
-        return changed;
+        return this.#sub.constrain(this.#sup, this.#node);
     }
 }
 
