@@ -35,6 +35,10 @@ export default class PathDeref implements Path {
         return this.#inner;
     }
 
+    get innerTy(): RefTy {
+        return this.#innerTy;
+    }
+
     toString(): string {
         return `*${this.#inner.toString()}`;
     }

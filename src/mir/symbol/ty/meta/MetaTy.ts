@@ -7,7 +7,7 @@ interface MetaTy {
     get isConst(): boolean;
     get jp(): Joinpoint;
 
-    toTy(regionVarMap: Map<string, Region>): Ty;
+    toTy(regionMap: Map<string, Region>): Ty;
 }
 
 export default MetaTy;

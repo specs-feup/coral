@@ -274,7 +274,7 @@ class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier
 
         const paramTys = fnSymbol.params.map((param) => param.ty.toTy(regionVars));
 
-        node.addCall($call, regionVars, returnTy, paramTys);
+        node.addCall($call, fnSymbol, regionVars, returnTy, paramTys);
 
         for (const $expr of $call.args) {
             this.#annotateExpr(node, $expr);

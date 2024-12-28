@@ -1,26 +1,24 @@
-import { Call, FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
+import { Call } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
 import CoralTransformation, {
     CoralTransformationApplier,
 } from "@specs-feup/coral/graph/CoralTransformation";
-import Region from "@specs-feup/coral/mir/symbol/Region";
 import ConstraintGenerator from "@specs-feup/coral/pipeline/analyze/regionck/ConstraintGenerator";
 import InScopeLoansComputation from "@specs-feup/coral/pipeline/analyze/regionck/InScopeLoansComputation";
 import RegionckErrorReporting from "@specs-feup/coral/pipeline/analyze/regionck/RegionckErrorReporting";
-import FunctionNode from "@specs-feup/flow/flow/FunctionNode";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 
-interface InferLifetimeBoundsArgs {
+interface InferRegionBoundsArgs {
     iterationLimit?: number;
 }
 
-class InferLifetimeBounds extends CoralTransformation<InferLifetimeBoundsArgs> {
-    applier = InferLifetimeBoundsApplier;
+class InferRegionBounds extends CoralTransformation<InferRegionBoundsArgs> {
+    applier = InferRegionBoundsApplier;
 }
 
-class InferLifetimeBoundsApplier extends CoralTransformationApplier<InferLifetimeBoundsArgs> {
+class InferRegionBoundsApplier extends CoralTransformationApplier<InferRegionBoundsArgs> {
     apply(): void {
-        let state = InferLifetimeBounds.State.PRIORITIZE_LEAFS;
+        let state = InferRegionBounds.State.PRIORITIZE_LEAFS;
         let changed;
         let iterationNumber = 0;
         while (
@@ -36,20 +34,19 @@ class InferLifetimeBoundsApplier extends CoralTransformationApplier<InferLifetim
 
                 if (
                     fn.inferRegionBoundsState !==
-                    InferLifetimeBounds.FunctionState.NOT_VISITED
+                    InferRegionBounds.FunctionState.NOT_VISITED
                 ) {
                     continue;
                 }
 
                 if (
-                    state === InferLifetimeBounds.State.PRIORITIZE_LEAFS &&
+                    state === InferRegionBounds.State.PRIORITIZE_LEAFS &&
                     this.#hasUnvisitedCall(fn)
                 ) {
                     continue;
                 }
 
-                fn.inferRegionBoundsState =
-                    InferLifetimeBounds.FunctionState.VISITED;
+                fn.inferRegionBoundsState = InferRegionBounds.FunctionState.VISITED;
 
                 this.graph
                     .apply(new ConstraintGenerator({ target: fn }))
@@ -67,13 +64,13 @@ class InferLifetimeBoundsApplier extends CoralTransformationApplier<InferLifetim
             }
 
             if (changed) {
-                if (state !== InferLifetimeBounds.State.PRIORITIZE_LEAFS) {
-                    state = InferLifetimeBounds.State.PRIORITIZE_LEAFS;
+                if (state !== InferRegionBounds.State.PRIORITIZE_LEAFS) {
+                    state = InferRegionBounds.State.PRIORITIZE_LEAFS;
                     iterationNumber++;
                 }
             } else {
-                if (state === InferLifetimeBounds.State.PRIORITIZE_LEAFS) {
-                    state = InferLifetimeBounds.State.ALLOW_LOOPS;
+                if (state === InferRegionBounds.State.PRIORITIZE_LEAFS) {
+                    state = InferRegionBounds.State.ALLOW_LOOPS;
                 } else {
                     break;
                 }
@@ -89,8 +86,7 @@ class InferLifetimeBoundsApplier extends CoralTransformationApplier<InferLifetim
                 continue;
             }
             if (
-                fn.inferRegionBoundsState !==
-                InferLifetimeBounds.FunctionState.NOT_VISITED
+                fn.inferRegionBoundsState !== InferRegionBounds.FunctionState.NOT_VISITED
             ) {
                 continue;
             }
@@ -105,7 +101,7 @@ class InferLifetimeBoundsApplier extends CoralTransformationApplier<InferLifetim
         let changed = false;
 
         for (const region of fn.universalRegions) {
-            for (const bound of region.missingBounds(fn.bounds)) {
+            for (const [bound] of region.missingBounds(fn.bounds)) {
                 changed = true;
                 // TODO generate this code
                 // const pragma = new Pragma(`#pragma coral lf ${region.name}: ${end}`);
@@ -128,16 +124,16 @@ class InferLifetimeBoundsApplier extends CoralTransformationApplier<InferLifetim
 
             if (
                 callerNode.inferRegionBoundsState ===
-                InferLifetimeBounds.FunctionState.VISITED
+                InferRegionBounds.FunctionState.VISITED
             ) {
                 callerNode.inferRegionBoundsState =
-                    InferLifetimeBounds.FunctionState.NOT_VISITED;
+                    InferRegionBounds.FunctionState.NOT_VISITED;
             }
         }
     }
 }
 
-namespace InferLifetimeBounds {
+namespace InferRegionBounds {
     export enum State {
         PRIORITIZE_LEAFS,
         ALLOW_LOOPS,
@@ -150,4 +146,4 @@ namespace InferLifetimeBounds {
     }
 }
 
-export default InferLifetimeBounds;
+export default InferRegionBounds;

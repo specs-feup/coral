@@ -5,6 +5,7 @@ import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
 import { PointerType } from "@specs-feup/clava/api/Joinpoints.js";
 import Loan from "@specs-feup/coral/mir/action/Loan";
 import Region from "@specs-feup/coral/mir/symbol/Region";
+import MetaRegion from "@specs-feup/coral/mir/symbol/region/meta/MetaRegion";
 
 export default class MetaRefTy implements MetaTy {
     #metaRegionVar: MetaRegion;
@@ -45,17 +46,10 @@ export default class MetaRefTy implements MetaTy {
         return this.#jp;
     }
 
-    toTy(regionVarMap: Map<string, Region>): Ty {
-        const regionVar = regionVarMap.get(this.#metaRegionVar.name);
-        if (regionVar === undefined) {
-            throw new Error(
-                `Region variable ${this.#metaRegionVar.name} not found in map`,
-            );
-        }
-
+    toTy(regionMap: Map<string, Region>): Ty {
         return new RefTy(
-            regionVar,
-            this.#referent.toTy(regionVarMap),
+            this.#metaRegionVar.toRegion(regionMap),
+            this.#referent.toTy(regionMap),
             this.#jp,
             this.#isConst,
         );

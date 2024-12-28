@@ -4,6 +4,7 @@ import Access from "@specs-feup/coral/mir/action/Access";
 import FunctionCall from "@specs-feup/coral/mir/action/FunctionCall";
 import Loan from "@specs-feup/coral/mir/action/Loan";
 import Path from "@specs-feup/coral/mir/path/Path";
+import Fn from "@specs-feup/coral/mir/symbol/Fn";
 import Region from "@specs-feup/coral/mir/symbol/Region";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
@@ -45,9 +46,9 @@ namespace CoralCfgNode {
             return this.scratchData[TAG].loans;
         }
 
-        addCall($jp: Call, regions: Map<string, Region>, returnTy: Ty, paramTys: Ty[]) {
+        addCall($jp: Call, fn: Fn, regions: Map<string, Region>, returnTy: Ty, paramTys: Ty[]) {
             this.scratchData[TAG].fnCalls.push(
-                new FunctionCall($jp, regions, returnTy, paramTys)
+                new FunctionCall($jp, fn, regions, returnTy, paramTys)
             );
         }
 

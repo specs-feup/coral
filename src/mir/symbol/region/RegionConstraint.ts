@@ -9,17 +9,11 @@ export default class RegionConstraint {
     #sup: Region;
     #sub: Region;
     #node: CoralCfgNode.Class;
-    // "end()" points added to the sup region variable due to this constraint.
-    // This is relevant for producing error messages for universal region variables.
-    #addedEnds: Set<string>;
-    #jp: Joinpoint;
 
-    constructor(sup: Region, sub: Region, node: CoralCfgNode.Class, jp: Joinpoint) {
+    constructor(sup: Region, sub: Region, node: CoralCfgNode.Class) {
         this.#sup = sup;
         this.#sub = sub;
         this.#node = node;
-        this.#addedEnds = new Set();
-        this.#jp = jp;
     }
 
     toString(): string {

@@ -1,5 +1,6 @@
 import { RecordJp } from "@specs-feup/clava/api/Joinpoints.js";
 import Region from "@specs-feup/coral/mir/symbol/Region";
+import MetaRegion from "@specs-feup/coral/mir/symbol/region/meta/MetaRegion";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
 import StructTy from "@specs-feup/coral/mir/symbol/ty/StructTy";
@@ -37,14 +38,10 @@ export default class MetaStructTy implements MetaTy {
         return this.#jp;
     }
 
-    toTy(regionVarMap: Map<string, Region>): Ty {
+    toTy(regionMap: Map<string, Region>): Ty {
         const innerRegionVarMap = new Map<string, Region>();
-        for (const [name, metaRegionVar] of this.#regionVarMap.entries()) {
-            const regionVar = regionVarMap.get(metaRegionVar.name);
-            if (regionVar === undefined) {
-                throw new Error(`Region variable ${metaRegionVar.name} not found in map`);
-            }
-            innerRegionVarMap.set(name, regionVar);
+        for (const [name, metaRegion] of this.#regionVarMap.entries()) {
+            innerRegionVarMap.set(name, metaRegion.toRegion(regionMap));
         }
 
         return new StructTy(

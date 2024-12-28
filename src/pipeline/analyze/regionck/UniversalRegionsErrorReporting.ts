@@ -14,18 +14,8 @@ export default class UniversalRegionsErrorReporting extends CoralTransformation<
 class UniversalRegionsErrorReportingApplier extends CoralTransformationApplier<UniversalRegionsErrorReportingArgs> {
     apply(): void {
         for (const region of this.args.target.universalRegions) {
-            for (const bound of region.missingBounds(this.args.target.bounds)) {
-                const relevantConstraint = this.args.target.regionConstraints.find(
-                    (c) => c.sup.name === bound.sup && c.addedEnds.has(bound.sub),
-                );
-                if (!relevantConstraint) {
-                    throw new Error("No relevant constraint found");
-                }
-                throw new MissingLifetimeBoundError(
-                    bound,
-                    relevantConstraint,
-                    this.args.target.jp,
-                );
+            for (const [bound, cause] of region.missingBounds(this.args.target.bounds)) {
+                throw new MissingLifetimeBoundError(bound, cause, this.args.target.jp);
             }
         }
     }

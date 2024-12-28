@@ -1,10 +1,9 @@
-import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
 import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
 import CoralTransformation, { CoralTransformationApplier } from "@specs-feup/coral/graph/CoralTransformation";
 import Loan from "@specs-feup/coral/mir/action/Loan";
 import PathDeref from "@specs-feup/coral/mir/path/PathDeref";
-import { Variance } from "@specs-feup/coral/mir/symbol/RegionConstraint";
+import { Variance } from "@specs-feup/coral/mir/symbol/region/RegionConstraint";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import BuiltinTy from "@specs-feup/coral/mir/symbol/ty/BuiltinTy";
 import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
@@ -69,9 +68,9 @@ class ConstraintGeneratorApplier extends CoralTransformationApplier<ConstraintGe
             for (const loan of node.loans) {
                 const successor = this.#getSuccessor(node);
 
-                this.#subtypingConstraints(loan, successor, node.jp);
+                this.#subtypingConstraints(loan, successor);
                 if (loan.isReborrow) {
-                    this.#reborrowConstraints(loan, successor, node.jp);
+                    this.#reborrowConstraints(loan, successor);
                 }
             }
 
@@ -80,20 +79,11 @@ class ConstraintGeneratorApplier extends CoralTransformationApplier<ConstraintGe
                 const successor = this.#getSuccessor(node);
 
                 for (const bound of call.bounds) {
-                    const sup = call.lifetimes.get(bound.name);
-                    const sub = call.lifetimes.get(bound.bound!);
-                    if (sup === undefined || sub === undefined) {
-                        throw new Error(
-                            `ConstraintGenerator: lifetime ${bound.name} or ${bound.bound} not found in call`,
-                        );
-                    }
-
                     this.args.target.addConstraint(
-                        sub,
-                        sup,
+                        bound.sub,
+                        bound.sup,
                         Variance.CO,
                         successor,
-                        node.jp,
                     );
                 }
             }
@@ -104,31 +94,30 @@ class ConstraintGeneratorApplier extends CoralTransformationApplier<ConstraintGe
         const successors = node.outgoers.targets;
         if (successors.length != 1) {
             throw new Error(
-                `ConstraintGenerator: node ${node.id} has ${successors.length} successors and a loan`,
+                `ConstraintGenerator: node ${node.id} has ${successors.length} successors and a loan or function call`,
             );
         }
         if (!successors[0].is(CoralCfgNode)) {
             throw new Error(
-                `ConstraintGenerator: successor of node ${node.id} is not a CoralNode`,
+                `ConstraintGenerator: successor of node ${node.id} is not a CoralCfgNode`,
             );
         }
         return successors[0].as(CoralCfgNode);
     }
 
-    #subtypingConstraints(loan: Loan, successor: CoralCfgNode.Class, $jp: Joinpoint) {
-        this.#relateTy(loan.leftTy, loan.loanedRefTy, Variance.CO, successor, $jp);
+    #subtypingConstraints(loan: Loan, successor: CoralCfgNode.Class) {
+        this.#relateTy(loan.leftTy, loan.rightTy, Variance.CO, successor);
     }
 
-    #reborrowConstraints(loan: Loan, successor: CoralCfgNode.Class, $jp: Joinpoint) {
+    #reborrowConstraints(loan: Loan, successor: CoralCfgNode.Class) {
         for (const path of loan.path.supportingPrefixes) {
             if (!(path instanceof PathDeref)) continue;
 
             this.args.target.addConstraint(
-                path.#innerTy.regionVar,
+                path.innerTy.regionVar,
                 loan.region,
                 Variance.CONTRA,
                 successor,
-                $jp,
             );
         }
     }
@@ -138,7 +127,6 @@ class ConstraintGeneratorApplier extends CoralTransformationApplier<ConstraintGe
         ty2: Ty,
         variance: Variance,
         successor: CoralCfgNode.Class,
-        $jp: Joinpoint,
     ) {
         if (ty1 instanceof RefTy && ty2 instanceof RefTy) {
             this.args.target.addConstraint(
@@ -146,7 +134,6 @@ class ConstraintGeneratorApplier extends CoralTransformationApplier<ConstraintGe
                 ty2.regionVar,
                 Variance.xform(variance, Variance.CO),
                 successor,
-                $jp,
             );
             this.#relateTy(
                 ty1.referent,
@@ -158,7 +145,6 @@ class ConstraintGeneratorApplier extends CoralTransformationApplier<ConstraintGe
                         : Variance.CO,
                 ),
                 successor,
-                $jp,
             );
         } else if (ty1 instanceof StructTy && ty2 instanceof StructTy) {
             if (ty1.jp.name != ty2.jp.name) {
@@ -179,7 +165,6 @@ class ConstraintGeneratorApplier extends CoralTransformationApplier<ConstraintGe
                     ty2RegionVar,
                     Variance.xform(variance, Variance.IN),
                     successor,
-                    $jp,
                 );
             }
         } else if (!(ty1 instanceof BuiltinTy && ty2 instanceof BuiltinTy)) {

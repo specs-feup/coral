@@ -1,18 +1,19 @@
 import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralError from "@specs-feup/coral/error/CoralError";
 import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
+import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
 import MetaRegionBound from "@specs-feup/coral/mir/symbol/MetaRegionBound";
 import RegionConstraint from "@specs-feup/coral/mir/symbol/RegionConstraint";
 
 export default class MissingLifetimeBoundError extends CoralError {
     constructor(
         requiredBound: MetaRegionBound,
-        relevantConstraint: RegionConstraint,
+        relevantConstraint: CoralCfgNode.Class,
         $fn: FunctionJp,
     ) {
         const builder = new ErrorMessageBuilder(
             "lifetime may not live long enough",
-            relevantConstraint.$jp,
+            relevantConstraint.jp,
         )
             .codeString(
                 $fn.originNode.code.split("\n")[0],
@@ -20,7 +21,7 @@ export default class MissingLifetimeBoundError extends CoralError {
                 $fn.originNode.line,
             )
             .code(
-                relevantConstraint.$jp,
+                relevantConstraint.jp,
                 `'${requiredBound.sup}' must outlive '${requiredBound.sub}'`,
             );
 

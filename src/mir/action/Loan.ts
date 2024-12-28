@@ -41,6 +41,14 @@ class Loan {
     get region(): Region {
         return this.#region;
     }
+
+    get leftTy(): RefTy {
+        return this.#leftTy;
+    }
+
+    get rightTy(): RefTy {
+        return this.#rightTy;
+    }
 }
 
 namespace Loan {

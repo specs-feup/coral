@@ -14,7 +14,7 @@ import RegionConstraint, {
     Variance,
 } from "@specs-feup/coral/mir/symbol/RegionConstraint";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
-import InferLifetimeBounds from "@specs-feup/coral/pipeline/analyze/regionck/InferLifetimeBounds";
+import InferRegionBounds from "@specs-feup/coral/pipeline/analyze/regionck/InferRegionBounds";
 import FileSymbolTable from "@specs-feup/coral/symbol/FileSymbolTable";
 import FunctionSymbolTable from "@specs-feup/coral/symbol/FunctionSymbolTable";
 import Node from "@specs-feup/flow/graph/Node";
@@ -79,25 +79,24 @@ namespace CoralFunctionNode {
             region2: Region,
             variance: Variance,
             node: CoralCfgNode.Class,
-            $jp: Joinpoint,
         ): void {
             switch (variance) {
                 case Variance.CO: // "a Co b" == "a <= b"
                     this.scratchData[TAG].constraints.push(
-                        new RegionConstraint(region2, region1, node, $jp),
+                        new RegionConstraint(region2, region1, node),
                     );
                     break;
                 case Variance.CONTRA: // "a Contra b" == "a >= b"
                     this.scratchData[TAG].constraints.push(
-                        new RegionConstraint(region1, region2, node, $jp),
+                        new RegionConstraint(region1, region2, node),
                     );
                     break;
                 case Variance.IN: // "a In b" == "a == b"
                     this.scratchData[TAG].constraints.push(
-                        new RegionConstraint(region2, region1, node, $jp),
+                        new RegionConstraint(region2, region1, node),
                     );
                     this.scratchData[TAG].constraints.push(
-                        new RegionConstraint(region1, region2, node, $jp),
+                        new RegionConstraint(region1, region2, node),
                     );
                     break;
             }
@@ -110,12 +109,12 @@ namespace CoralFunctionNode {
             }
         }
 
-        get inferRegionBoundsState(): InferLifetimeBounds.FunctionState {
-            return this.scratchData[TAG].inferLifetimeBoundsState;
+        get inferRegionBoundsState(): InferRegionBounds.FunctionState {
+            return this.scratchData[TAG].inferRegionBoundsState;
         }
 
-        set inferRegionBoundsState(state: InferLifetimeBounds.FunctionState) {
-            this.scratchData[TAG].inferLifetimeBoundsState = state;
+        set inferRegionBoundsState(state: InferRegionBounds.FunctionState) {
+            this.scratchData[TAG].inferRegionBoundsState = state;
         }
     }
 
@@ -148,7 +147,7 @@ namespace CoralFunctionNode {
                 [TAG]: {
                     symbolTable: new FunctionSymbolTable(this.#fileTable),
                     constraints: [],
-                    inferLifetimeBoundsState: InferLifetimeBounds.FunctionState.IGNORE,
+                    inferRegionBoundsState: InferRegionBounds.FunctionState.IGNORE,
                 },
             };
         }
@@ -174,7 +173,7 @@ namespace CoralFunctionNode {
         [TAG]: {
             symbolTable: FunctionSymbolTable;
             constraints: RegionConstraint[];
-            inferLifetimeBoundsState: InferLifetimeBounds.FunctionState;
+            inferRegionBoundsState: InferRegionBounds.FunctionState;
         };
     }
 }

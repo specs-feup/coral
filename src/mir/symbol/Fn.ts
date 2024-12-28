@@ -1,5 +1,6 @@
 import { FunctionJp, Param } from "@specs-feup/clava/api/Joinpoints.js";
-import MetaRegionBound from "@specs-feup/coral/mir/symbol/MetaRegionBound";
+import MetaRegion from "@specs-feup/coral/mir/symbol/region/meta/MetaRegion";
+import MetaRegionBound from "@specs-feup/coral/mir/symbol/region/meta/MetaRegionBound";
 import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
 
 export class FnParam {

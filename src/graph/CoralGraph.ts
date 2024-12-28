@@ -46,6 +46,10 @@ namespace CoralGraph {
         get isDebug(): boolean {
             return this.data[TAG].config.debug;
         }
+
+        get config(): CoralConfig {
+            return this.data[TAG].config;
+        }
     }
 
     export class Builder
