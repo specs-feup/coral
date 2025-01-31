@@ -52,8 +52,12 @@ export default class FunctionSymbolTable {
         this.#tyMap.register($decl, ty);
     }
 
-    generateRegion(kind: Region.Kind) {
-        return this.#regionMap.generate(kind);
+    generateExistentialRegion() {
+        return this.#regionMap.generateExistentialRegion();
+    }
+
+    addRegion(name: string, kind: Region.Kind) {
+        return this.#regionMap.add(name, kind);
     }
 
     // TODO instead of this set, put it in the constructor

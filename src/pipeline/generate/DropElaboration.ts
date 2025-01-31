@@ -1,43 +1,40 @@
+import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
+import { Joinpoint, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
+import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
+import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
+import CoralFunctionWiseTransformation, { CoralFunctionWiseTransformationApplier } from "@specs-feup/coral/graph/CoralFunctionWiseTransformation";
+import DropNode from "@specs-feup/coral/graph/DropNode";
+import Access from "@specs-feup/coral/mir/action/Access";
 import Path from "@specs-feup/coral/mir/path/Path";
 import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
 import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
+import Ty from "@specs-feup/coral/mir/symbol/Ty";
+import StructTy from "@specs-feup/coral/mir/symbol/ty/StructTy";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
 
 
-class DropElaboration implements GraphTransformation {
-    #dropFlags: Map<string, DropElaboration.DropFlagHolder>;
-    tempVarCounter: number;
-    #varNamePrefix: string;
+class DropElaboration extends CoralFunctionWiseTransformation {
+    fnApplier = DropElaborationApplier;
+}
 
-    constructor(
-        tempVarCounter: number = 0,
-        varNamePrefix: string = "__coral_drop_flag_",
-    ) {
-        this.tempVarCounter = tempVarCounter;
-        this.#varNamePrefix = varNamePrefix;
-        this.#dropFlags = new Map();
-    }
+class DropElaborationApplier extends CoralFunctionWiseTransformationApplier {
+    apply(): void {
 
-    apply(graph: BaseGraph.Class): void {
-        if (!graph.is(CoralGraph.TypeGuard)) {
-            throw new Error("DropElaboration can only be applied to CoralGraphs");
-        }
+    // #dropFlags: Map<string, DropElaboration.DropFlagHolder>;
+    // tempVarCounter: number;
+    // #varNamePrefix: string;
 
-        const coralGraph = graph.as(CoralGraph.Class);
+    // constructor(
+    //     tempVarCounter: number = 0,
+    //     varNamePrefix: string = "__coral_drop_flag_",
+    // ) {
+    //     this.tempVarCounter = tempVarCounter;
+    //     this.#varNamePrefix = varNamePrefix;
+    //     this.#dropFlags = new Map();
+    // }
 
-        for (const functionEntry of coralGraph.functions) {
-            this.#processFunction(functionEntry);
-        }
-    }
-
-    #processFunction(functionEntry: FunctionEntryNode.Class): void {
-        for (const [node] of functionEntry.bfs((e) => e.is(ControlFlowEdge.TypeGuard))) {
-            if (!node.is(DropNode.TypeGuard)) {
-                continue;
-            }
-
-            const dropNode = node.as(DropNode.Class);
-
-            const path = dropNode.accesses[0].path;
+        for (const node of this.fn.controlFlowNodes.filterIs(DropNode)) {
+            const path = node.accesses[0].path;
             if (!(path.ty instanceof StructTy && path.ty.dropFunction !== undefined)) {
                 throw new Error("Only structs with drop functions can be dropped");
             }
@@ -46,19 +43,19 @@ class DropElaboration implements GraphTransformation {
             // const $dropCall = ClavaJoinPoints.exprStmt(ClavaJoinPoints.call($dropFn, ClavaJoinPoints.unaryOp("&", path.$jp)));
             let $dropCall = `${$dropFn.name}(&${path.toString()});`;
 
-            if (dropNode.dropIsConditional) {
+            if (node.isDropConditional) {
                 const $dropFlag = ClavaJoinPoints.varRef(
-                    this.#getDropFlag(path, functionEntry),
+                    this.#getDropFlag(path, this.fn),
                 );
                 $dropCall = `if (${$dropFlag.code}) {${$dropCall}}`;
             }
 
-            switch (dropNode.dropInsertLocation) {
-                case DropNode.DropInsertLocation.BEFORE_TARGET:
-                    dropNode.insertDropCallBefore($dropCall);
+            switch (node.dropInsertLocation) {
+                case DropNode.InsertLocation.BEFORE_TARGET:
+                    node.insertDropCallBefore($dropCall);
                     break;
-                case DropNode.DropInsertLocation.AFTER_TARGET:
-                    dropNode.insertDropCallAfter($dropCall);
+                case DropNode.InsertLocation.AFTER_TARGET:
+                    node.insertDropCallAfter($dropCall);
                     break;
                 default:
                     throw new Error("Invalid drop insert location");
@@ -66,7 +63,7 @@ class DropElaboration implements GraphTransformation {
         }
     }
 
-    #getDropFlag(path: Path, functionEntry: FunctionEntryNode.Class): Vardecl {
+    #getDropFlag(path: Path, functionEntry: CoralFunctionNode.Class): Vardecl {
         const holder = this.#pathToDropFlagHolder(path);
 
         if (holder instanceof DropElaboration.SingleDropFlagHolder) {
@@ -84,18 +81,18 @@ class DropElaboration implements GraphTransformation {
 
     #pathToDropFlagHolder(path: Path): DropElaboration.DropFlagHolder {
         if (path instanceof PathVarRef) {
-            const holder = this.#dropFlags.get(path.$vardecl.astId);
+            const holder = this.#dropFlags.get(path.vardecl.astId);
             if (holder !== undefined) {
                 return holder;
             }
 
             const newHolder = DropElaboration.DropFlagHolder.create(path.ty);
-            this.#dropFlags.set(path.$vardecl.astId, newHolder);
+            this.#dropFlags.set(path.vardecl.astId, newHolder);
             return newHolder;
         } else if (path instanceof PathMemberAccess) {
             const inner = this.#pathToDropFlagHolder(path.inner);
             if (inner instanceof DropElaboration.FieldDropFlags) {
-                return inner.get(path.#fieldName);
+                return inner.get(path.fieldName);
             } else {
                 return inner;
             }
@@ -108,7 +105,7 @@ class DropElaboration implements GraphTransformation {
         return `${this.#varNamePrefix}${this.tempVarCounter++}`;
     }
 
-    #createDropFlag(path: Path, functionEntry: FunctionEntryNode.Class): Vardecl {
+    #createDropFlag(path: Path, functionEntry: CoralFunctionNode.Class): Vardecl {
         const dropFlagName = this.#getTempVarName();
 
         const $dropFlagDecl = ClavaJoinPoints.varDecl(
@@ -116,28 +113,22 @@ class DropElaboration implements GraphTransformation {
             ClavaJoinPoints.integerLiteral(path.vardecl.hasInit ? "1" : "0"),
         );
 
-        for (const $jp of Query.searchFrom(functionEntry.jp, "vardecl", {
+        // TODO doesn't this have problems with shadowing?
+        for (const $vardecl of Query.searchFrom(functionEntry.jp, Vardecl, {
             name: path.vardecl.name,
         })) {
-            const $vardecl = $jp as Vardecl;
             $vardecl.insertAfter($dropFlagDecl);
         }
 
-        for (const [node] of functionEntry.bfs((e) => e.is(ControlFlowEdge.TypeGuard))) {
-            if (!node.is(CoralNode.TypeGuard)) {
-                continue;
-            }
-
-            const nodeAsCoralNode = node.as(CoralNode.Class);
-
-            for (const access of nodeAsCoralNode.accesses) {
-                if (access.mutability === Access.Kind.WRITE) {
+        for (const node of functionEntry.controlFlowNodes.filterIs(CoralCfgNode)) {
+            for (const access of node.accesses) {
+                if (access.kind === Access.Kind.WRITE) {
                     if (path.contains(access.path) || access.path.contains(path)) {
-                        this.#addFlagAssignment(nodeAsCoralNode.jp, $dropFlagDecl, true);
+                        this.#addFlagAssignment(node.jp, $dropFlagDecl, true);
                     }
-                } else if (access.mutability === Access.Kind.READ) {
+                } else if (access.kind === Access.Kind.READ) {
                     if (path.contains(access.path)) {
-                        this.#addFlagAssignment(nodeAsCoralNode.jp, $dropFlagDecl, false);
+                        this.#addFlagAssignment(node.jp, $dropFlagDecl, false);
                     }
                 }
             }

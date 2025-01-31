@@ -1,15 +1,6 @@
+import { Field } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralError from "@specs-feup/coral/error/CoralError";
 import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
-import Access from "@specs-feup/coral/mir/Access";
-import {
-    Field,
-    FunctionJp,
-    Joinpoint,
-    RecordJp,
-    Vardecl,
-} from "@specs-feup/clava/api/Joinpoints.js";
-import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
-import LifetimeAssignmentPragma from "@specs-feup/coral/pragma/lifetime/LifetimeAssignmentPragma";
 
 export default class LifetimeExpectedError extends CoralError {
     constructor($field: Field) {

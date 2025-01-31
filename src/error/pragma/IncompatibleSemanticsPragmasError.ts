@@ -1,7 +1,5 @@
 import CoralError from "@specs-feup/coral/error/CoralError";
 import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
-import Access from "@specs-feup/coral/mir/Access";
-import { Joinpoint, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
 
 export default class IncompatibleSemanticsPragmasError extends CoralError {

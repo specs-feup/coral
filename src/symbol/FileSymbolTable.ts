@@ -7,7 +7,7 @@ export default class FileSymbolTable {
 
     constructor() {
         this.#defMap = new DefMap();
-        this.#fnMap = new FnMap();
+        this.#fnMap = new FnMap(this.#defMap);
     }
 
     get defMap(): DefMap {

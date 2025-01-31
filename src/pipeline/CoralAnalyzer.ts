@@ -17,8 +17,8 @@ export default class CoralAnalyzer {
         this.#config = config;
     }
 
-    apply($fns: FunctionJp[]) {
-        Graph.create()
+    apply($fns: FunctionJp[]): CoralGraph.Class {
+        return Graph.create()
             .setNodeIdGenerator(new IncrementingIdGenerator("node_"))
             .setEdgeIdGenerator(new IncrementingIdGenerator("edge_"))
             .apply(new ClavaCfgGenerator(...$fns))

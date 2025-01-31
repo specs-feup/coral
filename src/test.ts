@@ -2,9 +2,7 @@ import Clava from "@specs-feup/clava/api/clava/Clava.js";
 import Io from "@specs-feup/lara/api/lara/Io.js";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
-import { Call, FunctionJp, Joinpoint, Pragma } from "@specs-feup/clava/api/Joinpoints.js";
-
-import CoralPipeline from "@specs-feup/coral/CoralPipeline";
+import { Call, FunctionJp, Pragma } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralError from "@specs-feup/coral/error/CoralError";
 
 function stringifyReplacer(key: unknown, value: unknown): unknown {
@@ -39,13 +37,13 @@ function stringifyReplacer(key: unknown, value: unknown): unknown {
 
 class CoralTester {
     #baseFolder: string;
-    #pipeline: CoralPipeline;
+    #pipeline: () => void;
     #writeTo: string | undefined;
     #omitTree: CoralTester.Options.OmitTree;
 
     #CORAL_TEST_UTILS_PRAGMA_NAME = "coral_test";
 
-    constructor(testFolder: string, pipeline: CoralPipeline) {
+    constructor(testFolder: string, pipeline: () => void) {
         this.#baseFolder = testFolder;
         this.#pipeline = pipeline;
         this.#writeTo = undefined;
@@ -209,10 +207,9 @@ class CoralTester {
                 }
             }
 
-            Clava.pushAst();
             doublePush = true;
             initTime = System.nanos();
-            this.#pipeline.apply();
+            this.#pipeline();
             endTime = System.nanos();
 
             if (this.#writeTo !== undefined) {
@@ -354,8 +351,9 @@ namespace CoralTester {
 import path from "path";
 import { fileURLToPath } from "url";
 import System from "@specs-feup/lara/api/lara/System.js";
+import run_coral from "@specs-feup/coral/Coral";
 const rootFolder = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const testFolder = rootFolder + "/in/test";
-new CoralTester(testFolder, new CoralPipeline().inferFunctionLifetimes())
+new CoralTester(testFolder, () => run_coral({ inferFunctionLifetimeBounds: true }))
     .omitTree(CoralTester.Options.OmitTree.PASSED)
     .run();

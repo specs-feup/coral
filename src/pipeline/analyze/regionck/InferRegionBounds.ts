@@ -103,7 +103,7 @@ class InferRegionBoundsApplier extends CoralTransformationApplier<InferRegionBou
         for (const region of fn.universalRegions) {
             for (const [bound] of region.missingBounds(fn.bounds)) {
                 changed = true;
-                // TODO generate this code
+                // TODO generate this code for codegen
                 // const pragma = new Pragma(`#pragma coral lf ${region.name}: ${end}`);
                 // $fn.insertBefore(pragma);
                 fn.addBound(bound);

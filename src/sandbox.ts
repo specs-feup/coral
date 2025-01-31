@@ -2,23 +2,20 @@
 // import "@specs-feup/clava/api/Joinpoints.js";
 
 import run_coral from "@specs-feup/coral/Coral";
+import CoralError from "@specs-feup/coral/error/CoralError";
 
 
-//     .inferFunctionLifetimes()
-//     .writeMirToDotFile("out/woven_code/sandbox/mir.dot")
-//     .writeLivenessToDotFile("out/woven_code/sandbox/liveness.dot");
-
-
-run_coral({
-    debug: true,
-});
-
-// try {
-    
-// } catch (e) {
-//     if (e instanceof CoralError) {
-//         console.log(e.message);
-//     } else {
-//         throw e;
-//     }
-// }
+try {
+    run_coral({
+        debug: true,
+        inferFunctionLifetimeBounds: true,
+        //     .writeMirToDotFile("out/woven_code/sandbox/mir.dot")
+        //     .writeLivenessToDotFile("out/woven_code/sandbox/liveness.dot");
+    }); 
+} catch (e) {
+    if (e instanceof CoralError) {
+        console.log(e.message);
+    } else {
+        throw e;
+    }
+}

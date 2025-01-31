@@ -240,7 +240,7 @@ class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier
             );
         }
 
-        const regionVar = this.fn.generateRegion(Region.Kind.EXISTENTIAL);
+        const regionVar = this.fn.generateExistentialRegion();
 
         node.addLoan(loanedPath, regionVar, reborrow, leftTy);
         node.addAccess(loanedPath, Access.Kind.fromLoanKind(leftTy.loanKind));
@@ -253,8 +253,7 @@ class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier
         regionVars.set("%static", this.fn.staticRegion);
         for (const metaRegion of fnSymbol.metaRegions) {
             if (!regionVars.has(metaRegion.name)) {
-                const region = this.fn.generateRegion(Region.Kind.EXISTENTIAL);
-                // TODO `${newPragmaLhs}.${metaRegionVar.name}` for codegen
+                const region = this.fn.generateExistentialRegion();
                 regionVars.set(metaRegion.name, region);
             }
         }

@@ -110,8 +110,6 @@ class Region {
     }
 }
 
-// TODO if single kind, we don't have to change existing code and Universal is more easily fixed
-//      even reset becomes simpler
 namespace Region {
     export enum Kind {
         EXISTENTIAL = "existential",

@@ -1,47 +1,42 @@
 import Region from "@specs-feup/coral/mir/symbol/Region";
+import MetaRegion from "@specs-feup/coral/mir/symbol/region/meta/MetaRegion";
+import { MetaRegionMapper, numericMetaRegionGenerator } from "@specs-feup/coral/mir/symbol/ty/meta/MetaTyParser";
 
-function* existentialNameGenerator(): Generator<string, never, unknown> {
-    let i = 0;
-    while (true) {
-        yield `%${i}`;
-        i += 1;
+/**
+ * Injects a metaGenerator with silent generation of existential regions.
+ * It still yields MetaRegions, but mutates given regionMap.
+ */
+function* existentialRegionGenerator(
+    regionMap: RegionMap,
+    metaGenerator: Generator<MetaRegion, never, unknown>,
+): Generator<MetaRegion, never, unknown> {
+    for (const metaRegion of metaGenerator) {
+        regionMap.uncheckedAdd(metaRegion.name, Region.Kind.EXISTENTIAL);
+        yield metaRegion;
     }
-}
-
-function* universalNameGenerator(): Generator<string, never, unknown> {
-    let i = 0;
-    while (true) {
-        let name = "";
-        let j = i;
-        while (j >= 0) {
-            name = String.fromCharCode((j % 26) + 97) + name;
-            j = Math.floor(j / 26) - 1;
-        }
-        yield `%${name}`;
-        i += 1;
-    }
+    throw new Error("Unreachable");
 }
 
 export default class RegionMap {
     #regionTable: Map<string, Region>;
-    #existentialNameGenerator: Generator<string, never, unknown>;
-    #universalNameGenerator: Generator<string, never, unknown>;
+    #existentialMetaRegionGenerator: Generator<MetaRegion, never, unknown>;
 
     constructor() {
         this.#regionTable = new Map();
-        this.#existentialNameGenerator = existentialNameGenerator();
-        this.#universalNameGenerator = universalNameGenerator();
+        this.#existentialMetaRegionGenerator = existentialRegionGenerator(
+            this,
+            numericMetaRegionGenerator(),
+        );
 
-        this.#internalAddRegion(Region.Kind.UNIVERSAL, "%static");
+        this.uncheckedAdd("%static", Region.Kind.UNIVERSAL);
     }
 
-    #getGenerator(kind: Region.Kind): Generator<string, never, unknown> {
-        switch (kind) {
-            case Region.Kind.EXISTENTIAL:
-                return this.#existentialNameGenerator;
-            case Region.Kind.UNIVERSAL:
-                return this.#universalNameGenerator;
-        }
+    get map(): Map<string, Region> {
+        return this.#regionTable;
+    }
+
+    get existentialMetaRegionMapper(): MetaRegionMapper {
+        return new MetaRegionMapper([], this.#existentialMetaRegionGenerator);
     }
 
     get staticRegion(): Region {
@@ -58,16 +53,10 @@ export default class RegionMap {
         );
     }
 
-    generate(kind: Region.Kind): Region {
-        const generator = this.#getGenerator(kind);
-        let name;
-        do {
-            name = generator.next().value;
-        } while (this.#regionTable.has(name));
-
-        // TODO maybe add to a "to insert code" list
-
-        return this.#internalAddRegion(kind, name);
+    generateExistentialRegion(): Region {
+        let name = this.#existentialMetaRegionGenerator.next().value.name;
+        // TODO maybe add to a "to insert code" list for codegen
+        return this.#regionTable.get(name)!;
     }
 
     add(name: string, kind: Region.Kind): Region {
@@ -75,13 +64,13 @@ export default class RegionMap {
             throw new Error(`Region name ${name} is already taken`);
         }
 
-        return this.#internalAddRegion(kind, name);
+        return this.uncheckedAdd(name, kind);
     }
 
     /**
      * Does not check whether the region already exists.
      */
-    #internalAddRegion(kind: Region.Kind, name: string): Region {
+    uncheckedAdd(name: string, kind: Region.Kind): Region {
         const region = new Region(kind, name);
         this.#regionTable.set(name, region);
         return region;

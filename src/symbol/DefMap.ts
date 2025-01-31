@@ -1,40 +1,25 @@
 import {
-    BuiltinType,
-    ElaboratedType,
-    EnumDecl,
     Field,
     FunctionJp,
-    ParenType,
     PointerType,
-    QualType,
     RecordJp,
-    TagType,
-    Type,
-    TypedefType,
 } from "@specs-feup/clava/api/Joinpoints.js";
 import IncompatibleSemanticsPragmasError from "@specs-feup/coral/error/pragma/IncompatibleSemanticsPragmasError";
 import MultipleDropPragmasError from "@specs-feup/coral/error/pragma/MultipleDropPragmasError";
 import DropPragmaParseError from "@specs-feup/coral/error/pragma/parse/DropPragmaParseError";
 import IncompatibleStructDeclsError from "@specs-feup/coral/error/struct/IncompatibleStructDeclsError";
 import InvalidDropFunctionError from "@specs-feup/coral/error/struct/InvalidDropFunctionError";
-import LifetimeExpectedError from "@specs-feup/coral/error/struct/LifetimeExpectedError";
-import LifetimeReassignmentError from "@specs-feup/coral/error/struct/LifetimeReassignmentError";
 import StructCannotBeCopyError from "@specs-feup/coral/error/struct/StructCannotBeCopyError";
 import UnexpectedLifetimeAssignmentError from "@specs-feup/coral/error/struct/UnexpectedLifetimeAssignmentError";
 import Def from "@specs-feup/coral/mir/symbol/Def";
-import MetaRegionBound from "@specs-feup/coral/mir/symbol/MetaRegionBound";
+import MetaRegion from "@specs-feup/coral/mir/symbol/region/meta/MetaRegion";
+import MetaRegionBound from "@specs-feup/coral/mir/symbol/region/meta/MetaRegionBound";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
-import BuiltinTy from "@specs-feup/coral/mir/symbol/ty/BuiltinTy";
-import MetaRefTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaRefTy";
-import MetaStructTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaStructTy";
 import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
+import { errorMetaRegionGenerator, MetaRegionMapper } from "@specs-feup/coral/mir/symbol/ty/meta/MetaTyParser";
 import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
 import LifetimeAssignmentPragma from "@specs-feup/coral/pragma/lifetime/LifetimeAssignmentPragma";
 import LifetimeBoundPragma from "@specs-feup/coral/pragma/lifetime/LifetimeBoundPragma";
-import LfPath from "@specs-feup/coral/pragma/lifetime/path/LfPath";
-import LfPathDeref from "@specs-feup/coral/pragma/lifetime/path/LfPathDeref";
-import LfPathMemberAccess from "@specs-feup/coral/pragma/lifetime/path/LfPathMemberAccess";
-import LfPathVarRef from "@specs-feup/coral/pragma/lifetime/path/LfPathVarRef";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 
 export default class DefMap {
@@ -224,25 +209,30 @@ export default class DefMap {
             }
         }
 
-        const metaRegions = Array.from(lifetimesSet);
+        const metaRegions = Array.from(lifetimesSet).map(n => new MetaRegion(n));
 
         const bounds = lifetimes
             .filter((p) => p.bound !== undefined)
             .map(MetaRegionBound.fromPragma);
 
+        // TODO check lifetimesSet
         const fields = new Map<string, MetaTy>();
         for (const $field of $struct.fields) {
             const metaRegionVarAssignments = LifetimeAssignmentPragma.parse(
                 CoralPragma.parse($field.pragmas),
-            ).map((p): [LfPath, string, LifetimeAssignmentPragma] => [p.lhs, p.rhs, p]);
-            const fieldTy = this.#parseMetaType(
-                $field,
-                $field.name,
-                $field.type,
-                lifetimesSet,
-                metaRegionVarAssignments,
             );
 
+            for (const a of metaRegionVarAssignments) {
+                if (a.lhs.varName !== $field.name) {
+                    throw new UnexpectedLifetimeAssignmentError(a);
+                }
+            }
+
+            const metaRegionMapper = new MetaRegionMapper(
+                metaRegionVarAssignments,
+                errorMetaRegionGenerator($field),
+            );
+            const fieldTy = MetaTy.parse($field.type, metaRegionMapper, this);
             fields.set($field.name, fieldTy);
         }
 
@@ -324,162 +314,6 @@ export default class DefMap {
                     `lifetime '${lifetimePragma.name}' not assigned`,
                 );
             }
-        }
-    }
-
-    #parseMetaType(
-        $field: Field,
-        name: string,
-        $type: Type,
-        metaRegionVars: Set<string>,
-        metaRegionVarAssignments: [LfPath, string, LifetimeAssignmentPragma][],
-        isConst = false,
-        isRestrict = false,
-    ): MetaTy {
-        // TODO check metaRegionVars
-        if ($type instanceof QualType) {
-            if ($type.qualifiers.includes("const")) {
-                isConst = true;
-            }
-            if ($type.qualifiers.includes("restrict")) {
-                isRestrict = true;
-            }
-            $type = $type.unqualifiedType;
-        }
-
-        if ($type instanceof BuiltinType) {
-            if (metaRegionVarAssignments.length > 0) {
-                throw new UnexpectedLifetimeAssignmentError(
-                    metaRegionVarAssignments[0][2],
-                );
-            }
-            return new BuiltinTy($type.builtinKind, $type, isConst);
-        } else if ($type instanceof PointerType) {
-            const innerLfs = metaRegionVarAssignments
-                .filter(([lfPath]) => !(lfPath instanceof LfPathVarRef))
-                .map(
-                    ([lfPath, regionVar, pragma]): [
-                        LfPath,
-                        string,
-                        LifetimeAssignmentPragma,
-                    ] => {
-                        if (lfPath instanceof LfPathDeref) {
-                            return [(lfPath as LfPathDeref).inner, regionVar, pragma];
-                        } else if (lfPath instanceof LfPathMemberAccess) {
-                            const lfPathInner = lfPath.inner;
-                            if (!(lfPathInner instanceof LfPathDeref)) {
-                                throw new UnexpectedLifetimeAssignmentError(pragma);
-                            }
-                            return [
-                                new LfPathMemberAccess(lfPathInner.inner, lfPath.member),
-                                regionVar,
-                                pragma,
-                            ];
-                        }
-                        throw new Error("Unhandled LfPath");
-                    },
-                );
-            const inner = this.#parseMetaType(
-                $field,
-                name,
-                $type.pointee,
-                metaRegionVars,
-                innerLfs,
-            );
-            if (inner.isConst && isRestrict) {
-                throw new Error("Cannot have a restrict pointer to a const type");
-            }
-            const outer = metaRegionVarAssignments.filter(
-                ([lfPath]) => lfPath instanceof LfPathVarRef,
-            );
-            if (outer.length > 1) {
-                throw new LifetimeReassignmentError(outer[0][2], outer[0][2]);
-            }
-            if (outer.length === 0) {
-                throw new LifetimeExpectedError($field);
-            }
-            if ((outer[0][0] as LfPathVarRef).identifier !== name) {
-                throw new UnexpectedLifetimeAssignmentError(outer[0][2]);
-            }
-            return new MetaRefTy(new MetaRegion(outer[0][1]), inner, $type, isConst);
-        } else if ($type instanceof TypedefType) {
-            return this.#parseMetaType(
-                $field,
-                name,
-                $type.underlyingType,
-                metaRegionVars,
-                metaRegionVarAssignments,
-                isConst,
-                isRestrict,
-            );
-        } else if ($type instanceof ElaboratedType) {
-            return this.#parseMetaType(
-                $field,
-                name,
-                $type.namedType,
-                metaRegionVars,
-                metaRegionVarAssignments,
-                isConst,
-                isRestrict,
-            );
-        } else if ($type instanceof ParenType) {
-            return this.#parseMetaType(
-                $field,
-                name,
-                $type.innerType,
-                metaRegionVars,
-                metaRegionVarAssignments,
-                isConst,
-                isRestrict,
-            );
-        } else if ($type instanceof TagType) {
-            const $decl = $type.decl;
-            if ($decl instanceof RecordJp) {
-                const invalidMetaRegionVarAssignment = metaRegionVarAssignments.find(
-                    ([lfPath]) => !(lfPath instanceof LfPathMemberAccess),
-                );
-                if (invalidMetaRegionVarAssignment !== undefined) {
-                    throw new UnexpectedLifetimeAssignmentError(
-                        invalidMetaRegionVarAssignment[2],
-                    );
-                }
-
-                const regionVarMap = new Map<string, MetaRegion>();
-
-                for (const [lfPath, regionVar, pragma] of metaRegionVarAssignments) {
-                    const memberAccess = lfPath as LfPathMemberAccess;
-                    const memberAccessInner = memberAccess.inner;
-                    if (memberAccessInner instanceof LfPathVarRef) {
-                        if (memberAccessInner.identifier !== name) {
-                            throw new UnexpectedLifetimeAssignmentError(pragma);
-                        }
-                    } else {
-                        throw new UnexpectedLifetimeAssignmentError(pragma);
-                    }
-
-                    regionVarMap.set(memberAccess.member, new MetaRegion(regionVar));
-                }
-
-                return new MetaStructTy($decl, this, regionVarMap, isConst);
-            } else if ($decl instanceof EnumDecl) {
-                if (metaRegionVarAssignments.length > 0) {
-                    throw new UnexpectedLifetimeAssignmentError(
-                        metaRegionVarAssignments[0][2],
-                    );
-                }
-                return new BuiltinTy(`enum ${$decl.name}`, $decl, isConst);
-            } else {
-                // TypedefNameDecl;
-                //     TypedefDecl;
-                throw new Error("Unhandled parseType TagType: " + $decl.joinPointType);
-            }
-        } else {
-            // UndefinedType;
-            // AdjustedType;
-            // ArrayType;
-            //     VariableArrayType;
-            // FunctionType;
-            throw new Error("Unhandled parseType: " + $type.joinPointType);
         }
     }
 }

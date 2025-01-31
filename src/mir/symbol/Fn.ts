@@ -25,7 +25,6 @@ export default class Fn {
     #jp: FunctionJp;
     #baseBounds: MetaRegionBound[];
     #addedBounds: MetaRegionBound[];
-    // TODO should probably be Set
     #metaRegions: MetaRegion[];
     #return: MetaTy;
     #params: FnParam[];

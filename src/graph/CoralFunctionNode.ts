@@ -1,18 +1,15 @@
 import ClavaFunctionNode from "@specs-feup/clava-flow/ClavaFunctionNode";
 import {
     FunctionJp,
-    Joinpoint,
     RecordJp,
     Vardecl,
 } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
 import Def from "@specs-feup/coral/mir/symbol/Def";
 import Fn from "@specs-feup/coral/mir/symbol/Fn";
-import MetaRegionBound from "@specs-feup/coral/mir/symbol/MetaRegionBound";
 import Region from "@specs-feup/coral/mir/symbol/Region";
-import RegionConstraint, {
-    Variance,
-} from "@specs-feup/coral/mir/symbol/RegionConstraint";
+import MetaRegionBound from "@specs-feup/coral/mir/symbol/region/meta/MetaRegionBound";
+import RegionConstraint, { Variance } from "@specs-feup/coral/mir/symbol/region/RegionConstraint";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import InferRegionBounds from "@specs-feup/coral/pipeline/analyze/regionck/InferRegionBounds";
 import FileSymbolTable from "@specs-feup/coral/symbol/FileSymbolTable";
@@ -38,8 +35,12 @@ namespace CoralFunctionNode {
             this.scratchData[TAG].symbolTable.register($decl, ty);
         }
 
-        generateRegion(kind: Region.Kind) {
-            return this.scratchData[TAG].symbolTable.generateRegion(kind);
+        generateExistentialRegion(): Region {
+            return this.scratchData[TAG].symbolTable.generateExistentialRegion();
+        }
+
+        addRegion(name: string, kind: Region.Kind): Region {
+            return this.scratchData[TAG].symbolTable.addRegion(name, kind);
         }
 
         get staticRegion(): Region {

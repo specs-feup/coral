@@ -1,6 +1,7 @@
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
 import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralAnalyzer from "@specs-feup/coral/pipeline/CoralAnalyzer";
+import CoralCodeGenerator from "@specs-feup/coral/pipeline/CoralCodeGenerator";
 import CoralNormalizer from "@specs-feup/coral/pipeline/CoralNormalizer";
 import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
@@ -52,6 +53,6 @@ export default function run_coral(config: Partial<CoralConfig> = {}) {
         return isSafe || completeConfig.safeByDefault;
     }).get();
     new CoralNormalizer(completeConfig).apply(functionsToAnalyze);
-    new CoralAnalyzer(completeConfig).apply(functionsToAnalyze);
-    // new CoralCodeGenerator(completeConfig).apply($root); TODO
+    const graph = new CoralAnalyzer(completeConfig).apply(functionsToAnalyze);
+    new CoralCodeGenerator(graph).apply();
 }

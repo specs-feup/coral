@@ -2,8 +2,8 @@ import CoralError from "@specs-feup/coral/error/CoralError";
 import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
 import { Joinpoint, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import Path from "@specs-feup/coral/mir/path/Path";
-import StructTy from "@specs-feup/coral/mir/ty/StructTy";
-import MoveTable from "@specs-feup/coral/mir/MoveTable";
+import StructTy from "@specs-feup/coral/mir/symbol/ty/StructTy";
+import MoveTable from "@specs-feup/coral/symbol/MoveTable";
 
 class MergeInconsistentStructError extends CoralError {
     constructor($mergeLocation: Joinpoint, path: Path) {
@@ -14,7 +14,7 @@ class MergeInconsistentStructError extends CoralError {
             )
                 .code(
                     path.vardecl,
-                    `'${path.toString()}' has type '${path.ty.name}' with drop function '${(path.ty as StructTy).dropFunction!.name}'`,
+                    `'${path.toString()}' has type '${path.ty.toString()}' with drop function '${(path.ty as StructTy).dropFunction!.name}'`,
                 )
                 .codeString(
                     $mergeLocation.originNode.code.trim().split("\n").reverse()[0],

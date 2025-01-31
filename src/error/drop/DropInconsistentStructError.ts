@@ -1,12 +1,6 @@
+import { FunctionJp, Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralError from "@specs-feup/coral/error/CoralError";
 import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
-import Access from "@specs-feup/coral/mir/Access";
-import {
-    FunctionJp,
-    Joinpoint,
-    Type,
-    Vardecl,
-} from "@specs-feup/clava/api/Joinpoints.js";
 import Path from "@specs-feup/coral/mir/path/Path";
 
 export default class DropInconsistentStructError extends CoralError {
@@ -18,7 +12,7 @@ export default class DropInconsistentStructError extends CoralError {
             )
                 .code(
                     path.vardecl,
-                    `'${path.toString()}' has type '${path.ty.name}' with drop function '${$dropFunction.name}'`,
+                    `'${path.toString()}' has type '${path.ty.toString()}' with drop function '${$dropFunction.name}'`,
                 )
                 .codeString(
                     $dropLocation.originNode.code.trim().split("\n").reverse()[0],

@@ -42,6 +42,7 @@ export default class CoralNormalizer {
     apply($fns: FunctionJp[]) {
         // TODO instrumentation
         for (const $fn of $fns) {
+            // TODO inside given function should probably use a different context
             new NormalizationApplier(this.#context, $fn)
                 .apply(new ConvertForLoopToWhile())
                 .apply(new SplitVarDecls())

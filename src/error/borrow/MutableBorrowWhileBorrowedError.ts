@@ -1,8 +1,8 @@
 import CoralError from "@specs-feup/coral/error/CoralError";
 import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
-import Access from "@specs-feup/coral/mir/Access";
-import Loan from "@specs-feup/coral/mir/Loan";
 import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
+import Loan from "@specs-feup/coral/mir/action/Loan";
+import Access from "@specs-feup/coral/mir/action/Access";
 
 export default class MutableBorrowWhileBorrowedError extends CoralError {
     constructor(
@@ -12,16 +12,16 @@ export default class MutableBorrowWhileBorrowedError extends CoralError {
         access: Access,
     ) {
         const builder = new ErrorMessageBuilder(
-            `Cannot borrow '${access.#path.toString()}' as mutable because it is also borrowed as immutable`,
+            `Cannot borrow '${access.path.toString()}' as mutable because it is also borrowed as immutable`,
             $invalidUse,
         )
             .code(
-                loan.node.jp,
-                `immutable borrow of '${loan.loanedPath.toString()}' occurs here`,
+                loan.path.jp,
+                `immutable borrow of '${loan.path.toString()}' occurs here`,
             )
             .code(
                 $invalidUse,
-                `mutable borrow of '${access.#path.toString()}' occurs here`,
+                `mutable borrow of '${access.path.toString()}' occurs here`,
             );
         if ($nextUse) {
             builder.code($nextUse, "immutable borrow is later used here");

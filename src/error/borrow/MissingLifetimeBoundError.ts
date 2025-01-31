@@ -2,8 +2,7 @@ import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralError from "@specs-feup/coral/error/CoralError";
 import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
-import MetaRegionBound from "@specs-feup/coral/mir/symbol/MetaRegionBound";
-import RegionConstraint from "@specs-feup/coral/mir/symbol/RegionConstraint";
+import MetaRegionBound from "@specs-feup/coral/mir/symbol/region/meta/MetaRegionBound";
 
 export default class MissingLifetimeBoundError extends CoralError {
     constructor(

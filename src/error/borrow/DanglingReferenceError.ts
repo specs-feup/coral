@@ -1,9 +1,8 @@
+import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralError from "@specs-feup/coral/error/CoralError";
 import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
-import Access from "@specs-feup/coral/mir/Access";
-import Loan from "@specs-feup/coral/mir/Loan";
-import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
-import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
+import Access from "@specs-feup/coral/mir/action/Access";
+import Loan from "@specs-feup/coral/mir/action/Loan";
 
 export default class DanglingReferenceError extends CoralError {
     constructor(
@@ -13,14 +12,14 @@ export default class DanglingReferenceError extends CoralError {
         access: Access,
     ) {
         const builder = new ErrorMessageBuilder(
-            `'${access.#path.toString()}' does not live long enough`,
-            loan.node.jp,
+            `'${access.path.toString()}' does not live long enough`,
+            loan.path.jp,
         )
-            .code(access.#path.innerVardecl, `'${access.#path.toString()}' declared here`)
-            .code(loan.node.jp, `borrowed value does not live long enough`)
+            .code(access.path.vardecl, `'${access.path.toString()}' declared here`)
+            .code(loan.path.jp, `borrowed value does not live long enough`)
             .codeString(
                 "}",
-                `'${access.#path.toString()}' dropped here while still borrowed`,
+                `'${access.path.toString()}' dropped here while still borrowed`,
                 $scopeEnd.originNode.endLine,
             );
 

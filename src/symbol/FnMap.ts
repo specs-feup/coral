@@ -1,9 +1,13 @@
 import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
-import Fn from "@specs-feup/coral/mir/symbol/Fn";
-import MetaRegionBound from "@specs-feup/coral/mir/symbol/MetaRegionBound";
+import Fn, { FnParam } from "@specs-feup/coral/mir/symbol/Fn";
+import MetaRegion from "@specs-feup/coral/mir/symbol/region/meta/MetaRegion";
+import MetaRegionBound from "@specs-feup/coral/mir/symbol/region/meta/MetaRegionBound";
+import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
+import { alphabeticMetaRegionGenerator, MetaRegionMapper } from "@specs-feup/coral/mir/symbol/ty/meta/MetaTyParser";
 import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
 import LifetimeAssignmentPragma from "@specs-feup/coral/pragma/lifetime/LifetimeAssignmentPragma";
 import LifetimeBoundPragma from "@specs-feup/coral/pragma/lifetime/LifetimeBoundPragma";
+import DefMap from "@specs-feup/coral/symbol/DefMap";
 
 
 export default class FnMap {
@@ -11,9 +15,11 @@ export default class FnMap {
      * Maps {@link FunctionJp} ids to their {@link Fn}.
      */
     #fnTable: Map<string, Fn>;
+    #defMap: DefMap;
 
-    constructor() {
+    constructor(defMap: DefMap) {
         this.#fnTable = new Map();
+        this.#defMap = defMap;
     }
 
     get($decl: FunctionJp): Fn {
@@ -50,23 +56,24 @@ export default class FnMap {
                 relevantVar.push(assignment);
             }
         }
+        const metaRegions = Array.from(lifetimes).map((lifetime) => new MetaRegion(lifetime));
         
-        const returnTy = this.#parseMetaType(
-            $fn.returnType,
-            lifetimeAssignments.get("return"),
-            takenLifetimeNames,
-            "return",
-        );
+        
+        const regionNameGenerator = alphabeticMetaRegionGenerator(lifetimes);
+        // TODO new pragma Lhs is "return", for codegen
+        const returnTy = MetaTy.parse($fn.returnType, new MetaRegionMapper(
+            lifetimeAssignments.get("return") ?? [],
+            regionNameGenerator,
+        ), this.#defMap);
 
-        const paramTys = $fn.params.map($param => this.#parseMetaType(
-            $param.type,
-            lifetimeAssignments.get($param.name),
-            takenLifetimeNames,
-            $param.name,
-        ));
+        // TODO new pragma lhs is $param.name, for codegen
+        const params = $fn.params.map($param => new FnParam($param, MetaTy.parse($param.type, new MetaRegionMapper(
+            lifetimeAssignments.get($param.name) ?? [],
+            regionNameGenerator,
+        ), this.#defMap)));
 
         const hasLifetimePragmas = boundsOrDecl.length > 0 || assignments.length > 0;
 
-        return new Fn($fn, bounds, lifetimes, paramTys, returnTy, hasLifetimePragmas);
+        return new Fn($fn, bounds, metaRegions, returnTy, params, hasLifetimePragmas);
     }
 }

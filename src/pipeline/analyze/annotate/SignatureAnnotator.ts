@@ -16,7 +16,7 @@ class SignatureAnnotatorApplier extends CoralFunctionWiseTransformationApplier {
         regionVars.set("%static", this.fn.staticRegion);
         for (const metaRegion of fnSymbol.metaRegions) {
             if (!regionVars.has(metaRegion.name)) {
-                const region = this.fn.generateRegion(Region.Kind.UNIVERSAL);
+                const region = this.fn.addRegion(metaRegion.name, Region.Kind.UNIVERSAL);
                 // TODO `${newPragmaLhs}.${metaRegionVar.name}` for codegen
                 regionVars.set(metaRegion.name, region);
             }
