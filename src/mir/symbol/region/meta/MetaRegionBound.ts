@@ -1,3 +1,4 @@
+import { Pragma } from "@specs-feup/clava/api/Joinpoints.js";
 import Region from "@specs-feup/coral/mir/symbol/Region";
 import MetaRegion from "@specs-feup/coral/mir/symbol/region/meta/MetaRegion";
 import RegionBound from "@specs-feup/coral/mir/symbol/region/RegionBound";
@@ -35,5 +36,9 @@ export default class MetaRegionBound {
             this.#sup.toRegion(regionMap),
             this.#sub.toRegion(regionMap),
         );
+    }
+    
+    toPragma(): Pragma {
+        return new Pragma(`#pragma coral lf ${this.#sup}: ${this.#sub}`);
     }
 }

@@ -217,10 +217,16 @@ class AddDropsApplier extends CoralFunctionWiseTransformationApplier {
 
             switch (dropLocation) {
                 case DropNode.InsertLocation.BEFORE_TARGET:
-                    node.insertBefore(dropNode);
+                    for (const e of node.incomers.filterIs(ControlFlowEdge)) {
+                        e.target = dropNode;
+                    }
+                    node.graph.addEdge(dropNode, node).init(new ControlFlowEdge.Builder());
                     break;
                 case DropNode.InsertLocation.AFTER_TARGET:
-                    node.insertAfter(dropNode);
+                    for (const e of node.outgoers.filterIs(ControlFlowEdge)) {
+                        e.source = dropNode;
+                    }
+                    node.graph.addEdge(node, dropNode).init(new ControlFlowEdge.Builder());
                     break;
                 default:
                     throw new Error("Unexpected drop location.");

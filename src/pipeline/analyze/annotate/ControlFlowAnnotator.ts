@@ -41,11 +41,6 @@ export default class ControlFlowAnnotator extends CoralFunctionWiseTransformatio
 class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier {
     apply(): void {
         for (const node of this.fn.controlFlowNodes.filterIs(ClavaControlFlowNode)) {
-            // TODO
-            // if (!node.is(LivenessNode.TypeGuard)) {
-            //     node.init(new LivenessNode.Builder());
-            // }
-
             const coralNode = node.init(new CoralCfgNode.Builder()).as(CoralCfgNode);
 
             node.switch(

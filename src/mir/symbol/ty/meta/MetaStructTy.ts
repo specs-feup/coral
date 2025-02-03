@@ -1,7 +1,8 @@
-import { RecordJp } from "@specs-feup/clava/api/Joinpoints.js";
+import { Pragma, RecordJp } from "@specs-feup/clava/api/Joinpoints.js";
 import Region from "@specs-feup/coral/mir/symbol/Region";
 import MetaRegion from "@specs-feup/coral/mir/symbol/region/meta/MetaRegion";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
+import LifetimeAssignmentBuilder from "@specs-feup/coral/mir/symbol/ty/meta/LifetimeAssignmentBuilder";
 import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
 import StructTy from "@specs-feup/coral/mir/symbol/ty/StructTy";
 import DefMap from "@specs-feup/coral/symbol/DefMap";
@@ -36,6 +37,10 @@ export default class MetaStructTy implements MetaTy {
 
     get jp(): RecordJp {
         return this.#jp;
+    }
+
+    generateLifetimeAssignments(builder: LifetimeAssignmentBuilder): [LifetimeAssignmentBuilder, MetaRegion][] {
+        return Array.from(this.#regionVarMap.entries()).map(([name, m]) => [builder.withLfAccess(name), m]);
     }
 
     toTy(regionMap: Map<string, Region>): Ty {

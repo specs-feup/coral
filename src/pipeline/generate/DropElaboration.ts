@@ -1,7 +1,6 @@
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
 import { Joinpoint, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
-import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
 import CoralFunctionWiseTransformation, { CoralFunctionWiseTransformationApplier } from "@specs-feup/coral/graph/CoralFunctionWiseTransformation";
 import DropNode from "@specs-feup/coral/graph/DropNode";
 import Access from "@specs-feup/coral/mir/action/Access";
@@ -10,7 +9,6 @@ import PathMemberAccess from "@specs-feup/coral/mir/path/PathMemberAccess";
 import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import StructTy from "@specs-feup/coral/mir/symbol/ty/StructTy";
-import Query from "@specs-feup/lara/api/weaver/Query.js";
 
 
 class DropElaboration extends CoralFunctionWiseTransformation {
@@ -19,19 +17,7 @@ class DropElaboration extends CoralFunctionWiseTransformation {
 
 class DropElaborationApplier extends CoralFunctionWiseTransformationApplier {
     apply(): void {
-
-    // #dropFlags: Map<string, DropElaboration.DropFlagHolder>;
-    // tempVarCounter: number;
-    // #varNamePrefix: string;
-
-    // constructor(
-    //     tempVarCounter: number = 0,
-    //     varNamePrefix: string = "__coral_drop_flag_",
-    // ) {
-    //     this.tempVarCounter = tempVarCounter;
-    //     this.#varNamePrefix = varNamePrefix;
-    //     this.#dropFlags = new Map();
-    // }
+        const ctx = new DropElaboration.Context();
 
         for (const node of this.fn.controlFlowNodes.filterIs(DropNode)) {
             const path = node.accesses[0].path;
@@ -45,7 +31,7 @@ class DropElaborationApplier extends CoralFunctionWiseTransformationApplier {
 
             if (node.isDropConditional) {
                 const $dropFlag = ClavaJoinPoints.varRef(
-                    this.#getDropFlag(path, this.fn),
+                    this.#getDropFlag(path, ctx),
                 );
                 $dropCall = `if (${$dropFlag.code}) {${$dropCall}}`;
             }
@@ -63,12 +49,12 @@ class DropElaborationApplier extends CoralFunctionWiseTransformationApplier {
         }
     }
 
-    #getDropFlag(path: Path, functionEntry: CoralFunctionNode.Class): Vardecl {
-        const holder = this.#pathToDropFlagHolder(path);
+    #getDropFlag(path: Path, ctx: DropElaboration.Context): Vardecl {
+        const holder = ctx.pathToDropFlagHolder(path);
 
         if (holder instanceof DropElaboration.SingleDropFlagHolder) {
             if (holder.dropFlag === undefined) {
-                holder.dropFlag = this.#createDropFlag(path, functionEntry);
+                holder.dropFlag = this.#createDropFlag(path, ctx);
             }
 
             return holder.dropFlag;
@@ -79,48 +65,15 @@ class DropElaborationApplier extends CoralFunctionWiseTransformationApplier {
         }
     }
 
-    #pathToDropFlagHolder(path: Path): DropElaboration.DropFlagHolder {
-        if (path instanceof PathVarRef) {
-            const holder = this.#dropFlags.get(path.vardecl.astId);
-            if (holder !== undefined) {
-                return holder;
-            }
-
-            const newHolder = DropElaboration.DropFlagHolder.create(path.ty);
-            this.#dropFlags.set(path.vardecl.astId, newHolder);
-            return newHolder;
-        } else if (path instanceof PathMemberAccess) {
-            const inner = this.#pathToDropFlagHolder(path.inner);
-            if (inner instanceof DropElaboration.FieldDropFlags) {
-                return inner.get(path.fieldName);
-            } else {
-                return inner;
-            }
-        } else {
-            throw new Error("Unsupported path type");
-        }
-    }
-
-    #getTempVarName() {
-        return `${this.#varNamePrefix}${this.tempVarCounter++}`;
-    }
-
-    #createDropFlag(path: Path, functionEntry: CoralFunctionNode.Class): Vardecl {
-        const dropFlagName = this.#getTempVarName();
-
+    #createDropFlag(path: Path, ctx: DropElaboration.Context): Vardecl {
         const $dropFlagDecl = ClavaJoinPoints.varDecl(
-            dropFlagName,
+            ctx.generateVarName(),
             ClavaJoinPoints.integerLiteral(path.vardecl.hasInit ? "1" : "0"),
         );
 
-        // TODO doesn't this have problems with shadowing?
-        for (const $vardecl of Query.searchFrom(functionEntry.jp, Vardecl, {
-            name: path.vardecl.name,
-        })) {
-            $vardecl.insertAfter($dropFlagDecl);
-        }
+        path.vardecl.insertAfter($dropFlagDecl);
 
-        for (const node of functionEntry.controlFlowNodes.filterIs(CoralCfgNode)) {
+        for (const node of this.fn.controlFlowNodes.filterIs(CoralCfgNode)) {
             for (const access of node.accesses) {
                 if (access.kind === Access.Kind.WRITE) {
                     if (path.contains(access.path) || access.path.contains(path)) {
@@ -151,6 +104,44 @@ class DropElaborationApplier extends CoralFunctionWiseTransformationApplier {
 }
 
 namespace DropElaboration {
+    export class Context {
+        #varCounter: number;
+        #varPrefix: string;
+        #dropFlags: Map<string, DropElaboration.DropFlagHolder>;
+
+        generateVarName() {
+            return `${this.#varPrefix}${this.#varCounter++}`;
+        }
+
+        pathToDropFlagHolder(path: Path): DropElaboration.DropFlagHolder {
+            if (path instanceof PathVarRef) {
+                const holder = this.#dropFlags.get(path.vardecl.astId);
+                if (holder !== undefined) {
+                    return holder;
+                }
+
+                const newHolder = DropElaboration.DropFlagHolder.create(path.ty);
+                this.#dropFlags.set(path.vardecl.astId, newHolder);
+                return newHolder;
+            } else if (path instanceof PathMemberAccess) {
+                const inner = this.pathToDropFlagHolder(path.inner);
+                if (inner instanceof DropElaboration.FieldDropFlags) {
+                    return inner.get(path.fieldName);
+                } else {
+                    return inner;
+                }
+            } else {
+                throw new Error("Unsupported path type");
+            }
+        }
+
+        constructor(varPrefix: string = "__coral_drop_flag_") {
+            this.#varCounter = 0;
+            this.#varPrefix = varPrefix;
+            this.#dropFlags = new Map();
+        }
+    }
+
     export abstract class DropFlagHolder {
         static create(ty: Ty): DropFlagHolder {
             if (!(ty instanceof StructTy)) {

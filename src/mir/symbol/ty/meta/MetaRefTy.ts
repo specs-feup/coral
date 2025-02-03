@@ -2,10 +2,11 @@
 import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
-import { PointerType } from "@specs-feup/clava/api/Joinpoints.js";
+import { PointerType, Pragma } from "@specs-feup/clava/api/Joinpoints.js";
 import Loan from "@specs-feup/coral/mir/action/Loan";
 import Region from "@specs-feup/coral/mir/symbol/Region";
 import MetaRegion from "@specs-feup/coral/mir/symbol/region/meta/MetaRegion";
+import LifetimeAssignmentBuilder from "@specs-feup/coral/mir/symbol/ty/meta/LifetimeAssignmentBuilder";
 
 export default class MetaRefTy implements MetaTy {
     #metaRegionVar: MetaRegion;
@@ -44,6 +45,13 @@ export default class MetaRefTy implements MetaTy {
 
     get jp(): PointerType {
         return this.#jp;
+    }
+
+    generateLifetimeAssignments(builder: LifetimeAssignmentBuilder): [LifetimeAssignmentBuilder, MetaRegion][] {
+        return [
+            [builder, this.#metaRegionVar],
+            ...this.#referent.generateLifetimeAssignments(builder.addDeref())
+        ];
     }
 
     toTy(regionMap: Map<string, Region>): Ty {

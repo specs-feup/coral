@@ -55,7 +55,6 @@ export default class RegionMap {
 
     generateExistentialRegion(): Region {
         let name = this.#existentialMetaRegionGenerator.next().value.name;
-        // TODO maybe add to a "to insert code" list for codegen
         return this.#regionTable.get(name)!;
     }
 

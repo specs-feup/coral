@@ -1,9 +1,7 @@
 import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
-import ClavaNode from "@specs-feup/clava-flow/ClavaNode";
 import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
 import ControlFlowEdge from "@specs-feup/flow/flow/ControlFlowEdge";
-import ControlFlowNode from "@specs-feup/flow/flow/ControlFlowNode";
 import Node from "@specs-feup/flow/graph/Node";
 
 namespace DropNode {
@@ -22,13 +20,17 @@ namespace DropNode {
             return this.data[TAG].isDropElaborated;
         }
 
+        get isDropNotElaborated(): boolean {
+            return !this.data[TAG].isDropElaborated;
+        }
+
         get dropInsertLocation(): InsertLocation {
             return this.data[TAG].dropInsertLocation;
         }
 
         insertDropCallBefore($call: string): void {
             let targetNode: CoralCfgNode.Class = this;
-            while (targetNode.tryAs(DropNode)?.isDropElaborated) {
+            while (targetNode.tryAs(DropNode)?.isDropNotElaborated) {
                 const nextNodes = targetNode.outgoers.filterIs(ControlFlowEdge).targets.filterIs(CoralCfgNode);
                 if (nextNodes.length !== 1) {
                     throw new Error(
@@ -37,13 +39,14 @@ namespace DropNode {
                 }
                 targetNode = nextNodes[0];
             }
-            this.jp = targetNode.jp.insertBefore($call);
+            const jp = targetNode.tryAs(DropNode)?.data[TAG]?.dropTarget ?? targetNode.jp;
+            this.data[TAG].dropTarget = jp.insertBefore($call);
             this.data[TAG].isDropElaborated = true;
         }
 
         insertDropCallAfter($call: string): void {
             let targetNode: CoralCfgNode.Class = this;
-            while (targetNode.tryAs(DropNode)?.isDropElaborated) {
+            while (targetNode.tryAs(DropNode)?.isDropNotElaborated) {
                 const previousNodes = targetNode.incomers.filterIs(ControlFlowEdge).sources.filterIs(CoralCfgNode);
                 if (previousNodes.length !== 1) {
                     throw new Error(
@@ -52,7 +55,8 @@ namespace DropNode {
                 }
                 targetNode = previousNodes[0];
             }
-            this.jp = targetNode.jp.insertAfter($call);
+            const jp = targetNode.tryAs(DropNode)?.data[TAG]?.dropTarget ?? targetNode.jp;
+            this.data[TAG].dropTarget = jp.insertBefore($call);
             this.data[TAG].isDropElaborated = true;
         }
     }
@@ -82,6 +86,7 @@ namespace DropNode {
                     isDropConditional: this.#isConditional,
                     isDropElaborated: false,
                     dropInsertLocation: this.#insertLocation,
+                    dropTarget: undefined,
                 },
             };
         }
@@ -107,6 +112,7 @@ namespace DropNode {
             isDropConditional: boolean;
             isDropElaborated: boolean;
             dropInsertLocation: InsertLocation;
+            dropTarget: Joinpoint | undefined;
         };
     }
 

@@ -234,7 +234,6 @@ export default class MetaTyParser {
 
         const innerTy = this.#parseMetaType($type.pointee, new ParseTypeContext(ctx.metaRegions, ctx.defMap));
         
-        // TODO `(*${newPragmaLhs})` for codegen
         if (innerTy.isConst && ctx.isRestrict) {
             throw new Error("Cannot have a restrict pointer to a const type");
         }
@@ -254,7 +253,6 @@ export default class MetaTyParser {
         const structDef = ctx.defMap.get($decl);
         for (const region of structDef.metaRegionVars) {
             if (!regions.has(region.name)) {
-                // TODO `${newPragmaLhs}.${metaRegionVar.name}` for codegen
                 regions.set(region.name, ctx.metaRegions.generate());
             }
         }

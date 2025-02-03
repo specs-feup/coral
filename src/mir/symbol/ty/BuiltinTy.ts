@@ -31,6 +31,10 @@ export default class BuiltinTy implements Ty, MetaTy {
         return this.#jp;
     }
 
+    generateLifetimeAssignments(): [] {
+        return [];
+    }
+
     toString(): string {
         return this.#name;
     }

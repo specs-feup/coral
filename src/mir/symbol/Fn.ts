@@ -25,7 +25,8 @@ export default class Fn {
     #jp: FunctionJp;
     #baseBounds: MetaRegionBound[];
     #addedBounds: MetaRegionBound[];
-    #metaRegions: MetaRegion[];
+    #baseMetaRegions: MetaRegion[];
+    #addedMetaRegions: MetaRegion[];
     #return: MetaTy;
     #params: FnParam[];
     #hasLifetimePragmas: boolean;
@@ -33,7 +34,8 @@ export default class Fn {
     constructor(
         $jp: FunctionJp,
         bounds: MetaRegionBound[],
-        metaRegions: MetaRegion[],
+        baseMetaRegions: MetaRegion[],
+        addedMetaRegions: MetaRegion[],
         $return: MetaTy,
         params: FnParam[],
         hasLifetimePragmas: boolean,
@@ -41,7 +43,8 @@ export default class Fn {
         this.#jp = $jp;
         this.#baseBounds = bounds;
         this.#addedBounds = [];
-        this.#metaRegions = metaRegions;
+        this.#baseMetaRegions = baseMetaRegions;
+        this.#addedMetaRegions = addedMetaRegions;
         this.#return = $return;
         this.#params = params;
         this.#hasLifetimePragmas = hasLifetimePragmas;
@@ -55,12 +58,24 @@ export default class Fn {
         return [...this.#baseBounds, ...this.#addedBounds];
     }
 
+    get addedBounds(): MetaRegionBound[] {
+        return this.#addedBounds;
+    }
+
     addBound(bound: MetaRegionBound): void {
         this.#addedBounds.push(bound);
     }
 
     get metaRegions(): MetaRegion[] {
-        return this.#metaRegions;
+        return [...this.#baseMetaRegions, ...this.#addedMetaRegions];
+    }
+    
+    get baseMetaRegions(): MetaRegion[] {
+        return this.#baseMetaRegions;
+    }
+
+    get addedMetaRegions(): MetaRegion[] {
+        return this.#addedMetaRegions;
     }
 
     get return(): MetaTy {
