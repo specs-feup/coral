@@ -116,7 +116,6 @@ export default class DefMap {
             ($s) => $s.name === $struct.name,
         );
         for (const $other of $structs) {
-            console.log(($other as RecordJp).location, ($other as RecordJp).name);
             if (($other as RecordJp).astId === $struct.astId) {
                 continue;
             }

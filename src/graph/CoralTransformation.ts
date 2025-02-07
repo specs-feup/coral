@@ -1,3 +1,4 @@
+import ClavaFlowDotFormatter from "@specs-feup/clava-flow/dot/ClavaFlowDotFormatter";
 import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
 import Graph from "@specs-feup/flow/graph/Graph";
 
@@ -12,9 +13,16 @@ export default abstract class CoralTransformation<T = void>
     }
     
     apply(graph: CoralGraph.Class): CoralGraph.Class {
-        // TODO instrumentation
+        graph.instrumentation.pushCheckpoint(this.constructor.name);
         new this.applier(graph, this.#args).apply();
-
+        const checkpoint = graph.instrumentation.popCheckpoint();
+        if (graph.isDebug && checkpoint.isLeaf) {
+            graph.toFile(
+                new ClavaFlowDotFormatter(),
+                checkpoint.dotFilePath,
+            );
+        }
+        
         return graph;
     }
 }

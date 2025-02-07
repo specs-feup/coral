@@ -1,15 +1,14 @@
 import { FunctionJp, Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
-import { CoralConfig } from "@specs-feup/coral/Coral";
 import { Filter_WrapperVariant } from "@specs-feup/lara/api/weaver/Selector.js";
 import SplitVarDecls from "@specs-feup/coral/pipeline/normalize/SplitVarDecls";
 import ConvertForLoopToWhile from "@specs-feup/coral/pipeline/normalize/ConvertForLoopToWhile";
 import SimplifyAssignments from "@specs-feup/coral/pipeline/normalize/SimplifyAssignments";
 import AddAssignmentsToCallsAndBorrows from "@specs-feup/coral/pipeline/normalize/AddAssignmentsToCallsAndBorrows";
 import SplitExpressions from "@specs-feup/coral/pipeline/normalize/SplitExpressions";
+import Instrumentation from "@specs-feup/coral/instrumentation/Instrumentation";
 
 export class NormalizationContext {
-    #config: CoralConfig;
     #varCounter: number;
     #labelCounter: number;
     #varPrefix: string;
@@ -23,8 +22,7 @@ export class NormalizationContext {
         return `${this.#labelPrefix}${this.#labelCounter++}`;
     }
 
-    constructor(config: CoralConfig, varPrefix = "__coral_var_", labelPrefix = "__coral_label_") {
-        this.#config = config;
+    constructor(varPrefix = "__coral_var_", labelPrefix = "__coral_label_") {
         this.#varCounter = 0;
         this.#labelCounter = 0;
         this.#varPrefix = varPrefix;
@@ -33,23 +31,23 @@ export class NormalizationContext {
 }
 
 export default class CoralNormalizer {
-    #context: NormalizationContext;
+    #instrumentation: Instrumentation;
     
-    constructor(config: CoralConfig) {
-        this.#context = new NormalizationContext(config);
+    constructor(instrumentation: Instrumentation) {
+        this.#instrumentation = instrumentation;
     }
 
     apply($fns: FunctionJp[]) {
-        // TODO instrumentation
+        this.#instrumentation.pushCheckpoint("Normalization");
         for (const $fn of $fns) {
-            // TODO inside given function should probably use a different context
-            new NormalizationApplier(this.#context, $fn)
+            new NormalizationApplier(new NormalizationContext(), $fn)
                 .apply(new ConvertForLoopToWhile())
                 .apply(new SplitVarDecls())
                 .apply(new SimplifyAssignments())
                 .apply(new AddAssignmentsToCallsAndBorrows())
                 .apply(new SplitExpressions());
         }
+        this.#instrumentation.popCheckpoint();
     }
 }
 

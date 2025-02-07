@@ -1,3 +1,4 @@
+import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
 import { MemberAccess, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import MergeInconsistentStructError from "@specs-feup/coral/error/drop/MergeInconsistentStructError";
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
@@ -18,7 +19,7 @@ class MoveAnalyserApplier extends CoralFunctionWiseTransformationApplier {
         while (changed) {
             changed = false;
             // TODO ControlFlow BFS
-            for (const { node, path } of this.fn.cfgEntryNode!.bfs(e => e.is(ControlFlowEdge))) {
+            for (const { node, path } of this.fn.cfgEntryNode!.bfs(e => e.is(ControlFlowEdge) && !e.as(ControlFlowEdge).isFake)) {
                 const coralNode = node.expect(CoralCfgNode, "Nodes were previously inited as CoralCfgNode");
 
                 const previousMoveTable = coralNode.moveTable;

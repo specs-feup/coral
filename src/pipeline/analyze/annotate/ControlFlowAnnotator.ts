@@ -31,6 +31,8 @@ import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
 import Region from "@specs-feup/coral/mir/symbol/Region";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
+import ControlFlowEndNode from "@specs-feup/flow/flow/ControlFlowEndNode";
+import ControlFlowNode from "@specs-feup/flow/flow/ControlFlowNode";
 import Node from "@specs-feup/flow/graph/Node";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 
@@ -40,7 +42,16 @@ export default class ControlFlowAnnotator extends CoralFunctionWiseTransformatio
 
 class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier {
     apply(): void {
-        for (const node of this.fn.controlFlowNodes.filterIs(ClavaControlFlowNode)) {
+        for (const node of this.fn.controlFlowNodes.filterIs(ControlFlowNode)) {
+            if (node.is(ControlFlowEndNode)) {
+                // TODO Hack to make ControlFlowEndNode a CoralCfgNode
+                // this is against the philosophy of flow, but requires
+                // a refactor of coral to fix
+                node.init(new ClavaControlFlowNode.Builder(this.fn.jp));
+            }
+            if (!node.is(ClavaControlFlowNode)) {
+                continue;
+            }
             const coralNode = node.init(new CoralCfgNode.Builder()).as(CoralCfgNode);
 
             node.switch(
@@ -223,7 +234,6 @@ class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier
 
             leftTy = fnCall.paramTys[paramIndex];
         } else {
-            console.log($parent.code);
             // Assuming the weakest borrow is ok for `ref1;` but is not sound for `*(&a) = 5;`
             // Loan could be assumed to be the weakest borrow, but there is the risk that that is not sound.
             throw new Error("leftTy not found to annotate reference.");

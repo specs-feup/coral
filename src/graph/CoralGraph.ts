@@ -5,6 +5,7 @@ import {
 } from "@specs-feup/clava/api/Joinpoints.js";
 import { CoralConfig } from "@specs-feup/coral/Coral";
 import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
+import Instrumentation from "@specs-feup/coral/instrumentation/Instrumentation";
 import FileSymbolTable from "@specs-feup/coral/symbol/FileSymbolTable";
 import Graph from "@specs-feup/flow/graph/Graph";
 import { NodeCollection } from "@specs-feup/flow/graph/NodeCollection";
@@ -19,7 +20,7 @@ namespace CoralGraph {
     > extends ClavaFlowGraph.Class<D, S> {
         get functionsToAnalyze(): NodeCollection<CoralFunctionNode.Class> {
             const fns = this.clavaFunctions.filter((fn) =>
-                this.data[TAG].functionsToAnalyze.includes(fn.jp.name),
+                this.data[TAG].functionsToAnalyze.includes(fn.jp.signature),
             );
             for (const fn of fns) {
                 if (fn.is(CoralFunctionNode)) {
@@ -50,6 +51,10 @@ namespace CoralGraph {
         get config(): CoralConfig {
             return this.data[TAG].config;
         }
+
+        get instrumentation(): Instrumentation {
+            return this.scratchData[TAG].instrumentation;
+        }
     }
 
     export class Builder
@@ -63,9 +68,11 @@ namespace CoralGraph {
     {
         #config: CoralConfig;
         #functionsToAnalyze: string[];
+        #instrumentation: Instrumentation;
 
-        constructor(config: CoralConfig, functionsToAnalyze: FunctionJp[]) {
+        constructor(config: CoralConfig, instrumentation: Instrumentation, functionsToAnalyze: FunctionJp[]) {
             this.#config = config;
+            this.#instrumentation = instrumentation;
             this.#functionsToAnalyze = functionsToAnalyze.map((fn) => fn.signature);
         }
 
@@ -85,6 +92,7 @@ namespace CoralGraph {
                 ...scratchData,
                 [TAG]: {
                     symbolTable: new Map(),
+                    instrumentation: this.#instrumentation,
                 },
             };
         }
@@ -114,6 +122,7 @@ namespace CoralGraph {
     export interface ScratchData extends ClavaFlowGraph.ScratchData {
         [TAG]: {
             symbolTable: Map<string, FileSymbolTable>;
+            instrumentation: Instrumentation;
         };
     }
 }

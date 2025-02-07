@@ -8,6 +8,8 @@ import CoralError from "@specs-feup/coral/error/CoralError";
 try {
     run_coral({
         debug: true,
+        verbose: true,
+        instrumentation: true,
         inferFunctionLifetimeBounds: true,
         //     .writeMirToDotFile("out/woven_code/sandbox/mir.dot")
         //     .writeLivenessToDotFile("out/woven_code/sandbox/liveness.dot");

@@ -1,5 +1,6 @@
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
 import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
+import Instrumentation from "@specs-feup/coral/instrumentation/Instrumentation";
 import CoralAnalyzer from "@specs-feup/coral/pipeline/CoralAnalyzer";
 import CoralCodeGenerator from "@specs-feup/coral/pipeline/CoralCodeGenerator";
 import CoralNormalizer from "@specs-feup/coral/pipeline/CoralNormalizer";
@@ -8,7 +9,23 @@ import Query from "@specs-feup/lara/api/weaver/Query.js";
 
 
 export interface CoralConfig {
+    /**
+     * Logs additional information to files and the console.
+     * 
+     * This option increases the amound of information logged by Coral,
+     * but it will only use the console if verbose is also active.
+     */
     debug: boolean;
+    /**
+     * Whether to print to console additional information during
+     * the analysis, such as progress updates.
+     */
+    verbose: boolean;
+    /**
+     * Saves relevant instrumentation data for result analysis.
+     */
+    instrumentation: boolean;
+    outDir: string;
     /**
      * Whether functions with implementation but without explicit safe or unsafe
      * annotations should be considered safe or unsafe.
@@ -26,6 +43,9 @@ export interface CoralConfig {
 
 export const defaultCoralConfig: CoralConfig = {
     debug: false,
+    verbose: false,
+    instrumentation: false,
+    outDir: "out",
     safeByDefault: true,
     inferFunctionLifetimeBounds: false,
     inferFunctionLifetimeBoundsIterationLimit: 10,
@@ -33,6 +53,9 @@ export const defaultCoralConfig: CoralConfig = {
 
 export default function run_coral(config: Partial<CoralConfig> = {}) {
     const completeConfig = { ...defaultCoralConfig, ...config };
+    const instrumentation = new Instrumentation(completeConfig);
+    instrumentation.logDebug("Running Coral with config", completeConfig);
+
     Clava.pushAst(); // Additional copy for normalization
 
     // TODO put this in a better place
@@ -52,7 +75,14 @@ export default function run_coral(config: Partial<CoralConfig> = {}) {
         }
         return isSafe || completeConfig.safeByDefault;
     }).get();
-    new CoralNormalizer(completeConfig).apply(functionsToAnalyze);
-    const graph = new CoralAnalyzer(completeConfig).apply(functionsToAnalyze);
-    new CoralCodeGenerator(graph).apply();
+    
+    try {
+        new CoralNormalizer(instrumentation).apply(functionsToAnalyze);
+        const graph = new CoralAnalyzer(completeConfig, instrumentation).apply(functionsToAnalyze);
+        new CoralCodeGenerator(graph).apply();
+    } finally {
+        if (completeConfig.instrumentation) {
+            instrumentation.saveCheckpoints();
+        }
+    }
 }

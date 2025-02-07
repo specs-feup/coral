@@ -11,8 +11,10 @@ export default class CoralCodeGenerator {
     }
 
     apply() {
+        this.#graph.instrumentation.pushCheckpoint("C Code Generation");
         this.#graph
             .apply(new DropElaboration())
             .apply(new AddLifetimePragmas());
+        this.#graph.instrumentation.popCheckpoint();
     }
 }

@@ -28,7 +28,7 @@ class AddDropsApplier extends CoralFunctionWiseTransformationApplier {
         ][] = [];
 
         // TODO ControlFlow BFS
-        for (const { node, path } of this.fn.cfgEntryNode!.bfs(e => e.is(ControlFlowEdge))) {
+        for (const { node, path } of this.fn.cfgEntryNode!.bfs(e => e.is(ControlFlowEdge) && !e.as(ControlFlowEdge).isFake)) {
             const coralNode = node.expect(CoralCfgNode, "Nodes were previously inited as CoralCfgNode");
 
             let moveTable = new MoveTable();
