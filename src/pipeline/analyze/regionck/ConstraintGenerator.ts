@@ -21,19 +21,13 @@ class ConstraintGeneratorApplier extends CoralTransformationApplier<ConstraintGe
     apply(): void {
         this.#processFunction();
 
-        if (this.graph.isDebug) {
-            console.log(`Initial Constraint Set for ${this.args.target.jp.name}:`);
-            console.log(this.debugInfo());
-        }
+        // this.graph.instrumentation.logDebug(`Initial Constraint Set for ${this.args.target.jp.name}:`);
+        // this.graph.instrumentation.logDebug(this.debugInfo());
 
         this.#inferConstraints();
 
-        if (this.graph.isDebug) {
-            console.log(
-                `Constraint Set for ${this.args.target.jp.name} after inference:`,
-            );
-            console.log(this.debugInfo());
-        }
+        // this.graph.instrumentation.logDebug(`Constraint Set for ${this.args.target.jp.name} after inference:`);
+        // this.graph.instrumentation.logDebug(this.debugInfo());
     }
 
     #processFunction() {

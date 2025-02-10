@@ -23,7 +23,7 @@ class Loan {
     }
 
     toString(): string {
-        return `${this.kind.toString} ${this.#region.name} ${this.#path.toString()}`;
+        return `${this.kind} ${this.#region.name} ${this.#path.toString()}`;
     }
 
     get kind(): Loan.Kind {

@@ -1,5 +1,5 @@
 import ClavaJoinPoints from "@specs-feup/clava/api/clava/ClavaJoinPoints.js";
-import { Joinpoint, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
+import { Joinpoint, Param, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
 import CoralFunctionWiseTransformation, { CoralFunctionWiseTransformationApplier } from "@specs-feup/coral/graph/CoralFunctionWiseTransformation";
 import DropNode from "@specs-feup/coral/graph/DropNode";
@@ -66,16 +66,24 @@ class DropElaborationApplier extends CoralFunctionWiseTransformationApplier {
     }
 
     #createDropFlag(path: Path, ctx: DropElaboration.Context): Vardecl {
+        const hasInit = path.vardecl instanceof Param || path.vardecl.hasInit;
         const $dropFlagDecl = ClavaJoinPoints.varDecl(
             ctx.generateVarName(),
-            ClavaJoinPoints.integerLiteral(path.vardecl.hasInit ? "1" : "0"),
+            ClavaJoinPoints.integerLiteral(hasInit ? "1" : "0"),
         );
 
-        path.vardecl.insertAfter($dropFlagDecl);
+        if (path.vardecl instanceof Param) {
+            this.fn.jp.body.insertBegin($dropFlagDecl);
+        } else {
+            path.vardecl.insertAfter($dropFlagDecl);
+        }
 
         for (const node of this.fn.controlFlowNodes.filterIs(CoralCfgNode)) {
             for (const access of node.accesses) {
                 if (access.kind === Access.Kind.WRITE) {
+                    if (access.isVardecl) {
+                        continue;
+                    }
                     if (path.contains(access.path) || access.path.contains(path)) {
                         this.#addFlagAssignment(node.jp, $dropFlagDecl, true);
                     }

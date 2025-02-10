@@ -1,5 +1,6 @@
 import Loan from "@specs-feup/coral/mir/action/Loan";
 import Path from "@specs-feup/coral/mir/path/Path";
+import PathVarRef from "@specs-feup/coral/mir/path/PathVarRef";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 
 class Access {
@@ -33,6 +34,14 @@ class Access {
 
         return Access.Depth.DEEP;
     }
+
+    /**
+     * Returns whether this access is the write at the declaration of a variable
+     * due to an init.
+     */
+    get isVardecl(): boolean {
+        return this.#path instanceof PathVarRef && this.#path.isVarDecl;
+    }
 }
 
 namespace Access {
@@ -40,8 +49,8 @@ namespace Access {
         READ = "read",
         WRITE = "write",
         BORROW = "borrow",
-        MUTABLE_BORROW = "mutable borrow",
-        STORAGE_DEAD = "storage dead",
+        MUTABLE_BORROW = "borrow-mut",
+        STORAGE_DEAD = "kill",
     }
 
     export namespace Kind {

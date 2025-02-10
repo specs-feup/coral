@@ -18,7 +18,8 @@ export default class RegionConstraint {
 
     toString(): string {
         // TODO instead of ID, use something more recognizable, like line/location
-        return `${this.#sup.name}: ${this.#sub.name} @ ${this.#node.id}`;
+        const origin = this.#node.jp.originNode;
+        return `${this.#sup.name}: ${this.#sub.name} @ ${origin.line}:${origin.column}`;
     }
 
     apply(): boolean {

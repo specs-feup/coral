@@ -172,7 +172,7 @@ export default class DefMap {
 
         let $dropFn: FunctionJp | undefined = undefined;
         if (dropFnName !== undefined) {
-            const $dropFn = Query.searchFrom(
+            $dropFn = Query.searchFrom(
                 $struct.getAncestor("file"),
                 FunctionJp,
                 ($fn) => $fn.name === dropFnName,

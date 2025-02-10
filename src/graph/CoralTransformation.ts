@@ -1,5 +1,6 @@
 import ClavaFlowDotFormatter from "@specs-feup/clava-flow/dot/ClavaFlowDotFormatter";
 import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
+import CoralDotFormatter from "@specs-feup/coral/graph/dot/CoralDotFormatter";
 import Graph from "@specs-feup/flow/graph/Graph";
 
 export default abstract class CoralTransformation<T = void>
@@ -18,7 +19,7 @@ export default abstract class CoralTransformation<T = void>
         const checkpoint = graph.instrumentation.popCheckpoint();
         if (graph.isDebug && checkpoint.isLeaf) {
             graph.toFile(
-                new ClavaFlowDotFormatter(),
+                new CoralDotFormatter(),
                 checkpoint.dotFilePath,
             );
         }

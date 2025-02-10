@@ -1,5 +1,7 @@
 import Clava from "@specs-feup/clava/api/clava/Clava.js";
 import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
+import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
+import CoralDotFormatter from "@specs-feup/coral/graph/dot/CoralDotFormatter";
 import Instrumentation from "@specs-feup/coral/instrumentation/Instrumentation";
 import CoralAnalyzer from "@specs-feup/coral/pipeline/CoralAnalyzer";
 import CoralCodeGenerator from "@specs-feup/coral/pipeline/CoralCodeGenerator";
@@ -76,13 +78,17 @@ export default function run_coral(config: Partial<CoralConfig> = {}) {
         return isSafe || completeConfig.safeByDefault;
     }).get();
     
+    let graph: CoralGraph.Class | undefined;
     try {
         new CoralNormalizer(instrumentation).apply(functionsToAnalyze);
-        const graph = new CoralAnalyzer(completeConfig, instrumentation).apply(functionsToAnalyze);
+        graph = new CoralAnalyzer(completeConfig, instrumentation).apply(functionsToAnalyze);
         new CoralCodeGenerator(graph).apply();
     } finally {
         if (completeConfig.instrumentation) {
             instrumentation.saveCheckpoints();
+        }
+        if (completeConfig.debug && graph !== undefined) {
+            graph.toFile(new CoralDotFormatter(), graph.instrumentation.debugDir + "/graph/final.dot")
         }
     }
 }

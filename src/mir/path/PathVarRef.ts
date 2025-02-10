@@ -9,10 +9,14 @@ import Ty from "@specs-feup/coral/mir/symbol/Ty";
 export default class PathVarRef implements Path {
     #jp: Varref;
     #ty: Ty;
+    #isVarDecl;
 
     constructor($jp: Vardecl | Varref, ty: Ty) {
         if ($jp instanceof Vardecl) {
             $jp = ClavaJoinPoints.varRef($jp);
+            this.#isVarDecl = true;
+        } else {
+            this.#isVarDecl = false;
         }
         this.#jp = $jp;
         this.#ty = ty;
@@ -52,5 +56,9 @@ export default class PathVarRef implements Path {
 
     get vardecl(): Vardecl {
         return this.#jp.vardecl;
+    }
+
+    get isVarDecl(): boolean {
+        return this.#isVarDecl;
     }
 }

@@ -56,7 +56,7 @@ namespace DropNode {
                 targetNode = previousNodes[0];
             }
             const jp = targetNode.tryAs(DropNode)?.data[TAG]?.dropTarget ?? targetNode.jp;
-            this.data[TAG].dropTarget = jp.insertBefore($call);
+            this.data[TAG].dropTarget = jp.insertAfter($call);
             this.data[TAG].isDropElaborated = true;
         }
     }

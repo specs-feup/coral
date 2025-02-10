@@ -10,7 +10,7 @@ try {
         debug: true,
         verbose: true,
         instrumentation: true,
-        inferFunctionLifetimeBounds: true,
+        // inferFunctionLifetimeBounds: true,
         //     .writeMirToDotFile("out/woven_code/sandbox/mir.dot")
         //     .writeLivenessToDotFile("out/woven_code/sandbox/liveness.dot");
     }); 
