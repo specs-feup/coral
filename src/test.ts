@@ -354,6 +354,6 @@ import System from "@specs-feup/lara/api/lara/System.js";
 import run_coral from "@specs-feup/coral/Coral";
 const rootFolder = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const testFolder = rootFolder + "/in/test";
-new CoralTester(testFolder, () => run_coral({ inferFunctionLifetimeBounds: true }))
+new CoralTester(testFolder, () => run_coral({verbose: true, inferFunctionLifetimeBounds: true }))
     .omitTree(CoralTester.Options.OmitTree.PASSED)
     .run();

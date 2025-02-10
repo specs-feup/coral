@@ -21,8 +21,8 @@ class SignatureAnnotatorApplier extends CoralFunctionWiseTransformationApplier {
             }
         }
 
-        // Inference is only done if there are explicit no pragmas
-        if (fnSymbol.hasLifetimePragmas) {
+        // Inference is only done if there are no explicit pragmas
+        if (!fnSymbol.hasLifetimePragmas) {
             this.fn.inferRegionBoundsState = InferRegionBounds.FunctionState.NOT_VISITED;
         }
 

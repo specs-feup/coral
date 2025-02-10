@@ -28,9 +28,7 @@ class InferRegionBoundsApplier extends CoralTransformationApplier<InferRegionBou
             changed = false;
 
             for (const fn of this.graph.functionsToAnalyze) {
-                if (this.graph.isDebug) {
-                    console.log("Inferring lifetimes of function", fn.jp.name);
-                }
+                this.graph.instrumentation.logDebug("Inferring lifetimes of function", fn.jp.name, fn.inferRegionBoundsState);
 
                 if (
                     fn.inferRegionBoundsState !==
@@ -132,14 +130,14 @@ class InferRegionBoundsApplier extends CoralTransformationApplier<InferRegionBou
 
 namespace InferRegionBounds {
     export enum State {
-        PRIORITIZE_LEAFS,
-        ALLOW_LOOPS,
+        PRIORITIZE_LEAFS = "prioritize_leafs",
+        ALLOW_LOOPS = "allow_loops",
     }
 
     export enum FunctionState {
-        NOT_VISITED,
-        VISITED,
-        IGNORE,
+        NOT_VISITED = "not_visited",
+        VISITED = "visited",
+        IGNORE = "ignore",
     }
 }
 
