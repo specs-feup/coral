@@ -16,11 +16,12 @@ struct A {
 
 int test() {
   struct A a;
-  if (1)
+  int cond = 1;
+  if (cond)
   {
     a.a.b = 5;
     a.b.b = 6;
-    if (1) {
+    if (cond) {
       a;
     }
   } else {

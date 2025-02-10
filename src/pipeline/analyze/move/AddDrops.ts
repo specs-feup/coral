@@ -43,6 +43,7 @@ class AddDropsApplier extends CoralFunctionWiseTransformationApplier {
                 moveTable = MoveTable.merge(
                     node.incomers
                         .filterIs(ControlFlowEdge)
+                        .filter(e => !e.isFake)
                         .sources
                         .expectAll(CoralCfgNode, "Nodes were previously inited as CoralCfgNode")
                         .toArray()

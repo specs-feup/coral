@@ -1,10 +1,10 @@
-import ClavaCfgGenerator from "@specs-feup/clava-flow/transformation/ClavaCfgGenerator";
 import { FunctionJp } from "@specs-feup/clava/api/Joinpoints.js";
 import { CoralConfig } from "@specs-feup/coral/Coral";
 import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
 import Instrumentation from "@specs-feup/coral/instrumentation/Instrumentation";
 import CoralAnnotator from "@specs-feup/coral/pipeline/analyze/annotate/CoralAnnotator";
-import CfgGenerator from "@specs-feup/coral/pipeline/analyze/CfgGenerator";
+import CfgGenerator from "@specs-feup/coral/pipeline/analyze/construct/CfgGenerator";
+import RemoveImpossibleEdges from "@specs-feup/coral/pipeline/analyze/construct/RemoveImpossibleEdges";
 import AddDrops from "@specs-feup/coral/pipeline/analyze/move/AddDrops";
 import MoveAnalyser from "@specs-feup/coral/pipeline/analyze/move/MoveAnalyser";
 import CustomLivenessComputation from "@specs-feup/coral/pipeline/analyze/regionck/CustomLivenessComputation";
@@ -27,6 +27,7 @@ export default class CoralAnalyzer {
             .setNodeIdGenerator(new IncrementingIdGenerator("node_"))
             .setEdgeIdGenerator(new IncrementingIdGenerator("edge_"))
             .apply(new CfgGenerator(this.#instrumentation, ...$fns))
+            .apply(new RemoveImpossibleEdges(this.#instrumentation, ...$fns))
             .init(new CoralGraph.Builder(this.#config, this.#instrumentation, $fns))
             .as(CoralGraph)
             .apply(new CoralAnnotator())
