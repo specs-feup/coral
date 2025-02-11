@@ -54,18 +54,23 @@ jobs:
         ref: staging
         path: workspace/clava
 
+    - name: Check out lara-flow in the compatible version
+      uses: actions/checkout@v4
+      with:
+        repository: specs-feup/lara-flow
+        path: workspace/lara-flow
+
     - name: Check out clava-flow in the compatible version
       uses: actions/checkout@v4
       with:
         repository: specs-feup/clava-flow
-        #ref: a504de47349e525c778ccb34c14836a0cb9af7ae
         path: workspace/clava-flow
 
     - name: Create package.json
       working-directory: workspace
       run: |
         touch package.json
-        echo '{"name": "myPackage", "type": "module", "workspaces": ["clava/Clava-JS", "lara-framework/Lara-JS", "coral", "clava-flow"]}' >> package.json
+        echo '{"name": "myPackage", "type": "module", "workspaces": ["clava/Clava-JS", "lara-framework/Lara-JS", "coral", "clava-flow", "lara-flow"]}' >> package.json
     
     - name: Set up Node
       uses: actions/setup-node@v4
@@ -78,6 +83,7 @@ jobs:
         npm i
         npm run build -w lara-framework/Lara-JS
         npm run build -w clava/Clava-JS
+        npm run build -w lara-flow
         npm run build -w clava-flow
         npm run build -w coral
         npm i
