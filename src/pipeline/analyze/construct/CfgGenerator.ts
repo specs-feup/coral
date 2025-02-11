@@ -33,13 +33,8 @@ export default class CfgGenerator
      * needed for postdominance and can be safely removed.
      */
     #removeFakeEdges(graph: ClavaFlowGraph.Class) {
-        // TODO clean unreachable nodes
         for (const edge of graph.edges.filterIs(ControlFlowEdge).filter(e => e.isFake)) {
-            if (edge.source.is(GotoNode)) {
-                // gotos may have post dominance issues
-                continue;
-            }
-            edge.toCy().remove();
+            edge.remove();
         }
     }
 }

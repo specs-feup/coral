@@ -3,7 +3,9 @@ import { CoralConfig } from "@specs-feup/coral/Coral";
 import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
 import Instrumentation from "@specs-feup/coral/instrumentation/Instrumentation";
 import CoralAnnotator from "@specs-feup/coral/pipeline/analyze/annotate/CoralAnnotator";
+import AddFakeUnwind from "@specs-feup/coral/pipeline/analyze/construct/AddFakeUnwind";
 import CfgGenerator from "@specs-feup/coral/pipeline/analyze/construct/CfgGenerator";
+import RemoveDeadCode from "@specs-feup/coral/pipeline/analyze/construct/RemoveDeadCode";
 import RemoveImpossibleEdges from "@specs-feup/coral/pipeline/analyze/construct/RemoveImpossibleEdges";
 import AddDrops from "@specs-feup/coral/pipeline/analyze/move/AddDrops";
 import MoveAnalyser from "@specs-feup/coral/pipeline/analyze/move/MoveAnalyser";
@@ -27,9 +29,11 @@ export default class CoralAnalyzer {
             .setNodeIdGenerator(new IncrementingIdGenerator("node_"))
             .setEdgeIdGenerator(new IncrementingIdGenerator("edge_"))
             .apply(new CfgGenerator(this.#instrumentation, ...$fns))
-            .apply(new RemoveImpossibleEdges(this.#instrumentation, ...$fns))
             .init(new CoralGraph.Builder(this.#config, this.#instrumentation, $fns))
             .as(CoralGraph)
+            .apply(new RemoveImpossibleEdges())
+            .apply(new AddFakeUnwind())
+            .apply(new RemoveDeadCode())
             .apply(new CoralAnnotator())
             .apply(new MoveAnalyser())
             .apply(new AddDrops())

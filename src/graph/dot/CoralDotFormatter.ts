@@ -28,6 +28,7 @@ import CoralGraph from "@specs-feup/coral/graph/CoralGraph";
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
 import MoveTable from "@specs-feup/coral/symbol/MoveTable";
 import DropNode from "@specs-feup/coral/graph/DropNode";
+import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
 
 export default class CoralDotFormatter<
     G extends CoralGraph.Class = CoralGraph.Class,
@@ -354,7 +355,7 @@ export default class CoralDotFormatter<
 
         result.label = `<${result.label}>`;
 
-        if (!node.is(CoralCfgNode)) {
+        if (!node.is(CoralCfgNode) && !node.is(CoralFunctionNode)) {
             result.color = CoralDotFormatter.falseColor;
         }
         return result;
