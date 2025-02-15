@@ -31,7 +31,6 @@ class ConstraintGeneratorApplier extends CoralTransformationApplier<ConstraintGe
     }
 
     #processFunction() {
-        // TODO this should be done inside region
         for (const region of this.args.target.universalRegions) {
             region.addEnd(region);
         }

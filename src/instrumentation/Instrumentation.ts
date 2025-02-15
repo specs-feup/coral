@@ -85,6 +85,10 @@ class Checkpoint {
         this.#logger.log(ansiColors.white.dim(`${indentation}${bar} time: ${time}  mem: ${memory}`));
     }
 
+    get currentTime() {
+        return duration_unit(System.nanos() - this.#startTime);
+    }
+
     get isLeaf() {
         return this.#children.length === 0;
     }
@@ -144,5 +148,10 @@ export default class Instrumentation {
     saveCheckpoints() {
         const json = this.#rootCheckpoint.toJson();
         fs.writeFileSync(this.#logger.debugDir + "/instrumentation.json", JSON.stringify(json, null, 4));
+    }
+
+    printTotalTime() {
+        const time = this.#rootCheckpoint.currentTime;
+        this.#logger.log(`Total execution time was ${time}.`);
     }
 }

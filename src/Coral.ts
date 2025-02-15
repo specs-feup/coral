@@ -89,6 +89,7 @@ export default function run_coral(config: Partial<CoralConfig> = {}) {
         }
         if (completeConfig.debug && graph !== undefined) {
             graph.toFile(new CoralDotFormatter(), graph.instrumentation.debugDir + "/graph/final.dot")
+            graph.instrumentation.printTotalTime(); 
         }
     }
 }
