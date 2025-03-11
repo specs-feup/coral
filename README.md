@@ -16,7 +16,7 @@
 
 ```json
 {
-  "name": "coral",
+  "name": "coralws",
   "type": "module",
   "workspaces": [
     "lara-framework/Lara-JS",
