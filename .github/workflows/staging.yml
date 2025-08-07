@@ -28,49 +28,11 @@ jobs:
         ref: staging
         path: workspace/coral
 
-    - name: Set up JDK 17
+    - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: '21'
         distribution: 'temurin'
-
-    #- name: Check out specs-java-libs repo
-    #  uses: actions/checkout@v4
-    #  with:
-    #    repository: specs-feup/specs-java-libs
-    #    path: workspace/specs-java-libs
-    #
-    #- name: Check out lara-framework repo
-    #  uses: actions/checkout@v4
-    #  with:
-    #    repository: specs-feup/lara-framework
-    #    ref: staging
-    #    path: workspace/lara-framework
-    #
-    #- name: Check out Clava repo
-    #  uses: actions/checkout@v4
-    #  with:
-    #    repository: specs-feup/clava
-    #    ref: staging
-    #    path: workspace/clava
-    #
-    #- name: Check out lara-flow in the compatible version
-    #  uses: actions/checkout@v4
-    #  with:
-    #    repository: specs-feup/lara-flow
-    #    path: workspace/lara-flow
-    #
-    #- name: Check out clava-flow in the compatible version
-    #  uses: actions/checkout@v4
-    #  with:
-    #    repository: specs-feup/clava-flow
-    #    path: workspace/clava-flow
-    #
-    #- name: Create package.json
-    #  working-directory: workspace
-    #  run: |
-    #    touch package.json
-    #    echo '{"name": "myPackage", "type": "module", "workspaces": ["clava/Clava-JS", "lara-framework/Lara-JS", "coral", "clava-flow", "lara-flow"]}' >> package.json
     
     - name: Set up Node
       uses: actions/setup-node@v4
@@ -83,28 +45,6 @@ jobs:
         cd coral
         npm install
         npm run build
-    #    npm i
-    #    npm run build -w lara-framework/Lara-JS
-    #    npm run build -w clava/Clava-JS
-    #    npm run build -w lara-flow
-    #    npm run build -w clava-flow
-    #    npm run build -w coral
-    #    npm i
-    # Configure Gradle for optimal use in GitHub Actions, including caching of downloaded dependencies.
-    # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
-    #- name: Setup Gradle
-    #  uses: gradle/actions/setup-gradle@417ae3ccd767c252f5661f1ace9f835f9654f2b5 # v3.1.0
-
-    # Setting up gradle multi-project would be helpful
-    #- name: InstallDist Clava
-    #  working-directory: workspace/clava/ClavaWeaver
-    #  run: gradle installDist
-
-    #- name: Put java binary in Clava-JS
-    #  working-directory: workspace
-    #  run: |
-    #    mkdir clava/Clava-JS/java-binaries
-    #    cp -r ./clava/ClavaWeaver/build/install/ClavaWeaver ./clava/Clava-JS/java-binaries
       
     - name: Run CORAL tests
       working-directory: workspace/coral
