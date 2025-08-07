@@ -42,9 +42,9 @@
     },
     "homepage": "https://github.com/specs-feup/coral#readme",
     "dependencies": {
-        "@specs-feup/clava": "^3.0.5",
-        "@specs-feup/clava-flow": "^1.0.0",
-        "@specs-feup/flow": "^1.0.0",
+        "@specs-feup/clava": "^3.0.25",
+        "@specs-feup/clava-flow": "^1.0.1",
+        "@specs-feup/flow": "^1.0.3",
         "ansi-colors": "^4.1.3"
     },
     "devDependencies": {
