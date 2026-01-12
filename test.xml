@@ -141,10 +141,6 @@
       </OptionalFile>
     </entry>
     <entry>
-      <string>jsEngine</string>
-      <pt.up.fe.specs.jsengine.JsEngineType>GRAALVM_COMPAT</pt.up.fe.specs.jsengine.JsEngineType>
-    </entry>
-    <entry>
       <string>flatOutputFolder</string>
       <boolean>false</boolean>
     </entry>
@@ -159,12 +155,6 @@
     <entry>
       <string>Compiler Flags</string>
       <string></string>
-    </entry>
-    <entry>
-      <string>Compiler Flags in list format</string>
-      <StringList>
-        <stringList/>
-      </StringList>
     </entry>
     <entry>
       <string>Check C/CXX Syntax</string>
