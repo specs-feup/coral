@@ -70,10 +70,6 @@ jobs:
       working-directory: workspace/coral
       run: npm ls --all
 
-    - name: npm explain @specs-feup/lara-framework
-      working-directory: workspace/coral
-      run: npm explain @specs-feup/lara-framework
-              
     - name: Run CORAL tests
       working-directory: workspace/coral
       run: |
