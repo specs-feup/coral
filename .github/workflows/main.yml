@@ -39,12 +39,37 @@ jobs:
       with:
         node-version: '20.x'
 
+    - name: Versions (node / npm / yarn / pnpm)
+      run: |
+            node -v
+            npm -v || true
+            yarn -v || true
+            pnpm -v || true
+            ls -la
+            echo "Lockfiles:"
+            ls -la package-lock.json yarn.lock pnpm-lock.yaml 2>/dev/null || true
+
     - name: Install node libraries
       working-directory: workspace
       run: |
         cd coral
         npm install
         npm run build
+
+    - name: Show resolved deps (npm lockfile)
+      if: hashFiles('package-lock.json') != ''
+      run: |
+        node -e "const l=require('./package-lock.json'); console.log('lockfileVersion:', l.lockfileVersion); console.log('packages count:', Object.keys(l.packages||{}).length);"
+
+
+    - name: npm ls (top-level)
+      run: npm ls --depth=0
+
+    - name: npm ls (full tree, big!)
+      run: npm ls --all
+
+    - name: npm explain @specs-feup/lara-framework
+      run: npm explain @specs-feup/lara-framework
               
     - name: Run CORAL tests
       working-directory: workspace/coral
