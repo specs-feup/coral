@@ -57,26 +57,22 @@ jobs:
         npm run build
 
     - name: Show resolved deps (npm lockfile)
+      working-directory: workspace/coral
       if: hashFiles('package-lock.json') != ''
-      run: |
-        cd coral
-        node -e "const l=require('./package-lock.json'); console.log('lockfileVersion:', l.lockfileVersion); console.log('packages count:', Object.keys(l.packages||{}).length);"
+      run: node -e "const l=require('./package-lock.json'); console.log('lockfileVersion:', l.lockfileVersion); console.log('packages count:', Object.keys(l.packages||{}).length);"
 
 
     - name: npm ls (top-level)
-      run: |
-        cd coral
-        npm ls --depth=0
+      working-directory: workspace/coral
+      run: npm ls --depth=0
 
     - name: npm ls (full tree, big!)
-      run: |
-        cd coral
-        npm ls --all
+      working-directory: workspace/coral
+      run: npm ls --all
 
     - name: npm explain @specs-feup/lara-framework
-      run: |
-        cd coral
-        npm explain @specs-feup/lara-framework
+      working-directory: workspace/coral
+      run: npm explain @specs-feup/lara-framework
               
     - name: Run CORAL tests
       working-directory: workspace/coral
