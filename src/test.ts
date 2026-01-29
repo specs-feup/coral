@@ -144,9 +144,7 @@ class CoralTester {
     ): { raw: Pragma; content: string[] }[] {
         const matches = [];
 
-        for (const $jp of Query.search("pragma")) {
-            const $pragma = $jp as Pragma;
-
+        for (const $pragma of Query.search(Pragma)) {
             if ($pragma.name !== this.#CORAL_TEST_UTILS_PRAGMA_NAME) {
                 continue;
             }

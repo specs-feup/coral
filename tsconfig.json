@@ -2,7 +2,7 @@
     "compilerOptions": {
         "target": "ES2022",
         "module": "NodeNext",
-        "outDir": "out/src",
+        "outDir": "out",
         "declaration": true,
         "strict": true,
         "allowJs": false,
@@ -14,7 +14,8 @@
         "noFallthroughCasesInSwitch": true,
         "paths": {
             "@specs-feup/coral/*": ["./src/*.ts"]
-        }
+        },
+        "rootDir": "."
         //"esModuleInterop": true
     },
     "exclude": ["node_modules", "out"]
