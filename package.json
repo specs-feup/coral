@@ -1,6 +1,6 @@
 {
     "name": "@specs-feup/coral",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "A Rust-like Borrow Checker for C",
     "type": "module",
     "parserOptions": {
@@ -42,7 +42,7 @@
     },
     "homepage": "https://github.com/specs-feup/coral#readme",
     "dependencies": {
-        "@specs-feup/clava": "^3.5.1",
+        "@specs-feup/clava": "~3.5.1",
         "@specs-feup/clava-flow": "^1.0.4",
         "@specs-feup/flow": "^1.0.3",
         "ansi-colors": "^4.1.3"
