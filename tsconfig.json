@@ -15,7 +15,7 @@
         "paths": {
             "@specs-feup/coral/*": ["./src/*.ts"]
         },
-        "rootDir": "."
+        "rootDir": "src"
         //"esModuleInterop": true
     },
     "exclude": ["node_modules", "out"]
