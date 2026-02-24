@@ -1,3 +1,5 @@
+#pragma coral_test expect PotentialNullDereferenceError
+
 #include <stdlib.h>
 
 typedef void (*callback_t)(void);

@@ -1,3 +1,5 @@
+#pragma coral_test expect NullDereferenceError
+
 #include <stdlib.h>
 void modify(int** p) { *p = 0; }
 void test(int* ptr) {

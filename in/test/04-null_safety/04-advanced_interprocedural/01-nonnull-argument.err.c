@@ -1,3 +1,5 @@
+#pragma coral_test expect NullDereferenceError
+
 #include <stdio.h>
 
 void process_data(int* ptr) {

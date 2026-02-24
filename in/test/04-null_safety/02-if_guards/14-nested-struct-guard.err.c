@@ -1,3 +1,4 @@
+#pragma coral_test expect PotentialNullDereferenceError
 #include <stdlib.h>
 struct Inner { int val; };
 struct Outer { struct Inner* inner; };

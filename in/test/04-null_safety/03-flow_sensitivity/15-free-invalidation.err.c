@@ -1,3 +1,5 @@
+#pragma coral_test expect UseAfterFreeError
+
 #include <stdlib.h>
 void test() {
     int* p = malloc(sizeof(int));

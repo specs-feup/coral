@@ -1,3 +1,5 @@
+#pragma coral_test expect UninitializedPointerError
+
 void test(int cond) {
     int *ptr;
     if (cond) {

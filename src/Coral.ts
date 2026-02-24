@@ -66,6 +66,7 @@ export default function run_coral(config: Partial<CoralConfig> = {}) {
             return false;
         }
         const pragmas = CoralPragma.parse($fn.pragmas);
+        console.log(pragmas);
         const isSafe = pragmas.some($p => $p.isFlag("safe"));
         const isUnsafe = pragmas.some($p => $p.isFlag("unsafe"));
         if (isSafe && isUnsafe) {

@@ -1,3 +1,5 @@
+#pragma coral_test expect NullDereferenceError
+
 #include <stdlib.h>
 void test() {
     int** arr = (int**) malloc(2 * sizeof(int*));

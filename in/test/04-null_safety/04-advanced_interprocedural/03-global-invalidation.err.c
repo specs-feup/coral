@@ -1,3 +1,5 @@
+#pragma coral_test expect PotentialNullDereferenceError
+
 int* global_ptr = 0;
 
 void opaque_function(); 

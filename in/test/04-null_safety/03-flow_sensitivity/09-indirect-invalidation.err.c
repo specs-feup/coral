@@ -1,3 +1,4 @@
+#pragma coral_test expect NullDereferenceError
 #include <stdlib.h>
 struct Box { int* data; };
 void invalidate(struct Box* b) { b->data = NULL; }
