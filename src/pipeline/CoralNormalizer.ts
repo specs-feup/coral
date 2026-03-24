@@ -7,6 +7,7 @@ import SimplifyAssignments from "@specs-feup/coral/pipeline/normalize/SimplifyAs
 import AddAssignmentsToCallsAndBorrows from "@specs-feup/coral/pipeline/normalize/AddAssignmentsToCallsAndBorrows";
 import SplitExpressions from "@specs-feup/coral/pipeline/normalize/SplitExpressions";
 import Instrumentation from "@specs-feup/coral/instrumentation/Instrumentation";
+import ExtractContracts from "./normalize/ExtractContracts.js";
 
 export class NormalizationContext {
     #varCounter: number;
@@ -39,6 +40,13 @@ export default class CoralNormalizer {
 
     apply($fns: FunctionJp[]) {
         this.#instrumentation.pushCheckpoint("Normalization");
+
+        if ($fns.length > 0) {
+            const $parent = $fns[0].parent;
+            new NormalizationApplier(new NormalizationContext(), $parent)
+                .apply(new ExtractContracts());
+        }
+
         for (const $fn of $fns) {
             new NormalizationApplier(new NormalizationContext(), $fn)
                 .apply(new ConvertForLoopToWhile())

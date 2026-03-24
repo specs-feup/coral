@@ -30,7 +30,11 @@ export default class CoralPragma {
 
  
     get target(): string {
-        return this.tokens[this.tokens.length - 1];
+        const actualTargets = this.tokens.filter(t => t !== "final");
+
+        return actualTargets.length > 0 
+            ? actualTargets[actualTargets.length - 1] 
+            : "return";
     }
 
     isFlag(flag: string): boolean {

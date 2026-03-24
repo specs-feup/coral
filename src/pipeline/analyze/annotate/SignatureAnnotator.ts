@@ -12,7 +12,13 @@ class SignatureAnnotatorApplier extends CoralFunctionWiseTransformationApplier {
     apply(): void {
         const fnSymbol = this.fn.getSymbol(this.fn.jp);
 
-        const contracts = ((this.fn.jp.data as any).coralContracts ?? []) as Contract[];
+        let contracts: Contract[] = []
+        const raw = this.fn.jp.getUserField("coralContracts") as unknown as string | undefined;
+
+        if (raw) {
+            contracts = JSON.parse(raw) as Contract[];
+        }
+        console.log(contracts);
         for (const param of fnSymbol.params) {
             const paramContracts = contracts.filter(c => c.target === param.jp.name);
 
