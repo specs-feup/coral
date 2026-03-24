@@ -7,16 +7,30 @@ export default class CoralPragma {
     tokens: string[];
     $jp: Pragma;
 
-    // Assumes that the pragma itself is a coral pragma
+
     constructor($jp: Pragma) {
         this.$jp = $jp;
-        // Tokenize content into strings separated by whitespace
-        // while removing the whitespace
-        // Also tokenize special tokens: . = * -> ( ) :
-        // This small lexer simplifies parsing the simple coral pragma language
+ 
         [this.name, ...this.tokens] = $jp.content
             .split(/(\s|\.|=|\*|->|\(|\)|:)/)
             .filter((token) => token.trim().length > 0);
+
+        console.log(`[Lexer] Nome: ${this.name} | Tokens: ${this.tokens.join(', ')}`);
+    }
+
+
+    get isNullability(): boolean {
+        return ["not-null", "maybe-null", "null"].includes(this.name);
+    }
+
+  
+    get hasFinal(): boolean {
+        return this.tokens.includes("final");
+    }
+
+ 
+    get target(): string {
+        return this.tokens[this.tokens.length - 1];
     }
 
     isFlag(flag: string): boolean {
