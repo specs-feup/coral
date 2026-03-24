@@ -2,10 +2,13 @@ import { FunctionJp, Param } from "@specs-feup/clava/api/Joinpoints.js";
 import MetaRegion from "@specs-feup/coral/mir/symbol/region/meta/MetaRegion";
 import MetaRegionBound from "@specs-feup/coral/mir/symbol/region/meta/MetaRegionBound";
 import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
+import { Nullability } from "@specs-feup/coral/symbol/Nullability";
 
 export class FnParam {
     #jp: Param;
     #ty: MetaTy;
+    initialNullability: Nullability = Nullability.MAYBE_NULL; 
+    finalNullability?: Nullability; 
 
     constructor($jp: Param, ty: MetaTy) {
         this.#jp = $jp;
@@ -19,6 +22,11 @@ export class FnParam {
     get ty(): MetaTy {
         return this.#ty;
     }
+
+    get name():string {
+
+        return this.#jp.name;
+    }
 }
 
 export default class Fn {
@@ -30,6 +38,7 @@ export default class Fn {
     #return: MetaTy;
     #params: FnParam[];
     #hasLifetimePragmas: boolean;
+    #returnNullability: Nullability | undefined;
 
     constructor(
         $jp: FunctionJp,
@@ -80,6 +89,14 @@ export default class Fn {
 
     get return(): MetaTy {
         return this.#return;
+    }
+
+    get returnNullability(): Nullability | undefined {
+        return this.#returnNullability;
+    }
+
+    set returnNullability(value: Nullability | undefined) {
+        this.#returnNullability = value;
     }
 
     get params(): FnParam[] {

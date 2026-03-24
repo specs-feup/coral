@@ -1,4 +1,3 @@
-// src/pipeline/normalize/ExtractContracts.ts
 import { NormalizationPass, NormalizationContext } from "../CoralNormalizer.js";
 import { Pragma, Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import CoralPragma from "../../pragma/CoralPragma.js";
