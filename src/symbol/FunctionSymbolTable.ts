@@ -16,7 +16,7 @@ export default class FunctionSymbolTable {
     #fnMap: FnMap;
     #regionMap: RegionMap;
     #returnTy?: Ty;
-    private nullabilityStates: Map<string, Nullability> = new Map();
+    private nullabilityContracts: Map<string, Contract> = new Map();
 
     constructor(fileTable: FileSymbolTable) {
         this.#defMap = fileTable.defMap;
@@ -64,8 +64,20 @@ export default class FunctionSymbolTable {
 
     loadContracts(contracts: Contract[]) {
         for (const c of contracts) {
-            this.nullabilityStates.set(c.target, c.state);
+            this.nullabilityContracts.set(c.target, c);
         }
+    }
+
+    getEntryState(target: string): Nullability | undefined {
+        return this.nullabilityContracts.get(target)?.entryState;
+    }
+
+    getExitState(target: string): Nullability | undefined {
+        return this.nullabilityContracts.get(target)?.exitState;
+    }
+
+    hasContract(target: string): boolean {
+        return this.nullabilityContracts.has(target);
     }
 
     // TODO instead of this set, put it in the constructor

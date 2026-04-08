@@ -5,8 +5,8 @@ export enum Nullability {
 }
 
 export interface Contract {
-    state: Nullability;
-    isFinal: boolean;
     target: string;
+    entryState?: Nullability; 
+    exitState?: Nullability;  
 }
 

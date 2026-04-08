@@ -3,43 +3,43 @@ import { Pragma } from "@specs-feup/clava/api/Joinpoints.js";
 export default class CoralPragma {
     static keyword: string = "coral";
 
-    name: string;
-    tokens: string[];
-    $jp: Pragma;
-
+    readonly name: string;
+    readonly tokens: string[];
+    readonly $jp: Pragma;
 
     constructor($jp: Pragma) {
         this.$jp = $jp;
- 
-        [this.name, ...this.tokens] = $jp.content
+
+        const allTokens = $jp.content
             .split(/(\s|\.|=|\*|->|\(|\)|:)/)
-            .filter((token) => token.trim().length > 0);
+            .map(t => t.trim())
+            .filter(t => t.length > 0);
 
-        console.log(`[Lexer] Nome: ${this.name} | Tokens: ${this.tokens.join(', ')}`);
-    }
-
-
-    get isNullability(): boolean {
-        return ["not-null", "maybe-null", "null"].includes(this.name);
-    }
-
-  
-    get hasFinal(): boolean {
-        return this.tokens.includes("final");
-    }
-
- 
-    get target(): string {
-        const actualTargets = this.tokens.filter(t => t !== "final");
-
-        return actualTargets.length > 0 
-            ? actualTargets[actualTargets.length - 1] 
-            : "return";
+        this.name = allTokens[0] || "";
+        this.tokens = allTokens.slice(1);
     }
 
     isFlag(flag: string): boolean {
-        // TODO instead of second condition, it should be an error
         return this.name === flag && this.tokens.length === 0;
+    }
+    
+    get isTransitionSyntax(): boolean {
+        return this.tokens.includes(":");
+    }
+
+    get transitionData() {
+        if (!this.isTransitionSyntax) return null;
+
+        const content = this.$jp.content;
+        const parts = content.split(':');
+        const target = parts[0].trim();
+        const flow = parts[1].split("->");
+
+        return {
+            target,
+            entryPart: flow[0]?.trim() || "",
+            exitPart: flow[1]?.trim() || ""
+        };
     }
 
     static parse(pragmas: Pragma[]): CoralPragma[] {

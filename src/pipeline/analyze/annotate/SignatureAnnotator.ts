@@ -12,7 +12,6 @@ class SignatureAnnotatorApplier extends CoralFunctionWiseTransformationApplier {
     apply(): void {
         const fnSymbol = this.fn.getSymbol(this.fn.jp);
 
-
         const regionVars = new Map<string, Region>();
         regionVars.set("%static", this.fn.staticRegion);
         for (const metaRegion of fnSymbol.metaRegions) {
@@ -27,30 +26,44 @@ class SignatureAnnotatorApplier extends CoralFunctionWiseTransformationApplier {
         if (raw) {
             contracts = JSON.parse(raw) as Contract[];
         }
+        
+        console.log("[Annotator] Contracts found:", contracts);
 
         this.fn.returnTy = fnSymbol.return.toTy(regionVars);
         const returnContract = contracts.find(c => c.target === "return");
-        if (returnContract) {
-            fnSymbol.returnNullability = returnContract.state;
+        if (returnContract?.exitState) {
+            fnSymbol.returnNullability = returnContract.exitState;
         }
 
         for (const param of fnSymbol.params) {
-            const paramContracts = contracts.filter(c => c.target === param.jp.name);
-            for (const contract of paramContracts) {
-                if (contract.isFinal) {
-                    param.finalNullability = contract.state;
-                } else {
-                    param.initialNullability = contract.state;
+            const mirName = param.jp.name; 
+            
+            console.log(`[Annotator] Checking MIR parameter: "${mirName}"`);
+
+            const paramContract = contracts.find(c => c.target.trim() === mirName.trim());
+            
+            if (paramContract) {
+                console.log(`[Annotator] MATCH FOUND for ${mirName}! Applying states...`);
+                
+                if (paramContract.entryState) {
+                    param.initialNullability = paramContract.entryState;
                 }
+                
+                if (paramContract.exitState) {
+                    param.finalNullability = paramContract.exitState;
+                }
+            } else {
+                console.log(`[Annotator] No contract found for "${mirName}" in:`, contracts.map(c => c.target));
             }
+
             const ty = param.ty.toTy(regionVars);
             this.fn.registerSymbol(param.jp, ty); 
-
+            
+            console.log(`[Annotator] Result for ${mirName}: Initial=${param.initialNullability}, Final=${param.finalNullability}`);
         }
 
         if (!fnSymbol.hasLifetimePragmas) {
             this.fn.inferRegionBoundsState = InferRegionBounds.FunctionState.NOT_VISITED;
         }
-
     }
 }
