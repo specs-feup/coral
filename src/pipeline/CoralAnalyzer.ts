@@ -13,6 +13,7 @@ import CustomLivenessComputation from "@specs-feup/coral/pipeline/analyze/region
 import RegionckPipeline from "@specs-feup/coral/pipeline/analyze/regionck/RegionckPipeline";
 import Graph from "@specs-feup/flow/graph/Graph";
 import IncrementingIdGenerator from "@specs-feup/flow/graph/id/IncrementingIdGenerator";
+import NullabilityPipeline from "./analyze/nullck/NullabilityPipeline.js";
 
 export default class CoralAnalyzer {
     #config: CoralConfig;
@@ -35,6 +36,7 @@ export default class CoralAnalyzer {
             .apply(new AddFakeUnwind())
             .apply(new RemoveDeadCode())
             .apply(new CoralAnnotator())
+            .apply(new NullabilityPipeline())
             .apply(new MoveAnalyser())
             .apply(new AddDrops())
             .apply(new CustomLivenessComputation())
