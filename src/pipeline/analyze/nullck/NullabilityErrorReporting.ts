@@ -2,7 +2,12 @@ import { Nullability } from "@specs-feup/coral/symbol/Nullability";
 import { NullabilityState } from "./NullabilityAnalyser.js";
 import FnSymbol from "@specs-feup/coral/mir/symbol/Fn";
 import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
-import ControlFlowEndNode from "@specs-feup/flow/flow/ControlFlowEndNode"; // Add this import
+import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
+import ControlFlowEndNode from "@specs-feup/flow/flow/ControlFlowEndNode";
+import ContractViolationError from "@specs-feup/coral/error/null_safety/ContractViolationError";
+import PotentialNullDereferenceError from "@specs-feup/coral/error/null_safety/PotentialNullDereferenceError";
+import NullDereferenceError from "@specs-feup/coral/error/null_safety/NullDereferenceError";
+import PathDeref from "@specs-feup/coral/mir/path/PathDeref";
 
 export default class NullabilityErrorReporting {
     private fn: CoralFunctionNode.Class;
@@ -16,54 +21,49 @@ export default class NullabilityErrorReporting {
     report(): void {
         const fnSymbol: FnSymbol = this.fn.getSymbol(this.fn.jp);
 
-        // Find the specific node that represents the end of the function
+        for (const node of this.fn.controlFlowNodes.filterIs(CoralCfgNode)) {
+            const state = this.nodeStates.get(node.id);
+            if (!state) continue;
+
+            for (const access of node.accesses) {
+                // Only flag as a dereference if the MIR Path is actually a Dereference object
+                if (access.path instanceof PathDeref) {
+                    const varName = access.path.toString(); 
+                    const actual = state.get(varName);
+            
+                    if (actual === Nullability.MAYBE_NULL) {
+                        throw new PotentialNullDereferenceError(node.jp, varName);
+                    } else if (actual === Nullability.NULL) {
+                        throw new NullDereferenceError(node.jp, varName);
+                    }
+                }
+            }
+        }
         const endNodes = this.fn.controlFlowNodes.filterIs(ControlFlowEndNode);
-        
         for (const node of endNodes) {
             const finalState = this.nodeStates.get(node.id);
             if (!finalState) continue;
 
             for (const param of fnSymbol.params) {
                 if (param.finalNullability) {
-                    const actual = finalState.get(param.jp.name);
+                    const actual = finalState.get(param.jp.name) ?? Nullability.MAYBE_NULL;
                     
                     if (this.isWeaker(actual, param.finalNullability)) {
-                        this.logError(
-                            `Contract Violation: Parameter '${param.jp.name}' was promised to be ${param.finalNullability} on exit, but is ${actual}.`,
-                            this.fn.jp
+                        throw new ContractViolationError(
+                            this.fn.jp, 
+                            param.jp.name, 
+                            param.finalNullability, 
+                            actual
                         );
                     }
                 }
             }
-            
-            // Also check the Return Value contract
-            if (fnSymbol.returnNullability) {
-                const actualReturn = finalState.get("return");
-                if (this.isWeaker(actualReturn, fnSymbol.returnNullability)) {
-                     this.logError(
-                        `Contract Violation: Return value was promised to be ${fnSymbol.returnNullability}, but is ${actualReturn}.`,
-                        this.fn.jp
-                    );
-                }
-            }
         }
     }
 
-    private isWeaker(actual: Nullability | undefined, required: Nullability): boolean {
-        // If no state is found, we assume the worst (MAYBE_NULL)
-        const current = actual ?? Nullability.MAYBE_NULL;
-        
-        if (required === Nullability.NOT_NULL && current !== Nullability.NOT_NULL) {
-            return true;
-        }
-        if (required === Nullability.NULL && current !== Nullability.NULL) {
-            return true;
-        }
+    private isWeaker(actual: Nullability, required: Nullability): boolean {
+        if (required === Nullability.NOT_NULL && actual !== Nullability.NOT_NULL) return true;
+        if (required === Nullability.NULL && actual !== Nullability.NULL) return true;
         return false;
-    }
-
-    private logError(message: string, jp: any): void {
-        const loc = jp.location ? ` at ${jp.location}` : "";
-        console.error(`\x1b[31m[Nullability Error]\x1b[0m ${message}${loc}`);
     }
 }
