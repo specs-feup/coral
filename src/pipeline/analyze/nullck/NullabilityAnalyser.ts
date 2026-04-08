@@ -3,9 +3,10 @@ import { Nullability } from "@specs-feup/coral/symbol/Nullability";
 import FnSymbol from "@specs-feup/coral/mir/symbol/Fn";
 import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
 import Access from "@specs-feup/coral/mir/action/Access";
-import ControlFlowEndNode from "@specs-feup/flow/flow/ControlFlowEndNode"; // Correct ESM import
-
+import ControlFlowEndNode from "@specs-feup/flow/flow/ControlFlowEndNode";
+import PreconditionViolationError from "@specs-feup/coral/error/null_safety/PreconditionViolationError";
 export type NullabilityState = Map<string, Nullability>;
+import Fn from "@specs-feup/coral/mir/symbol/Fn";
 
 export default class NullabilityAnalyser {
     private fn: CoralFunctionNode.Class;
@@ -18,14 +19,18 @@ export default class NullabilityAnalyser {
     analyze(): Map<string, NullabilityState> {
         const fnSymbol: FnSymbol = this.fn.getSymbol(this.fn.jp);
         let currentState: NullabilityState = new Map();
-    
+        console.log("haa")
+        console.log(fnSymbol)
+        
         for (const param of fnSymbol.params) {
+            console.log(param)
             currentState.set(param.jp.name, param.initialNullability ?? Nullability.MAYBE_NULL);
         }
     
         for (const node of this.fn.controlFlowNodes.filterIs(CoralCfgNode)) {
-            
+            console.log("Node", node)
             for (const access of node.accesses) {
+                console.log("Access", access);
                 if (access.kind === Access.Kind.WRITE) {
                     const targetName = access.path.toString().trim();
                     const code = node.jp.code;
@@ -40,13 +45,36 @@ export default class NullabilityAnalyser {
     
     
             for (const call of node.calls) {
-                const targetFn: FnSymbol = (call as any).symbol;
-                if (!targetFn) continue;
-    
-                targetFn.params.forEach((param, i) => {
-                    const argCode = (call.jp.args[i] as any)?.code;
-                    if (argCode && param.finalNullability) {
-                        currentState.set(argCode, param.finalNullability);
+                const targetFnSymbol: Fn = (call as any).symbol ?? this.fn.getSymbol(call.jp.function);
+            
+                if (!targetFnSymbol) {
+                    console.log(`[Nullck-Debug] Skipping call: No symbol found for ${call.jp.code}`);
+                    continue;
+                }
+            
+                console.log(`[Nullck-Debug] Checking call to: ${targetFnSymbol.jp.name}`);
+            
+                targetFnSymbol.params.forEach((param, i: number) => {
+                    const arg = call.jp.args[i];
+                    if (!arg) return;
+            
+                    const argName = arg.code.trim();
+                    const argNullability = currentState.get(argName) ?? Nullability.MAYBE_NULL;
+            
+                    console.log(`[Nullck-Debug] Arg ${i} (${argName}): State = ${argNullability}, Required = ${param.initialNullability}`);
+            
+                    if (param.initialNullability === Nullability.NOT_NULL && argNullability !== Nullability.NOT_NULL) {
+                        throw new PreconditionViolationError(
+                            call.jp, 
+                            argName, 
+                            targetFnSymbol.jp.name, 
+                            param.initialNullability, 
+                            argNullability
+                        );
+                    }
+
+                    if (param.finalNullability) {
+                        currentState.set(argName, param.finalNullability);
                     }
                 });
             }
