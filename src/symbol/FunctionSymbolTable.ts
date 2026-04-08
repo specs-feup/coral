@@ -8,6 +8,7 @@ import FileSymbolTable from "@specs-feup/coral/symbol/FileSymbolTable";
 import FnMap from "@specs-feup/coral/symbol/FnMap";
 import RegionMap from "@specs-feup/coral/symbol/RegionMap";
 import TyMap from "@specs-feup/coral/symbol/TyMap";
+import { Nullability, Contract } from "./Nullability.js";
 
 export default class FunctionSymbolTable {
     #tyMap: TyMap;
@@ -15,6 +16,7 @@ export default class FunctionSymbolTable {
     #fnMap: FnMap;
     #regionMap: RegionMap;
     #returnTy?: Ty;
+    private nullabilityContracts: Map<string, Contract> = new Map();
 
     constructor(fileTable: FileSymbolTable) {
         this.#defMap = fileTable.defMap;
@@ -58,6 +60,24 @@ export default class FunctionSymbolTable {
 
     addRegion(name: string, kind: Region.Kind) {
         return this.#regionMap.add(name, kind);
+    }
+
+    loadContracts(contracts: Contract[]) {
+        for (const c of contracts) {
+            this.nullabilityContracts.set(c.target, c);
+        }
+    }
+
+    getEntryState(target: string): Nullability | undefined {
+        return this.nullabilityContracts.get(target)?.entryState;
+    }
+
+    getExitState(target: string): Nullability | undefined {
+        return this.nullabilityContracts.get(target)?.exitState;
+    }
+
+    hasContract(target: string): boolean {
+        return this.nullabilityContracts.has(target);
     }
 
     // TODO instead of this set, put it in the constructor

@@ -1,39 +1,32 @@
-// src/pipeline/normalize/ExtractContracts.ts
+import { FunctionJp, Pragma } from "@specs-feup/clava/api/Joinpoints.js";
 import { NormalizationPass, NormalizationContext } from "../CoralNormalizer.js";
-import { Pragma, Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
+import { ContractFactory } from "@specs-feup/coral/pragma/ContractFactory";
 import CoralPragma from "../../pragma/CoralPragma.js";
-import { ContractFactory } from "../../pragma/ContractFactory.js";
 
 export default class ExtractContracts implements NormalizationPass<typeof Pragma> {
-    get query() { 
-        return { jp: Pragma, filter: { name: "coral" } }; 
+    get query() {
+        return { 
+            jp: Pragma, 
+            filter: ($p: Pragma) => $p.name === "coral" 
+        };
     }
 
     apply($pragma: Pragma, context: NormalizationContext): void {
-        const coralPragma = new CoralPragma($pragma);
-        const contract = ContractFactory.fromPragma(coralPragma);
+        const $target = $pragma.target;
+    
+        if ($target instanceof FunctionJp) {
+            const coralPragma = new CoralPragma($pragma);
+            const contract = ContractFactory.fromPragma(coralPragma);
+    
+            if (contract) {
+                const raw = $target.getUserField("coralContracts") as unknown as string | undefined;
+                const existingContracts: any[] = raw ? JSON.parse(raw) : [];
 
-        if (contract) {
-          
-            let $current: Joinpoint | undefined = $pragma.target;
-            
-
-            while ($current && !$current.instanceOf("function") && !$current.instanceOf("scope")) {
-                $current = $current.parent;
-            }
-
-            if ($current) {
-          
-                const contracts = ($current.data as any).coralContracts ?? [];
-                contracts.push(contract);
-                ($current.data as any).coralContracts = contracts;
+                existingContracts.push(contract);
                 
-        
-                console.log(`[Coral] Contrato '${contract.state}' para '${contract.target}' anexado a ${$current.joinPointType}`);
-                console.log(`[Pass] SUCESSO: Contrato anexado ao Joinpoint do tipo: ${$current.joinPointType}`);
-                if ($current.instanceOf("function")) {
-                    console.log(`       Nome da Função: ${($current as any).name}`);
-                }
+                $target.setUserField("coralContracts", JSON.stringify(existingContracts) as unknown as object);
+            
+                console.log(`[Extract] Saved contract for variable '${contract.target}'`);
             }
         }
     }
