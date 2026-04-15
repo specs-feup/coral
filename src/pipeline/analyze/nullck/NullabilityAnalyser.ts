@@ -28,17 +28,51 @@ export default class NullabilityAnalyser {
         }
     
         for (const node of this.fn.controlFlowNodes.filterIs(CoralCfgNode)) {
+
             console.log("Node", node)
+
+            // Look for: if (p == NULL) return;
+            // We use optional chaining (?.) to prevent "reading 'code' of undefined"
+            const $if = node.jp.getAncestor("if") as any;
+
+            if ($if?.condition?.code && $if?.then?.code) {
+                const conditionCode: string = $if.condition.code;
+                const thenBody: string = $if.then.code;
+
+                // Check if this is a "Null Guard" that returns
+                if ((conditionCode.includes("== NULL") || conditionCode.includes("== 0")) && 
+                    thenBody.includes("return")) {
+                    
+                    const parts: string[] = conditionCode.split("==").map((s: string) => s.trim());
+                    const varName: string | undefined = parts.find((p: string) => p !== "NULL" && p !== "0");
+
+                    if (varName && currentState.has(varName)) {
+                        console.log(`[Nullck] Guard Refinement: '${varName}' is now NOT_NULL`);
+                        currentState.set(varName, Nullability.NOT_NULL);
+                    }
+                }
+            }
             for (const access of node.accesses) {
                 console.log("Access", access);
                 if (access.kind === Access.Kind.WRITE) {
                     const targetName = access.path.toString().trim();
                     const code = node.jp.code;
-    
-                    if (code.includes("NULL") || code.includes("0")) {
+                
+                    if (code.includes("NULL") || code.includes("= 0") || code.includes("(void *) 0")) {
                         currentState.set(targetName, Nullability.NULL);
-                    } else {
-                        currentState.set(targetName, Nullability.NOT_NULL);
+                    } 
+                    else if (code.includes("=")) {
+                        let rhs = code.split("=")[1].replace(";", "").trim();
+                        
+                        // --- POINTER STRIPPING ---
+                        // If rhs is "*p", we look up the nullability of "p"
+                        if (rhs.startsWith("*")) {
+                            rhs = rhs.substring(1).trim();
+                        }
+                
+                        const rhsState = currentState.get(rhs) ?? Nullability.MAYBE_NULL;
+                        currentState.set(targetName, rhsState);
+                        console.log(`[Nullck] Propagating state: ${targetName} is now ${rhsState} (from ${rhs})`);
                     }
                 }
             }

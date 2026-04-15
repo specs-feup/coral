@@ -67,9 +67,35 @@ class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier
                 Node.Case(ReturnNode, (node) =>
                     this.#annotateExpr(coralNode, node.jp.returnExpr),
                 ),
-                Node.Case(ConditionNode, (node) =>
-                    this.#annotateExpr(coralNode, node.condition),
-                ),
+                Node.Case(ConditionNode, (node) => {
+                    this.#annotateExpr(coralNode, node.condition);
+            
+                    // --- Guard Refinement Logic ---
+                    const $jp = node.jp;
+                    // Check if this condition belongs to an 'if'
+                    const $if = $jp.getAncestor("if") as any;
+            
+                    if ($if && $if.then) {
+                        const conditionCode = $jp.code;
+                        const thenBody = $if.then.code;
+            
+                        // Pattern: if (p == NULL) return; or if (p == 0) return;
+                        if ((conditionCode.includes("== NULL") || conditionCode.includes("== 0")) && 
+                            thenBody.includes("return")) {
+                            
+                            const parts = conditionCode.split("==").map((s: string) => s.trim());
+                            const varName = parts.find(p => p !== "NULL" && p !== "0");
+            
+                            if (varName) {
+                                const fnAsAny = this.fn as any;
+                                // REFINEMENT: For the rest of this function's annotation, 
+                                // this variable is now guaranteed to be NOT_NULL
+                                fnAsAny.debugNullabilityStates.set(varName, "NOT_NULL");
+                                console.log(`[Flow-Refine] Guard detected! '${varName}' is now NOT_NULL`);
+                            }
+                        }
+                    }
+                }),
             );
         }
     }
@@ -179,9 +205,32 @@ class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier
             this.#annotateExpr(node, $binaryOp.right);
             const path = this.#parseLvalue($binaryOp.left);
             node.addAccess(path, Access.Kind.WRITE);
-        } else {
-            this.#annotateExpr(node, $binaryOp.left);
-            this.#annotateExpr(node, $binaryOp.right);
+        // Inside ControlFlowAnnotator.ts -> #annotateBinaryOp
+        } else if ($binaryOp.kind === "eq" || $binaryOp.kind === "ne") {
+            // Only refine if this comparison is part of an 'if' that returns!
+            const $if = $binaryOp.getAncestor("if") as any;
+            const thenBody = $if?.then?.code ?? "";
+
+            if (thenBody.includes("return")) {
+                const code = $binaryOp.code;
+                const parts = code.split(/==|!=/).map((s: string) => s.trim());
+                const varName = parts.find(p => p !== "NULL" && p !== "0" && !p.includes("("));
+
+                if (varName) {
+                    const fnAsAny = this.fn as any;
+                    fnAsAny.debugNullabilityStates.set(varName, "NOT_NULL");
+                    
+                    // Refine the original param if this is a temporary
+                    if (varName.startsWith("__")) {
+                        for (const key of fnAsAny.debugNullabilityStates.keys()) {
+                            if (!key.startsWith("__")) {
+                                fnAsAny.debugNullabilityStates.set(key, "NOT_NULL");
+                            }
+                        }
+                    }
+                    console.log(`[Flow-Refine] Guard detected return, refining '${varName}'`);
+                }
+            }
         }
     }
 
