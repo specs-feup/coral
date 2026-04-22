@@ -104,8 +104,13 @@ export default class NullabilityAnalyser {
             if (node.is(ReturnNode) || node.is(ControlFlowEndNode) || code.includes("return")) {
                 this.#verifyExitContracts(fnSymbol, currentState);
             }
-
+            node.nullabilityStates = new Map(currentState);
             this.nodeStates.set(node.id, new Map(currentState));
+
+            console.log(`[Nullck-Debug] Node ${node.id}: ${node.jp.code.split('\n')[0]}`);
+            for (const [varName, state] of node.nullabilityStates) {
+            console.log(`   └─ ${varName}: ${state}`);
+    }
         }
 
         return this.nodeStates;
