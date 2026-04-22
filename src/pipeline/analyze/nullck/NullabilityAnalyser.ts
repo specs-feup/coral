@@ -4,9 +4,12 @@ import FnSymbol from "@specs-feup/coral/mir/symbol/Fn";
 import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
 import Access from "@specs-feup/coral/mir/action/Access";
 import ControlFlowEndNode from "@specs-feup/flow/flow/ControlFlowEndNode";
+import ReturnNode from "@specs-feup/clava-flow/cfg/node/ReturnNode";
 import PreconditionViolationError from "@specs-feup/coral/error/null_safety/PreconditionViolationError";
-export type NullabilityState = Map<string, Nullability>;
+//import PostconditionViolationError from "@specs-feup/coral/error/null_safety/PostconditionViolationError"; // You might need to create this
 import Fn from "@specs-feup/coral/mir/symbol/Fn";
+
+export type NullabilityState = Map<string, Nullability>;
 
 export default class NullabilityAnalyser {
     private fn: CoralFunctionNode.Class;
@@ -19,108 +22,123 @@ export default class NullabilityAnalyser {
     analyze(): Map<string, NullabilityState> {
         const fnSymbol: FnSymbol = this.fn.getSymbol(this.fn.jp);
         let currentState: NullabilityState = new Map();
-        console.log("haa")
-        console.log(fnSymbol)
-        
+
+        // 1. Initialize State from Entry Contracts (The "Pre" condition)
         for (const param of fnSymbol.params) {
-            console.log(param)
-            currentState.set(param.jp.name, param.initialNullability ?? Nullability.MAYBE_NULL);
+            const initial = param.initialNullability ?? Nullability.MAYBE_NULL;
+            currentState.set(param.jp.name, initial);
         }
-    
+
+        // 2. Traverse the CFG
         for (const node of this.fn.controlFlowNodes.filterIs(CoralCfgNode)) {
+            
+            // --- A. GUARD REFINEMENT (The 'if (p == NULL) return' logic) ---
+            const $jp = node.jp;
+            const $if = $jp.getAncestor("if") as any;
+            
+            if ($if && $if.then && $if.condition) {
+                const condCode = $if.condition.code;
+                const thenCode = $if.then.code;
 
-            console.log("Node", node)
-
-            // Look for: if (p == NULL) return;
-            // We use optional chaining (?.) to prevent "reading 'code' of undefined"
-            const $if = node.jp.getAncestor("if") as any;
-
-            if ($if?.condition?.code && $if?.then?.code) {
-                const conditionCode: string = $if.condition.code;
-                const thenBody: string = $if.then.code;
-
-                // Check if this is a "Null Guard" that returns
-                if ((conditionCode.includes("== NULL") || conditionCode.includes("== 0")) && 
-                    thenBody.includes("return")) {
-                    
-                    const parts: string[] = conditionCode.split("==").map((s: string) => s.trim());
-                    const varName: string | undefined = parts.find((p: string) => p !== "NULL" && p !== "0");
-
-                    if (varName && currentState.has(varName)) {
-                        console.log(`[Nullck] Guard Refinement: '${varName}' is now NOT_NULL`);
+                // If the "then" branch exits the function, we refine the state for the "else" path
+                if ((condCode.includes("== NULL") || condCode.includes("== 0")) && thenCode.includes("return")) {
+                    const varName = condCode.split("==")[0].trim(); // Simplistic parse
+                    if (currentState.has(varName)) {
                         currentState.set(varName, Nullability.NOT_NULL);
+                        console.log(`[Flow] Refined ${varName} to NOT_NULL after guard.`);
                     }
                 }
             }
-            for (const access of node.accesses) {
-                console.log("Access", access);
-                if (access.kind === Access.Kind.WRITE) {
-                    const targetName = access.path.toString().trim();
-                    const code = node.jp.code;
-                
-                    if (code.includes("NULL") || code.includes("= 0") || code.includes("(void *) 0")) {
-                        currentState.set(targetName, Nullability.NULL);
-                    } 
-                    else if (code.includes("=")) {
-                        let rhs = code.split("=")[1].replace(";", "").trim();
-                        
-                        // --- POINTER STRIPPING ---
-                        // If rhs is "*p", we look up the nullability of "p"
-                        if (rhs.startsWith("*")) {
-                            rhs = rhs.substring(1).trim();
-                        }
-                
-                        const rhsState = currentState.get(rhs) ?? Nullability.MAYBE_NULL;
-                        currentState.set(targetName, rhsState);
-                        console.log(`[Nullck] Propagating state: ${targetName} is now ${rhsState} (from ${rhs})`);
-                    }
-                }
-            }
-    
-    
-            for (const call of node.calls) {
-                const targetFnSymbol: Fn = (call as any).symbol ?? this.fn.getSymbol(call.jp.function);
-            
-                if (!targetFnSymbol) {
-                    console.log(`[Nullck-Debug] Skipping call: No symbol found for ${call.jp.code}`);
-                    continue;
-                }
-            
-                console.log(`[Nullck-Debug] Checking call to: ${targetFnSymbol.jp.name}`);
-            
-                targetFnSymbol.params.forEach((param, i: number) => {
-                    const arg = call.jp.args[i];
-                    if (!arg) return;
-            
-                    const argName = arg.code.trim();
-                    const argNullability = currentState.get(argName) ?? Nullability.MAYBE_NULL;
-            
-                    console.log(`[Nullck-Debug] Arg ${i} (${argName}): State = ${argNullability}, Required = ${param.initialNullability}`);
-            
-                    if (param.initialNullability === Nullability.NOT_NULL && argNullability !== Nullability.NOT_NULL) {
-                        throw new PreconditionViolationError(
-                            call.jp, 
-                            argName, 
-                            targetFnSymbol.jp.name, 
-                            param.initialNullability, 
-                            argNullability
-                        );
-                    }
 
-                    if (param.finalNullability) {
-                        currentState.set(argName, param.finalNullability);
-                    }
-                });
+            // --- B. ASSIGNMENTS / WRITES ---
+            for (const access of node.accesses) {
+                if (access.kind === Access.Kind.WRITE) {
+                    const targetName = access.path.toString();
+                    currentState.set(targetName, this.#resolveRhsState(node.jp, currentState));
+                }
             }
-    
+
+            // --- C. FUNCTION CALLS (Pre-condition Check) ---
+            this.#checkFunctionCalls(node, currentState);
+
+            // --- D. EXIT POINT CHECK (The "Post" condition) ---
+            // If this node is a Return or the End of the function, check the contract
+            if (node.is(ReturnNode) || node.is(ControlFlowEndNode)) {
+                this.#verifyExitContracts(fnSymbol, currentState, node.jp);
+            }
+
             this.nodeStates.set(node.id, new Map(currentState));
         }
-    
-        const endNodes = this.fn.controlFlowNodes.filterIs(ControlFlowEndNode);
-        for (const node of endNodes) {
-            this.nodeStates.set(node.id, new Map(currentState));
-        }
-    
+
         return this.nodeStates;
+    }
+
+    #resolveRhsState($jp: any, state: NullabilityState): Nullability {
+        const code = $jp.code;
+        if (code.includes("NULL") || code.includes("= 0")) return Nullability.NULL;
+        if (code.includes("&")) return Nullability.NOT_NULL;
+        
+        // Handle variable propagation: p = q;
+        const parts = code.split("=");
+        if (parts.length > 1) {
+            const rhs = parts[1].replace(";", "").trim();
+            return state.get(rhs) ?? Nullability.MAYBE_NULL;
+        }
+        return Nullability.MAYBE_NULL;
+    }
+
+    #checkFunctionCalls(node: CoralCfgNode.Class, state: NullabilityState) {
+        for (const call of node.calls) {
+            // Now using the getter we added above
+            const targetFn: Fn = call.symbol; 
+    
+            if (!targetFn) continue;
+    
+            // Explicitly typing 'param' and 'i'
+            // 'i' is always number. 'param' is the parameter object from your MIR
+            targetFn.params.forEach((param: any, i: number) => {
+                const arg = call.jp.args[i];
+                if (!arg) return;
+    
+                const argName = arg.code.trim();
+                const argNullability = state.get(argName) ?? Nullability.MAYBE_NULL;
+    
+                console.log(`[Nullck] Checking ${targetFn.jp.name}(${argName}): has ${argNullability}, needs ${param.initialNullability}`);
+    
+                // 1. Pre-condition Check (Entry)
+                if (param.initialNullability === Nullability.NOT_NULL && argNullability !== Nullability.NOT_NULL) {
+                    throw new PreconditionViolationError(
+                        call.jp, 
+                        argName, 
+                        targetFn.jp.name, 
+                        param.initialNullability, 
+                        argNullability
+                    );
+                }
+    
+                // 2. State Propagation (Exit)
+                // If the function contract says the parameter exits as NOT_NULL, 
+                // update our flow state for that variable.
+                if (param.finalNullability) {
+                    state.set(argName, param.finalNullability);
+                    console.log(`[Nullck] Post-call update: ${argName} is now ${param.finalNullability}`);
+                }
+            });
+        }
+    }
+
+    #verifyExitContracts(fnSymbol: FnSymbol, state: NullabilityState, $jp: any) {
+        for (const param of fnSymbol.params) {
+            const requiredAtExit = param.finalNullability;
+            if (!requiredAtExit) continue;
+
+            const actualAtExit = state.get(param.jp.name) ?? Nullability.MAYBE_NULL;
+
+            // Logic: if contract says NOT_NULL, but we are NULL or MAYBE_NULL, error!
+            if (requiredAtExit === Nullability.NOT_NULL && actualAtExit !== Nullability.NOT_NULL) {
+                console.error(`[Error] Post-condition failed for '${param.jp.name}'. Expected NOT_NULL, got ${actualAtExit}`);
+                // throw new PostconditionViolationError(...);
+            }
+        }
     }
 }

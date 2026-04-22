@@ -25,6 +25,10 @@ export default class FunctionCall {
         this.#paramTys = paramTys;
     }
 
+    get symbol(): Fn {
+        return this.#fn;
+    }
+
     get jp(): Call {
         return this.#jp;
     }

@@ -69,8 +69,7 @@ class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier
                 ),
                 Node.Case(ConditionNode, (node) => {
                     this.#annotateExpr(coralNode, node.condition);
-            
-                    // --- Guard Refinement Logic ---
+                     /*                   // --- Guard Refinement Logic ---
                     const $jp = node.jp;
                     // Check if this condition belongs to an 'if'
                     const $if = $jp.getAncestor("if") as any;
@@ -93,8 +92,9 @@ class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier
                                 fnAsAny.debugNullabilityStates.set(varName, "NOT_NULL");
                                 console.log(`[Flow-Refine] Guard detected! '${varName}' is now NOT_NULL`);
                             }
+                                
                         }
-                    }
+                    }*/
                 }),
             );
         }
