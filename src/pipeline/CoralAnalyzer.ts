@@ -36,11 +36,11 @@ export default class CoralAnalyzer {
             .apply(new AddFakeUnwind())
             .apply(new RemoveDeadCode())
             .apply(new CoralAnnotator())
-            .apply(new NullabilityPipeline())
             .apply(new MoveAnalyser())
             .apply(new AddDrops())
             .apply(new CustomLivenessComputation())
-            .apply(new RegionckPipeline());
+            .apply(new RegionckPipeline())
+            .apply(new NullabilityPipeline());
         this.#instrumentation.popCheckpoint();
         return graph;
     }

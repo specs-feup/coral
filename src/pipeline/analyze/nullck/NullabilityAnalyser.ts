@@ -7,7 +7,13 @@ import ControlFlowEndNode from "@specs-feup/flow/flow/ControlFlowEndNode";
 import ReturnNode from "@specs-feup/clava-flow/cfg/node/ReturnNode";
 import PreconditionViolationError from "@specs-feup/coral/error/null_safety/PreconditionViolationError";
 import Fn from "@specs-feup/coral/mir/symbol/Fn";
-
+import VariableDeclarationNode from "@specs-feup/clava-flow/cfg/node/VariableDeclarationNode";
+import Node from "@specs-feup/flow/graph/Node";
+import ExpressionNode from "@specs-feup/clava-flow/cfg/node/ExpressionNode";
+import ConditionNode from "@specs-feup/clava-flow/cfg/node/condition/ConditionNode";
+import { BinaryOp, Expression } from "@specs-feup/clava/api/Joinpoints.js";
+import { Literal } from "@specs-feup/clava/api/Joinpoints.js";
+import ContractViolationError from "@specs-feup/coral/error/null_safety/ContractViolationError";
 export type NullabilityState = Map<string, Nullability>;
 
 export default class NullabilityAnalyser {
@@ -15,10 +21,14 @@ export default class NullabilityAnalyser {
     private nodeStates: Map<string, NullabilityState> = new Map();
     // Tracks temporary variables back to their originals (e.g., __coral_var_0 -> p)
     private aliasMap: Map<string, string> = new Map();
-
+    currentState: NullabilityState = new Map();
     constructor(fn: CoralFunctionNode.Class) {
         this.fn = fn;
     }
+
+
+    // A simple helper to "peek" through the normalization
+
 
     /**
      * Follows the chain of assignments to find the source variable name.
@@ -33,6 +43,114 @@ export default class NullabilityAnalyser {
             depth++;
         }
         return current;
+    }
+
+        apply(): void {
+            this.#computeDefsAndUses();
+            // this.#computeLiveInOut();
+        }
+    
+        #computeDefsAndUses() {
+            const fnSymbol: FnSymbol = this.fn.getSymbol(this.fn.jp);
+           
+            let finalStates:NullabilityState = new Map();
+            this.aliasMap.clear();
+            this.currentState.clear()
+    
+            // 1. Initialize State from Entry Contracts
+            for (const param of fnSymbol.params) {
+                const initial = param.initialNullability ?? Nullability.MAYBE_NULL;
+                this.currentState.set(param.jp.name, initial);
+            }
+            console.log(this.currentState);
+            for (const node of this.fn.controlFlowNodes.expectAll(CoralCfgNode, "Nodes were previously inited as CoralCfgNode")) {
+                node.switch(
+                    Node.Case(VariableDeclarationNode, n => {
+                        console.log("------")
+                        console.log("Var dec");
+                        if (n.jp.hasInit) {
+                            node.addDef(n.jp);
+                            console.log(n.jp.name)
+                            console.log(n.jp.code);
+                            let v = this.#computeVarDec(node, n.jp.init!);
+                            this.currentState.set(n.jp.name, v);
+                        }
+                    }),
+                    Node.Case(ExpressionNode, n => {
+                        console.log("----------------\n Expression node\n", n.jp)
+                        console.log(n.jp.code);
+                        if (n.jp instanceof BinaryOp){
+                            console.log(n.jp.left.code)
+                            console.log(n.jp.right.code)
+                            this.currentState.set(n.jp.left.code, this.currentState.get(n.jp.right.code)!)
+                        }
+                    }),
+                    Node.Case(ReturnNode, n => {
+                        console.log("--------------");
+                        console.log("Return");
+                        console.log(n.jp.returnExpr);
+                        console.log(n.jp.code);
+
+                        finalStates= this.#solveConflict(this.currentState, finalStates);
+                        console.log(finalStates)
+
+                    }),
+                    Node.Case(ConditionNode, n => {
+                        console.log("---------")
+                        console.log("Condition");
+                        console.log(n.condition);
+                        console.log(n.jp.code);
+
+
+                    }),
+                );
+            }
+
+            finalStates= this.#solveConflict(this.currentState, finalStates);
+
+            console.log(this.currentState)
+            console.log(finalStates);
+            for (const param of fnSymbol.params) {
+                const final = param.finalNullability ?? Nullability.MAYBE_NULL;
+                if (finalStates.get(param.name)!== final){
+                    throw new ContractViolationError(
+                        param.jp,
+                        param.name,
+                        param.finalNullability!,
+                        finalStates.get(param.name)!,
+                    )
+                }
+            }
+
+        }
+
+    #computeVarDec(node: CoralCfgNode.Class, $jp: Expression ): Nullability{
+        if ($jp instanceof Literal) {
+            console.log ("Literal");
+            node.nullabilityStates
+        }
+        console.log(node);
+        console.log($jp.code);
+        console.log(this.#resolveRhsState($jp, this.currentState));
+        return this.#resolveRhsState($jp, this.currentState)
+    }
+
+    #solveConflict(currentState: Map<string, Nullability>, finalStates : Map<string, Nullability>){
+        currentState.forEach((v:Nullability, k) => {
+            if(finalStates.get(k)){
+                let $temp: Nullability = finalStates.get(k)!;
+                let $value: Nullability = Nullability.MAYBE_NULL;
+                if( $temp === v){
+                    $value = v;
+                }
+                finalStates.set(k, $value)
+            }else{
+                finalStates.set(k,v);
+            }
+        })
+
+        return finalStates;
+
     }
 
     analyze(): Map<string, NullabilityState> {
@@ -113,11 +231,15 @@ export default class NullabilityAnalyser {
     }
         }
 
+
+
         return this.nodeStates;
     }
 
     #resolveRhsState($jp: any, state: NullabilityState): Nullability {
         const code = $jp.code;
+        
+        console.log("RHS code , ", code )
         
         // 1. Literal Nulls
         if (code.includes("NULL") || code.includes("= 0") || code.includes("(void *) 0")) {
@@ -128,6 +250,17 @@ export default class NullabilityAnalyser {
         if (code.includes("&")) {
             return Nullability.NOT_NULL;
         }
+
+        if(this.currentState.get(code)){
+            return this.currentState.get(code)!;
+        }
+
+        if(code.startsWith("*")){
+            let $var = code.replace("*", "").trim();
+            if(this.currentState.get($var)){
+                return this.currentState.get($var)!;
+            }
+        }
         
         // 3. Variable Propagations & Dereferences
         const parts = code.split("=");
@@ -135,18 +268,23 @@ export default class NullabilityAnalyser {
             let rhs = parts[1].replace(";", "").trim();
 
             // Handle x = *p
+            console.log("pointer, ", rhs)
             if (rhs.startsWith("*")) {
+                console.log("pointer, ", rhs)
                 rhs = rhs.substring(1).trim();
                 const realName = this.#resolveToOriginal(rhs);
                 const pointerState = state.get(realName) ?? Nullability.MAYBE_NULL;
                 // If the pointer itself is NOT_NULL, then dereferencing it is safe.
                 return pointerState === Nullability.NOT_NULL ? Nullability.NOT_NULL : Nullability.MAYBE_NULL;
             }
+            
 
             // Handle direct assignment: p = q
             const realName = this.#resolveToOriginal(rhs);
             return state.get(realName) ?? Nullability.MAYBE_NULL;
         }
+
+
 
         return Nullability.MAYBE_NULL;
     }
