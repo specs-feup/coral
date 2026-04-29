@@ -34,7 +34,7 @@ export default class NullabilityErrorReporting {
                     if (actual === Nullability.MAYBE_NULL) {
                         throw new PotentialNullDereferenceError(node.jp, varName);
                     } else if (actual === Nullability.NULL) {
-                        throw new NullDereferenceError(node.jp, varName);
+                        throw new NullDereferenceError(node.jp, varName,actual );
                     }
                 }
             }

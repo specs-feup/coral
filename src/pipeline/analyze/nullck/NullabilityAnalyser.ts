@@ -7,9 +7,10 @@ import VariableDeclarationNode from "@specs-feup/clava-flow/cfg/node/VariableDec
 import Node from "@specs-feup/flow/graph/Node";
 import ExpressionNode from "@specs-feup/clava-flow/cfg/node/ExpressionNode";
 import ConditionNode from "@specs-feup/clava-flow/cfg/node/condition/ConditionNode";
-import { BinaryOp, BoolLiteral, Expression, If, Joinpoint, Literal } from "@specs-feup/clava/api/Joinpoints.js";
+import { BinaryOp, Expression, If, Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 import ContractViolationError from "@specs-feup/coral/error/null_safety/ContractViolationError";
 import { ReturnStmt } from "@specs-feup/clava/api/Joinpoints.js";
+import NullDereferenceError from "@specs-feup/coral/error/null_safety/NullDereferenceError";
 export type NullabilityState = Map<string, Nullability>;
 
 type DataflowStates = {
@@ -122,7 +123,7 @@ export default class NullabilityAnalyser {
             const $var = left.trim();
             const $rhs = right.trim();
         
-            const $nullability = this.#resolveRhsStateFromCode($rhs, inStates);
+            const $nullability = this.#resolveRhsStateFromCode(ifJp.cond,$rhs, inStates);
         
             if ($nullability !== Nullability.MAYBE_NULL) {
                 const isEq = operator === "==";
@@ -210,11 +211,11 @@ export default class NullabilityAnalyser {
 
     #resolveRhsState($jp: Joinpoint, state: NullabilityState): Nullability {
         const code: string = $jp.code;
-        return this.#resolveRhsStateFromCode(code, state);
+        return this.#resolveRhsStateFromCode($jp,code, state);
 
     }
 
-    #resolveRhsStateFromCode(code : string, state: NullabilityState): Nullability{
+    #resolveRhsStateFromCode($jp:Joinpoint,code : string, state: NullabilityState): Nullability{
                 // 1. Literal Nulls
         if (code.includes("NULL") || code.includes("= 0") || code.includes("(void *) 0")) {
             return Nullability.NULL;
@@ -234,6 +235,11 @@ export default class NullabilityAnalyser {
         if (code.startsWith("*")) {
             const pointerVar = code.replace("*", "").trim();
             const pointerState = state.get(pointerVar) ?? Nullability.MAYBE_NULL;
+
+            if (pointerState !== Nullability.NOT_NULL) {
+                throw new NullDereferenceError($jp, code, pointerState);
+            }
+
             return pointerState === Nullability.NOT_NULL ? Nullability.NOT_NULL : Nullability.MAYBE_NULL;
         }
 

@@ -2,8 +2,10 @@ import CoralError from "@specs-feup/coral/error/CoralError";
 import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
 import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 
+import { Nullability } from "@specs-feup/coral/symbol/Nullability";
+
 export default class NullDereferenceError extends CoralError {
-    constructor($invalidUse: Joinpoint, varName: string) {
+    constructor($invalidUse: Joinpoint, varName: string, state:Nullability) {
         super(
             new ErrorMessageBuilder(
                 `Dereference of a null pointer '${varName}'`,
@@ -11,7 +13,7 @@ export default class NullDereferenceError extends CoralError {
             )
                 .code(
                     $invalidUse,
-                    `pointer '${varName}' is definitely null here`,
+                    `pointer '${varName}' is ${state} here`,
                 )
                 .toString(),
         );
