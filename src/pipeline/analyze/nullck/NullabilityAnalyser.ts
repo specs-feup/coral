@@ -112,6 +112,25 @@ export default class NullabilityAnalyser {
     }
 
     #handleConditionBranch(ifJp: If, inStates: NullabilityState, finalStates: NullabilityState) {
+        let thenOutStates = new Map(inStates);
+        let elseOutStates = new Map(inStates);
+        const condCode = ifJp.cond.originNode.code;
+        const match = condCode.match(/(.*?)\s*(==|!=)\s*(.*)/);
+        
+        if (match) {
+            const [, left, operator, right] = match;
+            const $var = left.trim();
+            const $rhs = right.trim();
+        
+            const $nullability = this.#resolveRhsStateFromCode($rhs, inStates);
+        
+            if ($nullability !== Nullability.MAYBE_NULL) {
+                const isEq = operator === "==";
+                const oppositeNullability = $nullability === Nullability.NULL ? Nullability.NOT_NULL : Nullability.NULL;
+                thenOutStates.set($var, isEq ? $nullability : oppositeNullability);
+                elseOutStates.set($var, isEq ? oppositeNullability : $nullability);
+            }
+        }
         const thenJp = ifJp.then;
         const elseJp = ifJp.else;
 
@@ -122,7 +141,7 @@ export default class NullabilityAnalyser {
         const thenNodeIds = new Set(thenNodes.map(n => n.id));
         this.nodes = this.nodes.filter(node => !thenNodeIds.has(node.id)); // Remove from main queue
 
-        let thenOutStates = new Map(inStates);
+       
         let currentFinal = new Map(finalStates);
 
         for (const node of thenNodes) {
@@ -132,7 +151,7 @@ export default class NullabilityAnalyser {
         }
 
         // Process ELSE block (if exists)
-        let elseOutStates = new Map(inStates);
+       
         if (elseJp) {
             const elseNodes = [...this.fn.controlFlowNodes.filterIs(CoralCfgNode)]
                 .filter(cfgNode => elseJp.contains(cfgNode.jp));
@@ -177,10 +196,14 @@ export default class NullabilityAnalyser {
         return merged;
     }
 
-    #resolveRhsState($jp: any, state: NullabilityState): Nullability {
+    #resolveRhsState($jp: Joinpoint, state: NullabilityState): Nullability {
         const code: string = $jp.code;
+        return this.#resolveRhsStateFromCode(code, state);
 
-        // 1. Literal Nulls
+    }
+
+    #resolveRhsStateFromCode(code : string, state: NullabilityState): Nullability{
+                // 1. Literal Nulls
         if (code.includes("NULL") || code.includes("= 0") || code.includes("(void *) 0")) {
             return Nullability.NULL;
         }
@@ -217,5 +240,8 @@ export default class NullabilityAnalyser {
         }
 
         return Nullability.MAYBE_NULL;
+
     }
+
+
 }
