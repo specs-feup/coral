@@ -7,9 +7,9 @@ import VariableDeclarationNode from "@specs-feup/clava-flow/cfg/node/VariableDec
 import Node from "@specs-feup/flow/graph/Node";
 import ExpressionNode from "@specs-feup/clava-flow/cfg/node/ExpressionNode";
 import ConditionNode from "@specs-feup/clava-flow/cfg/node/condition/ConditionNode";
-import { BinaryOp, Expression, If, Joinpoint, Literal } from "@specs-feup/clava/api/Joinpoints.js";
+import { BinaryOp, BoolLiteral, Expression, If, Joinpoint, Literal } from "@specs-feup/clava/api/Joinpoints.js";
 import ContractViolationError from "@specs-feup/coral/error/null_safety/ContractViolationError";
-
+import { ReturnStmt } from "@specs-feup/clava/api/Joinpoints.js";
 export type NullabilityState = Map<string, Nullability>;
 
 type DataflowStates = {
@@ -127,12 +127,16 @@ export default class NullabilityAnalyser {
             if ($nullability !== Nullability.MAYBE_NULL) {
                 const isEq = operator === "==";
                 const oppositeNullability = $nullability === Nullability.NULL ? Nullability.NOT_NULL : Nullability.NULL;
-                thenOutStates.set($var, isEq ? $nullability : oppositeNullability);
+                thenOutStates.set($var, isEq ? $nullability : oppositeNullability);       
                 elseOutStates.set($var, isEq ? oppositeNullability : $nullability);
             }
         }
         const thenJp = ifJp.then;
         const elseJp = ifJp.else;
+
+        const thenHasReturn = (thenJp.astChildren || []).find(n=> n instanceof ReturnStmt);
+        let elseHasReturn ;
+
 
         // Process THEN block
         const thenNodes = [...this.fn.controlFlowNodes.filterIs(CoralCfgNode)]
@@ -153,6 +157,7 @@ export default class NullabilityAnalyser {
         // Process ELSE block (if exists)
        
         if (elseJp) {
+            elseHasReturn = (elseJp.astChildren).find(n=> n instanceof ReturnStmt);
             const elseNodes = [...this.fn.controlFlowNodes.filterIs(CoralCfgNode)]
                 .filter(cfgNode => elseJp.contains(cfgNode.jp));
 
@@ -166,8 +171,13 @@ export default class NullabilityAnalyser {
             }
         }
 
+        const mergedOut = (thenHasReturn && elseHasReturn) ? new Map()
+                        : thenHasReturn                    ? elseOutStates
+                        : elseHasReturn                    ? thenOutStates
+                        : this.#mergeStates(thenOutStates, elseOutStates);
+
         return {
-            mergedOut: this.#mergeStates(thenOutStates, elseOutStates),
+            mergedOut, 
             mergedReturn: currentFinal
         };
     }
@@ -195,6 +205,8 @@ export default class NullabilityAnalyser {
 
         return merged;
     }
+
+
 
     #resolveRhsState($jp: Joinpoint, state: NullabilityState): Nullability {
         const code: string = $jp.code;
