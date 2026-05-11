@@ -82,6 +82,7 @@ export default class NullabilityAnalyser {
 
         node.switch(
             Node.Case(VariableDeclarationNode, n => {
+                console.log("Var dec, ", n.jp.code)
                 if (n.jp.hasInit) {
                     node.addDef(n.jp);
                     const v = this.#computeVarDec(n.jp.init!, outStates);
@@ -90,8 +91,15 @@ export default class NullabilityAnalyser {
             }),
             
             Node.Case(ExpressionNode, n => {
+                console.log("Express, ", n.jp.code)
                 if (n.jp instanceof BinaryOp) {
-                    const rightState = outStates.get(n.jp.right.code) ?? Nullability.MAYBE_NULL;
+                    console.log("Binary op Express, ", n.jp.code)
+                    const leftHds = n.jp.left.code.trim();
+                    if(leftHds.startsWith("*")){
+                        this.testDeferencialError(n.jp, leftHds, outStates);
+                    }
+                    
+                    const rightState = this.#resolveRhsState(n.jp.right, outStates);
                     outStates.set(n.jp.left.code, rightState);
                 }
             }),
@@ -110,6 +118,17 @@ export default class NullabilityAnalyser {
         );
 
         return { inStates, outStates, returnStates };
+    }
+
+    testDeferencialError(jp: Joinpoint, code :string, outStates: NullabilityState){
+            const pointerVar = code.replace("*", "").trim();
+            const pointerState = outStates.get(pointerVar) ?? Nullability.MAYBE_NULL;
+
+            if (pointerState !== Nullability.NOT_NULL) {
+                throw new NullDereferenceError(jp, code, pointerState);
+            }
+
+            return pointerState === Nullability.NOT_NULL ? Nullability.NOT_NULL : Nullability.MAYBE_NULL;
     }
 
     #handleConditionBranch(ifJp: If, inStates: NullabilityState, finalStates: NullabilityState) {
@@ -233,14 +252,7 @@ export default class NullabilityAnalyser {
 
         // 4. Direct pointer dereferences (e.g., *p)
         if (code.startsWith("*")) {
-            const pointerVar = code.replace("*", "").trim();
-            const pointerState = state.get(pointerVar) ?? Nullability.MAYBE_NULL;
-
-            if (pointerState !== Nullability.NOT_NULL) {
-                throw new NullDereferenceError($jp, code, pointerState);
-            }
-
-            return pointerState === Nullability.NOT_NULL ? Nullability.NOT_NULL : Nullability.MAYBE_NULL;
+            return this.testDeferencialError($jp, code, state)!;
         }
 
         // 5. Assignments (e.g., x = *p or x = y)
