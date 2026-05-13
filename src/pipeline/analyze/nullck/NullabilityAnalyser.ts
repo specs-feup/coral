@@ -7,7 +7,7 @@ import VariableDeclarationNode from "@specs-feup/clava-flow/cfg/node/VariableDec
 import Node from "@specs-feup/flow/graph/Node";
 import ExpressionNode from "@specs-feup/clava-flow/cfg/node/ExpressionNode";
 import ConditionNode from "@specs-feup/clava-flow/cfg/node/condition/ConditionNode";
-import { BinaryOp, Expression, If, Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
+import { BinaryOp, Expression, If, Joinpoint, Loop } from "@specs-feup/clava/api/Joinpoints.js";
 import ContractViolationError from "@specs-feup/coral/error/null_safety/ContractViolationError";
 import { ReturnStmt } from "@specs-feup/clava/api/Joinpoints.js";
 import NullDereferenceError from "@specs-feup/coral/error/null_safety/NullDereferenceError";
@@ -109,7 +109,7 @@ export default class NullabilityAnalyser {
             }),
 
             Node.Case(ConditionNode, n => {
-                if (n.jp instanceof If) {
+                if (n.jp instanceof If || n.jp instanceof Loop) {
                     const conditionRes = this.#handleConditionBranch(n.jp, inStates, returnStates);
                     outStates = conditionRes.mergedOut;
                     returnStates = conditionRes.mergedReturn;
@@ -121,17 +121,19 @@ export default class NullabilityAnalyser {
     }
 
     testDeferencialError(jp: Joinpoint, code :string, outStates: NullabilityState){
-            const pointerVar = code.replace("*", "").trim();
-            const pointerState = outStates.get(pointerVar) ?? Nullability.MAYBE_NULL;
+        const pointerVar = code.replace("*", "").trim();
+        const pointerState = outStates.get(pointerVar) ?? Nullability.MAYBE_NULL;
 
-            if (pointerState !== Nullability.NOT_NULL) {
-                throw new NullDereferenceError(jp, code, pointerState);
-            }
+        if (pointerState !== Nullability.NOT_NULL) {
+            throw new NullDereferenceError(jp, code, pointerState);
+        }
 
-            return pointerState === Nullability.NOT_NULL ? Nullability.NOT_NULL : Nullability.MAYBE_NULL;
-    }
+        return pointerState === Nullability.NOT_NULL ? Nullability.NOT_NULL : Nullability.MAYBE_NULL;
+}
 
-    #handleConditionBranch(ifJp: If, inStates: NullabilityState, finalStates: NullabilityState) {
+   
+
+    #handleConditionBranch(ifJp: If | Loop, inStates: NullabilityState, finalStates: NullabilityState) {
         let thenOutStates = new Map(inStates);
         let elseOutStates = new Map(inStates);
         const condCode = ifJp.cond.originNode.code;
@@ -151,8 +153,20 @@ export default class NullabilityAnalyser {
                 elseOutStates.set($var, isEq ? oppositeNullability : $nullability);
             }
         }
-        const thenJp = ifJp.then;
-        const elseJp = ifJp.else;
+
+
+        let thenJp ;
+        let elseJp;
+
+        if(ifJp instanceof If){
+             thenJp = ifJp.then;
+             elseJp = ifJp.else;
+        }else if( ifJp instanceof Loop){
+             thenJp = ifJp.body
+             console.log("Body, ", thenJp);
+        }else{
+            throw Error("Condition must be If or Loop");
+        }
 
         const thenHasReturn = (thenJp.astChildren || []).find(n=> n instanceof ReturnStmt);
         let elseHasReturn ;
