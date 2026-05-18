@@ -15,7 +15,6 @@ export type NullabilityState = Map<string, Nullability>;
 import ControlFlowNode from "@specs-feup/flow/flow/ControlFlowNode";
 import ControlFlowEndNode from "@specs-feup/flow/flow/ControlFlowEndNode";
 import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
-import ScopeNode from "@specs-feup/clava-flow/cfg/node/ScopeNode";
 
 type DataflowStates = {
     inStates: NullabilityState;
@@ -158,6 +157,8 @@ export default class NullabilityAnalyser {
         let thenOutStates = new Map(inStates);
         let elseOutStates = new Map(inStates);
         const condCode = ifJp.cond.originNode.code;
+        let targetVar = "";
+        let isEq = false;
         const match = condCode.match(/(.*?)\s*(==|!=)\s*(.*)/);
         
         if (match) {
@@ -173,6 +174,20 @@ export default class NullabilityAnalyser {
                 thenOutStates.set($var, isEq ? $nullability : oppositeNullability);       
                 elseOutStates.set($var, isEq ? oppositeNullability : $nullability);
             }
+        }else if (condCode.startsWith("!")) {
+            targetVar = condCode.substring(1).trim();
+            isEq = true;
+        } 
+        else {
+            if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(condCode)) {
+                targetVar = condCode;
+                isEq = false;
+            }
+        }
+
+        if (targetVar) {
+            thenOutStates.set(targetVar, isEq ? Nullability.NULL : Nullability.NOT_NULL);       
+            elseOutStates.set(targetVar, isEq ? Nullability.NOT_NULL : Nullability.NULL);
         }
 
 
