@@ -42,7 +42,65 @@ export default class SplitExpressions implements NormalizationPass<typeof Statem
         if ($jp instanceof Switch) {
             this.#splitNonLvalue($jp, $jp.condition, context);
         } else if ($jp instanceof If) {
+            let $condExpr = $jp.cond;
+            while ($condExpr instanceof ParenExpr) {
+                $condExpr = $condExpr.subExpr;
+            }
+
+            if ($condExpr instanceof BinaryOp && ($condExpr.operator === "&&" || $condExpr.operator === "||")) {
+                const isAnd = $condExpr.operator === "&&";
+                const $left = $condExpr.left;
+                const $right = $condExpr.right;
+
+                console.log($left.code);
+                console.log($right.code);
+
+                const $then = $jp.then;
+                const $else = $jp.else;
+
+                let $outerIf: If;
+                let $innerIf: If;
+
+                if (isAnd) {
+                    $innerIf = ClavaJoinPoints.ifStmt(
+                        $right,
+                        ClavaJoinPoints.scope($then.copy()) ,
+                        $else ? ClavaJoinPoints.scope($else.copy()) : undefined
+                    );
+                    $outerIf = ClavaJoinPoints.ifStmt(
+                        $left,
+                        ClavaJoinPoints.scope($innerIf),
+                        $else ? ClavaJoinPoints.scope($else.copy()) : undefined
+                    );
+                } else {
+                    // if (A || B) { T } else { E }
+                    // Becomes: if (A) { T } else { if (B) { T } else { E } }
+                    $innerIf = ClavaJoinPoints.ifStmt(
+                        $right,
+                        ClavaJoinPoints.scope($then.copy()),
+                        $else ? ClavaJoinPoints.scope($else.copy()) : undefined
+                    );
+                    $outerIf = ClavaJoinPoints.ifStmt(
+                        $left,
+                        ClavaJoinPoints.scope($then.copy()),
+                        ClavaJoinPoints.scope($innerIf)
+                    );
+                }
+
+                console.log("outerif, ", $outerIf.code)
+
+
+                $jp.replaceWith($outerIf);
+            
+                this.apply($innerIf, context);
+                this.apply($outerIf, context);
+                
+                
+                return;
+            }
+
             this.#splitNonLvalue($jp, $jp.cond, context);
+            
         } else if ($jp instanceof Loop) {
             if ($jp.kind === "while") {
                 const $label = ClavaJoinPoints.labelDecl(context.generateLabelName());

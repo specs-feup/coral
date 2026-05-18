@@ -7,7 +7,7 @@ import VariableDeclarationNode from "@specs-feup/clava-flow/cfg/node/VariableDec
 import Node from "@specs-feup/flow/graph/Node";
 import ExpressionNode from "@specs-feup/clava-flow/cfg/node/ExpressionNode";
 import ConditionNode from "@specs-feup/clava-flow/cfg/node/condition/ConditionNode";
-import { BinaryOp, Expression, If, Joinpoint, Loop } from "@specs-feup/clava/api/Joinpoints.js";
+import { BinaryOp, Expression, If, Joinpoint, Loop, Scope } from "@specs-feup/clava/api/Joinpoints.js";
 import ContractViolationError from "@specs-feup/coral/error/null_safety/ContractViolationError";
 import { ReturnStmt } from "@specs-feup/clava/api/Joinpoints.js";
 import NullDereferenceError from "@specs-feup/coral/error/null_safety/NullDereferenceError";
@@ -15,6 +15,7 @@ export type NullabilityState = Map<string, Nullability>;
 import ControlFlowNode from "@specs-feup/flow/flow/ControlFlowNode";
 import ControlFlowEndNode from "@specs-feup/flow/flow/ControlFlowEndNode";
 import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
+import ScopeNode from "@specs-feup/clava-flow/cfg/node/ScopeNode";
 
 type DataflowStates = {
     inStates: NullabilityState;
@@ -63,11 +64,13 @@ export default class NullabilityAnalyser {
              const coralNode = node.init(new CoralCfgNode.Builder()).as(CoralCfgNode);
             }
         this.nodes = [...this.fn.controlFlowNodes.filterIs(CoralCfgNode)];
-        console.log(this.nodes);
+
+   
 
         // 2. Traverse the CFG
         while (this.nodes.length > 0) {
             const node = this.nodes.shift()!;
+            console.log("Node, ", node.jp.code)
             const res = this.#computeUse(node, inStates, finalStates);
             inStates = res.outStates;
             finalStates = res.returnStates;
@@ -127,13 +130,14 @@ export default class NullabilityAnalyser {
 
             Node.Case(ConditionNode, n => {
                 if (n.jp instanceof If || n.jp instanceof Loop) {
+                    console.log("If statement", n.condition.code);
                     const conditionRes = this.#handleConditionBranch(n.jp, inStates, returnStates);
                     outStates = conditionRes.mergedOut;
                     returnStates = conditionRes.mergedReturn;
                 }
-            })
+            }),
+            
         );
-
         return { inStates, outStates, returnStates };
     }
 
@@ -266,11 +270,10 @@ export default class NullabilityAnalyser {
 
     #resolveRhsStateFromCode($jp:Joinpoint,code : string, state: NullabilityState): Nullability{
                 // 1. Literal Nulls
-                console.log(code)
+
         if (code.includes("NULL") || code.includes("= 0") || code.includes("(void *) 0")) {
             return Nullability.NULL;
         }
-        console.log(state)
         if(state.get(code.replace("(", "").replace(")", ""))){
             return state.get(code.replace("(", "").replace(")", "")) ?? Nullability.MAYBE_NULL;
         }
