@@ -7,7 +7,7 @@ import VariableDeclarationNode from "@specs-feup/clava-flow/cfg/node/VariableDec
 import Node from "@specs-feup/flow/graph/Node";
 import ExpressionNode from "@specs-feup/clava-flow/cfg/node/ExpressionNode";
 import ConditionNode from "@specs-feup/clava-flow/cfg/node/condition/ConditionNode";
-import { BinaryOp, Expression, If, Joinpoint, Loop, Scope } from "@specs-feup/clava/api/Joinpoints.js";
+import { BinaryOp, Expression, If, Joinpoint, Loop, Scope, TernaryOp } from "@specs-feup/clava/api/Joinpoints.js";
 import ContractViolationError from "@specs-feup/coral/error/null_safety/ContractViolationError";
 import { ReturnStmt } from "@specs-feup/clava/api/Joinpoints.js";
 import NullDereferenceError from "@specs-feup/coral/error/null_safety/NullDereferenceError";
@@ -15,6 +15,8 @@ export type NullabilityState = Map<string, Nullability>;
 import ControlFlowNode from "@specs-feup/flow/flow/ControlFlowNode";
 import ControlFlowEndNode from "@specs-feup/flow/flow/ControlFlowEndNode";
 import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
+import { ParenExpr } from "@specs-feup/clava/api/Joinpoints.js";
+import Query from "@specs-feup/lara/api/weaver/Query.js";
 
 type DataflowStates = {
     inStates: NullabilityState;
@@ -26,6 +28,9 @@ export default class NullabilityAnalyser {
     private fn: CoralFunctionNode.Class;
     private nodes: CoralCfgNode.Class[] = [];
     private currentState: NullabilityState = new Map();
+    private aliasMap = new Map<string, string>();
+    // Tracks temporary boolean variables back to the condition they represent
+    private conditionDefs = new Map<string, { targetVar: string, isEq: boolean }>();
 
     constructor(fn: CoralFunctionNode.Class) {
         this.fn = fn;
@@ -42,6 +47,8 @@ export default class NullabilityAnalyser {
         let finalStates: NullabilityState = new Map();
         
         this.currentState.clear();
+        this.aliasMap.clear();
+        this.conditionDefs.clear();
 
         // 1. Initialize State from Entry Contracts
         for (const param of fnSymbol.params) {
@@ -100,25 +107,30 @@ export default class NullabilityAnalyser {
 
         node.switch(
             Node.Case(VariableDeclarationNode, n => {
-                console.log("Var dec, ", n.jp.code)
                 if (n.jp.hasInit) {
                     node.addDef(n.jp);
+                    
+                    // NEW: Track the definition behind the scenes
+                    this.#trackDefinition(n.jp, inStates,n.jp.name, n.jp.init!);
+
                     const v = this.#computeVarDec(n.jp.init!, outStates);
                     outStates.set(n.jp.name, v);
                 }
             }),
             
             Node.Case(ExpressionNode, n => {
-                console.log("Express, ", n.jp.code)
                 if (n.jp instanceof BinaryOp) {
-                    console.log("Binary op Express, ", n.jp.code)
+                    // NEW: If this is an assignment (e.g., x = y), track it
+                    if (n.jp.isAssignment) {
+                        this.#trackDefinition(n.jp, inStates,n.jp.left.code.trim(), n.jp.right);
+                    }
+
                     const leftHds = n.jp.left.code.trim();
                     if(leftHds.startsWith("*")){
                         this.testDeferencialError(n.jp, leftHds, outStates);
                     }
                     
                     const rightState = this.#resolveRhsState(n.jp.right, outStates);
-                    console.log("RightState,", rightState);
                     outStates.set(n.jp.left.code, rightState);
                 }
             }),
@@ -128,6 +140,9 @@ export default class NullabilityAnalyser {
             }),
 
             Node.Case(ConditionNode, n => {
+                if(n.jp instanceof TernaryOp){
+                    console.log("Ternary", n.jp.code)
+                }
                 if (n.jp instanceof If || n.jp instanceof Loop) {
                     console.log("If statement", n.condition.code);
                     const conditionRes = this.#handleConditionBranch(n.jp, inStates, returnStates);
@@ -153,43 +168,38 @@ export default class NullabilityAnalyser {
 
    
 
-    #handleConditionBranch(ifJp: If | Loop, inStates: NullabilityState, finalStates: NullabilityState) {
-        let thenOutStates = new Map(inStates);
-        let elseOutStates = new Map(inStates);
-        const condCode = ifJp.cond.originNode.code;
-        let targetVar = "";
-        let isEq = false;
-        const match = condCode.match(/(.*?)\s*(==|!=)\s*(.*)/);
-        
-        if (match) {
-            const [, left, operator, right] = match;
-            const $var = left.trim();
-            const $rhs = right.trim();
-        
-            const $nullability = this.#resolveRhsStateFromCode(ifJp.cond,$rhs, inStates);
-        
-            if ($nullability !== Nullability.MAYBE_NULL) {
-                const isEq = operator === "==";
-                const oppositeNullability = $nullability === Nullability.NULL ? Nullability.NOT_NULL : Nullability.NULL;
-                thenOutStates.set($var, isEq ? $nullability : oppositeNullability);       
-                elseOutStates.set($var, isEq ? oppositeNullability : $nullability);
-            }
-        }else if (condCode.startsWith("!")) {
-            targetVar = condCode.substring(1).trim();
+#handleConditionBranch(ifJp: If | Loop, inStates: NullabilityState, finalStates: NullabilityState) {
+    // TODO: this logic only makes sense if var is maybe-null
+    let thenOutStates = new Map(inStates);
+    let elseOutStates = new Map(inStates);
+    
+    const condCode = ifJp.cond.code.trim();
+    console.log("condCode, ", condCode)
+    
+    let targetVar = "";
+    let isEq = false;
+
+    console.log("conditions, ", this.conditionDefs)
+    if (this.conditionDefs.has(condCode)) {
+        const def = this.conditionDefs.get(condCode)!;
+        targetVar = def.targetVar;
+        isEq = def.isEq;
+    } 
+    else {
+        let varToCheck = condCode;
+        if (condCode.startsWith("!")) {
+            varToCheck = condCode.substring(1).trim();
             isEq = true;
-        } 
-        else {
-            if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(condCode)) {
-                targetVar = condCode;
-                isEq = false;
-            }
         }
+        
+        targetVar = this.aliasMap.get(varToCheck) || varToCheck;
+    }
 
-        if (targetVar) {
-            thenOutStates.set(targetVar, isEq ? Nullability.NULL : Nullability.NOT_NULL);       
-            elseOutStates.set(targetVar, isEq ? Nullability.NOT_NULL : Nullability.NULL);
-        }
 
+    if (targetVar && targetVar !== "NULL") {
+        thenOutStates.set(targetVar, isEq ? Nullability.NULL : Nullability.NOT_NULL);       
+        elseOutStates.set(targetVar, isEq ? Nullability.NOT_NULL : Nullability.NULL);
+    }
 
         let thenJp ;
         let elseJp;
@@ -203,7 +213,7 @@ export default class NullabilityAnalyser {
             throw Error("Condition must be If or Loop");
         }
 
-        const thenHasReturn = (thenJp.astChildren || []).find(n=> n instanceof ReturnStmt);
+        const thenHasReturn = Query.searchFrom(thenJp, ReturnStmt).first() !== undefined;
         let elseHasReturn ;
 
 
@@ -226,7 +236,7 @@ export default class NullabilityAnalyser {
         // Process ELSE block (if exists)
        
         if (elseJp) {
-            elseHasReturn = (elseJp.astChildren).find(n=> n instanceof ReturnStmt);
+            elseHasReturn = Query.searchFrom(elseJp, ReturnStmt).first() !== undefined;
             const elseNodes = [...this.fn.controlFlowNodes.filterIs(CoralCfgNode)]
                 .filter(cfgNode => elseJp.contains(cfgNode.jp));
 
@@ -289,8 +299,9 @@ export default class NullabilityAnalyser {
         if (code.includes("NULL") || code.includes("= 0") || code.includes("(void *) 0")) {
             return Nullability.NULL;
         }
-        if(state.get(code.replace("(", "").replace(")", ""))){
-            return state.get(code.replace("(", "").replace(")", "")) ?? Nullability.MAYBE_NULL;
+        code = code.replace(/[()]/g, "");
+        if(state.get(code)){
+            return state.get(code) ?? Nullability.MAYBE_NULL;
         }
 
         // 2. Memory addresses (always not null)
@@ -324,6 +335,53 @@ export default class NullabilityAnalyser {
 
         return Nullability.MAYBE_NULL;
 
+    }
+
+    #trackDefinition($jp: Joinpoint, states: NullabilityState, leftName: string, rightJp: Expression) {
+        const rightCode = rightJp.code.trim();
+        console.log("Tracks")
+        console.log(leftName);
+        console.log(rightCode)
+
+        if (rightCode.includes("NULL") || rightCode === "0" || rightCode.includes("(void *) 0")) {
+            this.aliasMap.set(leftName, "NULL");
+            return;
+        }
+
+        let coreJp = rightJp;
+        while (coreJp instanceof ParenExpr) {
+            coreJp = coreJp.subExpr;
+        }
+ 
+
+    
+        if (coreJp instanceof BinaryOp && (coreJp.operator === "==" || coreJp.operator === "!=")) {
+            const leftOp = coreJp.left.code.replace(/[()]/g, "").trim();
+            const rightOp = coreJp.right.code.replace(/[()]/g, "").trim();
+            console.log(this.aliasMap);
+            const resolvedLeft = this.aliasMap.get(leftOp) || leftOp;
+            const resolvedRight = this.aliasMap.get(rightOp) || rightOp;
+            console.log( "resolve\n", resolvedLeft, resolvedRight)
+
+            const leftState = this.#resolveRhsStateFromCode($jp, resolvedLeft, states);
+            const rightState = this.#resolveRhsStateFromCode($jp, resolvedRight, states);
+
+            if (leftState === Nullability.NULL || rightState === Nullability.NULL) {
+                const targetVar = rightState === Nullability.NULL ? resolvedLeft : resolvedRight;
+                
+                this.conditionDefs.set(leftName, {
+                    targetVar: targetVar,
+                    isEq: coreJp.operator === "=="
+                });
+            }
+            return;
+        }
+
+
+        if (rightCode.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/)) {
+            const rootVar = this.aliasMap.get(rightCode) || rightCode;
+            this.aliasMap.set(leftName, rootVar);
+        }
     }
 
 
