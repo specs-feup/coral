@@ -12,6 +12,9 @@ import ContractViolationError from "@specs-feup/coral/error/null_safety/Contract
 import { ReturnStmt } from "@specs-feup/clava/api/Joinpoints.js";
 import NullDereferenceError from "@specs-feup/coral/error/null_safety/NullDereferenceError";
 export type NullabilityState = Map<string, Nullability>;
+import ControlFlowNode from "@specs-feup/flow/flow/ControlFlowNode";
+import ControlFlowEndNode from "@specs-feup/flow/flow/ControlFlowEndNode";
+import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
 
 type DataflowStates = {
     inStates: NullabilityState;
@@ -47,7 +50,20 @@ export default class NullabilityAnalyser {
             inStates.set(param.jp.name, initial);
         }
 
-        this.nodes = [...this.fn.controlFlowNodes.expectAll(CoralCfgNode, "Nodes were previously inited as CoralCfgNode")];
+      for (const node of this.fn.controlFlowNodes.filterIs(ControlFlowNode)) {
+             if (node.is(ControlFlowEndNode)) {
+                 // TODO Hack to make ControlFlowEndNode a CoralCfgNode
+                 // this is against the philosophy of flow, but requires
+                 // a refactor of coral to fix
+                 node.init(new ClavaControlFlowNode.Builder(this.fn.jp));
+             }
+             if (!node.is(ClavaControlFlowNode)) {
+                 continue;
+             }
+             const coralNode = node.init(new CoralCfgNode.Builder()).as(CoralCfgNode);
+            }
+        this.nodes = [...this.fn.controlFlowNodes.filterIs(CoralCfgNode)];
+        console.log(this.nodes);
 
         // 2. Traverse the CFG
         while (this.nodes.length > 0) {
@@ -100,6 +116,7 @@ export default class NullabilityAnalyser {
                     }
                     
                     const rightState = this.#resolveRhsState(n.jp.right, outStates);
+                    console.log("RightState,", rightState);
                     outStates.set(n.jp.left.code, rightState);
                 }
             }),
@@ -163,7 +180,6 @@ export default class NullabilityAnalyser {
              elseJp = ifJp.else;
         }else if( ifJp instanceof Loop){
              thenJp = ifJp.body
-             console.log("Body, ", thenJp);
         }else{
             throw Error("Condition must be If or Loop");
         }
@@ -250,8 +266,13 @@ export default class NullabilityAnalyser {
 
     #resolveRhsStateFromCode($jp:Joinpoint,code : string, state: NullabilityState): Nullability{
                 // 1. Literal Nulls
+                console.log(code)
         if (code.includes("NULL") || code.includes("= 0") || code.includes("(void *) 0")) {
             return Nullability.NULL;
+        }
+        console.log(state)
+        if(state.get(code.replace("(", "").replace(")", ""))){
+            return state.get(code.replace("(", "").replace(")", "")) ?? Nullability.MAYBE_NULL;
         }
 
         // 2. Memory addresses (always not null)

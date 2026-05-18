@@ -1,4 +1,4 @@
-#pragma coral_test expect PotentialNullDereferenceError
+#pragma coral_test expect NullDereferenceError
 
 void test(int* ptr) {
     if (!ptr) {

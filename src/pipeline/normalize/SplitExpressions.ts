@@ -194,7 +194,7 @@ export default class SplitExpressions implements NormalizationPass<typeof Statem
                     ? ClavaJoinPoints.varRef($vardecl)
                     : $expr.operand;
             }
-        } else if ($expr instanceof BinaryOp) {
+        } else if ($expr instanceof BinaryOp) { // TODO: Change the slipt for the && and the || 
             if ($expr.isAssignment) {
                 const $varref = this.#split($targetStmt, $expr.right, context);
                 this.#splitNonLvalue($targetStmt, $expr.left, context);
