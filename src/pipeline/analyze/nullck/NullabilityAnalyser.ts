@@ -7,16 +7,19 @@ import VariableDeclarationNode from "@specs-feup/clava-flow/cfg/node/VariableDec
 import Node from "@specs-feup/flow/graph/Node";
 import ExpressionNode from "@specs-feup/clava-flow/cfg/node/ExpressionNode";
 import ConditionNode from "@specs-feup/clava-flow/cfg/node/condition/ConditionNode";
-import { BinaryOp, Expression, If, Joinpoint, Loop, Scope, TernaryOp } from "@specs-feup/clava/api/Joinpoints.js";
 import ContractViolationError from "@specs-feup/coral/error/null_safety/ContractViolationError";
-import { ReturnStmt } from "@specs-feup/clava/api/Joinpoints.js";
+import { ReturnStmt, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import NullDereferenceError from "@specs-feup/coral/error/null_safety/NullDereferenceError";
 export type NullabilityState = Map<string, Nullability>;
 import ControlFlowNode from "@specs-feup/flow/flow/ControlFlowNode";
 import ControlFlowEndNode from "@specs-feup/flow/flow/ControlFlowEndNode";
 import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
-import { ParenExpr } from "@specs-feup/clava/api/Joinpoints.js";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
+
+import { 
+    BinaryOp, Expression, If, Joinpoint, Loop, Scope, 
+    TernaryOp, ParenExpr, MemberAccess, UnaryOp 
+} from "@specs-feup/clava/api/Joinpoints.js";
 
 type DataflowStates = {
     inStates: NullabilityState;
@@ -84,6 +87,7 @@ export default class NullabilityAnalyser {
         // 2. Traverse the CFG
         while (this.nodes.length > 0) {
             const node = this.nodes.shift()!;
+            console.log("node, ", node.jp.code)
             const res = this.#computeUse(node, inStates, finalStates);
             inStates = res.outStates;
             finalStates = res.returnStates;
@@ -116,7 +120,7 @@ export default class NullabilityAnalyser {
             return { inStates, outStates, returnStates };
         }
 
- 
+        this.#verifyDereferences(node.jp, outStates);
 
         node.switch(
             Node.Case(VariableDeclarationNode, n => {
@@ -130,22 +134,21 @@ export default class NullabilityAnalyser {
                     const v = this.#computeVarDec(n.jp.init!, outStates);
                     outStates.set(n.jp.name, v);
                 }
+                else{
+                    outStates.set(n.jp.name, Nullability.NULL);
+                }
             }),
 
             Node.Case(ExpressionNode, n => {
                 if (n.jp instanceof BinaryOp) {
-                    console.log("binary")
                     if (n.jp.isAssignment) {
                         this.#trackDefinition(n.jp, inStates, n.jp.left.code.trim(), n.jp.right);
                     }
 
-                    const leftHds = n.jp.left.code.trim();
-                    if (leftHds.startsWith("*")) {
-                        this.testDeferencialError(n.jp, leftHds, outStates);
-                    }
-
+                
+                    
                     const rightState = this.#resolveRhsState(n.jp.right, outStates);
-                    outStates.set(n.jp.left.code, rightState);
+                    outStates.set(n.jp.left.code.trim(), rightState);
                 }
             }),
 
@@ -164,6 +167,7 @@ export default class NullabilityAnalyser {
 
         );
         this.processNodes.add(node.jp.astId);
+        console.log(outStates)
         return { inStates, outStates, returnStates };
     }
 
@@ -187,6 +191,9 @@ export default class NullabilityAnalyser {
 
         const condCode = ifJp.cond.code.trim();
 
+        console.log("cond code, ", condCode)
+        console.log("condition defs, ", this.conditionDefs);
+
         let targetVar = "";
         let isEq = false;
 
@@ -207,7 +214,7 @@ export default class NullabilityAnalyser {
             targetVar = targetVar.substring(1).trim();
             isEq = !isEq;
         }
-
+        console.log("target var, ", targetVar);
         if (targetVar && targetVar !== "NULL") {
             thenOutStates.set(targetVar, isEq ? Nullability.NULL : Nullability.NOT_NULL);
             elseOutStates.set(targetVar, isEq ? Nullability.NOT_NULL : Nullability.NULL);
@@ -235,8 +242,9 @@ export default class NullabilityAnalyser {
 
         console.log(this.nodes)
         let currentFinal = new Map(finalStates);
-
+        console.log(thenNodes)
         for (const node of thenNodes) {
+            console.log("Hello?")
             const res = this.#computeUse(node, thenOutStates, currentFinal);
             thenOutStates = res.outStates;
             currentFinal = res.returnStates;
@@ -256,13 +264,13 @@ export default class NullabilityAnalyser {
                 currentFinal = res.returnStates;
             }
         }
-
+        console.log("then outs, ", thenOutStates)
 
         const mergedOut = (thenHasReturn && elseHasReturn) ? new Map()
             : thenHasReturn ? elseOutStates
                 : elseHasReturn ? thenOutStates
                     : this.#mergeStates(thenOutStates, elseOutStates);
-
+        console.log("merge states, ", mergedOut)
         return {
             mergedOut,
             mergedReturn: currentFinal
@@ -270,6 +278,7 @@ export default class NullabilityAnalyser {
     }
 
     #computeVarDec($jp: Expression, state: NullabilityState): Nullability {
+        console.log(state)
         return this.#resolveRhsState($jp, state);
     }
 
@@ -333,7 +342,7 @@ export default class NullabilityAnalyser {
 
         // 4. Direct pointer dereferences (e.g., *p)
         if (code.startsWith("*")) {
-            return this.testDeferencialError($jp, code, state)!;
+            return state.get(code) ?? Nullability.MAYBE_NULL;
         }
 
         // 5. Assignments (e.g., x = *p or x = y)
@@ -355,19 +364,25 @@ export default class NullabilityAnalyser {
     }
 
     #trackDefinition($jp: Joinpoint, states: NullabilityState, leftName: string, rightJp: Expression) {
-        const rightCode = rightJp.code.trim();
-
-        if (rightCode.includes("NULL") || rightCode === "0" || rightCode.includes("(void *) 0")) {
-            this.aliasMap.set(leftName, "NULL");
+        
+        // 1. GUARD CLAUSE: Only track auxiliary compiler variables. 
+        // Actual variables (like 'ptr') are mutable and are safely tracked in outStates!
+        if (!leftName.startsWith("__coral_var_")) {
             return;
         }
 
+        const rightCode = rightJp.code.trim();
+
+        /*if (rightCode.includes("NULL") || rightCode === "0" || rightCode.includes("(void *) 0")) {
+            this.aliasMap.set(leftName, "NULL");
+            return;
+        }*/
+
+        // Peel parentheses
         let coreJp = rightJp;
         while (coreJp instanceof ParenExpr) {
             coreJp = coreJp.subExpr;
         }
-
-
 
         if (coreJp instanceof BinaryOp && (coreJp.operator === "==" || coreJp.operator === "!=")) {
             const leftOp = coreJp.left.code.replace(/[()]/g, "").trim();
@@ -389,11 +404,59 @@ export default class NullabilityAnalyser {
             return;
         }
 
+        // 2. PARENTHESES FIX: Use the peeled 'coreJp' code so (__coral_var_0) resolves correctly
+        const cleanRightCode = coreJp.code.replace(/[()]/g, "").trim();
 
-        if (rightCode.match(/^[!a-zA-Z_][a-zA-Z0-9_]*$/)) {
-            const rootVar = this.aliasMap.get(rightCode) || rightCode;
+        if (cleanRightCode.match(/^[!a-zA-Z_][a-zA-Z0-9_.\->\[\]]*$/)) {
+            const rootVar = this.aliasMap.get(cleanRightCode) || cleanRightCode;
             this.aliasMap.set(leftName, rootVar);
         }
     }
+
+    #verifyDereferences(jp: Joinpoint, outStates: NullabilityState) {
+        // 1. Check struct arrow accesses (e.g., d->value)
+
+        console.log("Deferences, ", jp.code)
+        if (jp instanceof BinaryOp || jp instanceof Vardecl) {
+
+            for (const ma of Query.searchFrom(jp, MemberAccess)){
+            console.log("ola?, ", ma.arrow)
+            if (ma.arrow) {
+
+                // Extract the base variable (e.g., 'd' from 'd->value')
+                const baseVar = ma.base.code.replace(/[()]/g, "").trim();
+                const rootVar = this.aliasMap.get(baseVar) || baseVar;
+                console.log(rootVar);
+                console.log(outStates)
+                const pointerState = outStates.get(rootVar) ?? Nullability.MAYBE_NULL;
+
+                if (pointerState !== Nullability.NOT_NULL) {
+                    throw new NullDereferenceError(jp, baseVar, pointerState);
+                }
+            }
+        }
+        for (const ma of Query.searchFrom(jp, UnaryOp)) {
+            if (ma.operator === "*") {
+                // Extract the operand (e.g., 'ptr' from '*ptr')
+                const baseVar = ma.operand.code.replace(/[()]/g, "").trim();
+                console.log(baseVar)
+                console.log(this.aliasMap)
+                const rootVar = this.aliasMap.get(baseVar) || baseVar;
+                console.log(rootVar);
+                const pointerState = outStates.get(rootVar) ?? Nullability.MAYBE_NULL;
+
+                if (pointerState !== Nullability.NOT_NULL) {
+                    throw new NullDereferenceError(ma, baseVar, pointerState);
+                }
+            }
+        }
+        }
+
+        
+
+        // 2. Check standard pointer dereferences (e.g., *ptr)
+
+    }
+
 
 }
