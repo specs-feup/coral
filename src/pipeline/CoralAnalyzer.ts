@@ -32,9 +32,7 @@ export default class CoralAnalyzer {
 
     apply($fns: FunctionJp[]): CoralGraph.Class {
         this.#instrumentation.pushCheckpoint("Analysis");
-        console.log("Ha")
         DefMap.ENFORCE_STRICT_LIFETIMES = this.#config.enableBorrowChecker === true;
-        console.log("he")
 
         // 1. Base Pipeline (Always runs)
         // Builds the initial AST -> CFG -> MIR mapping

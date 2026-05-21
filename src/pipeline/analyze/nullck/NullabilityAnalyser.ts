@@ -8,18 +8,19 @@ import Node from "@specs-feup/flow/graph/Node";
 import ExpressionNode from "@specs-feup/clava-flow/cfg/node/ExpressionNode";
 import ConditionNode from "@specs-feup/clava-flow/cfg/node/condition/ConditionNode";
 import ContractViolationError from "@specs-feup/coral/error/null_safety/ContractViolationError";
-import { ReturnStmt, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
+import { Call, ReturnStmt, Vardecl } from "@specs-feup/clava/api/Joinpoints.js";
 import NullDereferenceError from "@specs-feup/coral/error/null_safety/NullDereferenceError";
 export type NullabilityState = Map<string, Nullability>;
 import ControlFlowNode from "@specs-feup/flow/flow/ControlFlowNode";
 import ControlFlowEndNode from "@specs-feup/flow/flow/ControlFlowEndNode";
 import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
-
+import { Contract } from "@specs-feup/coral/symbol/Nullability";
 import { 
     BinaryOp, Expression, If, Joinpoint, Loop, Scope, 
     TernaryOp, ParenExpr, MemberAccess, UnaryOp 
 } from "@specs-feup/clava/api/Joinpoints.js";
+import PreconditionViolationError from "@specs-feup/coral/error/null_safety/PreconditionViolationError";
 
 type DataflowStates = {
     inStates: NullabilityState;
@@ -150,7 +151,45 @@ export default class NullabilityAnalyser {
                     const rightState = this.#resolveRhsState(n.jp.right, outStates);
                     outStates.set(n.jp.left.code.trim(), rightState);
                 }
-            }),
+                if (n.jp instanceof Call) {
+                    // 1. Get the AST node of the function being called
+                    const callee = n.jp.function;
+                    
+                    if (callee) {
+                        // 2. Retrieve the raw contracts attached to this function
+                        const raw = callee.getUserField("coralContracts") as unknown as string | undefined;
+                        let contracts : Contract[] = [];
+                        if (raw) {
+                            contracts = JSON.parse(raw) as Contract[];
+                            console.log("contracts, ", contracts)
+                        }
+                            // 3. Match the function's parameters to the arguments passed in the call
+                            const args = n.jp.args;
+                            const params = callee.params;
+
+                            console.log("Args, ", args[0].code);
+                            console.log("params, ", params[0].name);
+
+
+                            for (let i = 0; i < args.length && i < params.length; i++) {
+                                const paramName = params[i].name;
+                                
+                                const paramContract = contracts.find(c => c.target.trim() === paramName.trim());
+                                if (paramContract && paramContract.entryState) {
+                                    const argNullability = inStates.get(args[i].code)
+                                    const paramNullability = paramContract.entryState
+                                    if(paramNullability !== Nullability.MAYBE_NULL && paramNullability!== argNullability){
+                                        throw new PreconditionViolationError(n.jp, args[i].code, callee.name, paramNullability as string, argNullability as string);
+                                    }
+                                }
+
+                                const argCode = args[i].code.replace(/[()]/g, "").trim();
+                                const rootVar = this.aliasMap.get(argCode) || argCode;
+                                outStates.set(rootVar,(paramContract && paramContract.exitState)? paramContract.exitState: Nullability.MAYBE_NULL);
+                            }
+                }
+            }
+        }),
 
             Node.Case(ReturnNode, n => {
                 returnStates = this.#mergeStates(outStates, returnStates);
@@ -189,7 +228,7 @@ export default class NullabilityAnalyser {
         let thenOutStates = new Map(inStates);
         let elseOutStates = new Map(inStates);
 
-        const condCode = ifJp.cond.code.trim();
+        const condCode = ifJp.cond.code.replace(/[();]/g, "").trim();
 
         console.log("cond code, ", condCode)
         console.log("condition defs, ", this.conditionDefs);
@@ -227,6 +266,7 @@ export default class NullabilityAnalyser {
             thenJp = ifJp.then;
             elseJp = ifJp.else;
         } else if (ifJp instanceof Loop) {
+            console.log("Loop body, ", ifJp.body.code)
             thenJp = ifJp.body
         } else {
             throw Error("Condition must be If or Loop");
@@ -253,6 +293,7 @@ export default class NullabilityAnalyser {
         // Process ELSE block (if exists)
 
         if (elseJp) {
+            console.log("else stms")
             elseHasReturn = Query.searchFrom(elseJp, ReturnStmt).first() !== undefined;
             const elseNodes = [...this.fn.controlFlowNodes.filterIs(CoralCfgNode)]
                 .filter(cfgNode => elseJp.contains(cfgNode.jp));
