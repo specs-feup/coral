@@ -8,17 +8,13 @@ import { NullabilityEnvironment } from "./NullabilityEnvironment.js";
 
 export class NullabilityChecker {
     
-    /**
-     * Checks an AST node for any pointer or struct dereferences and ensures they are safe.
-     */
     static verifyDereferences(jp: Joinpoint, env: NullabilityEnvironment) {
         if (jp instanceof BinaryOp || jp instanceof Vardecl) {
-            // 1. Check Struct Accesses (d->value)
             for (const ma of Query.searchFrom(jp, MemberAccess)) {
                 if (ma.arrow) {
                     const baseVar = ma.base.code.replace(/[()]/g, "").trim();
                     const rootVar = env.resolveAlias(baseVar); 
-                    const pointerState = env.states.get(rootVar) ?? Nullability.MAYBE_NULL;
+                    const pointerState = env.getState(rootVar); 
 
                     if (pointerState === Nullability.NULL) {
                         throw new NullDereferenceError(jp, rootVar, pointerState);
@@ -28,26 +24,22 @@ export class NullabilityChecker {
                 }
             }
             
-            // 2. Check Pointer Dereferences (*dptr)
             for (const ma of Query.searchFrom(jp, UnaryOp)) {
                 if (ma.operator === "*") {
                     const baseVar = ma.operand.code.replace(/[()]/g, "").trim();
                     const rootVar = env.resolveAlias(baseVar); 
-                    const pointerState = env.states.get(rootVar) ?? Nullability.MAYBE_NULL;
+                    const pointerState = env.getState(rootVar); 
 
                     if (pointerState === Nullability.NULL) {
-                        throw new NullDereferenceError(jp, rootVar, pointerState);
+                        throw new NullDereferenceError(ma, rootVar, pointerState);
                     } else if (pointerState === Nullability.MAYBE_NULL) {
-                        throw new PotentialNullDereferenceError(jp, rootVar);
+                        throw new PotentialNullDereferenceError(ma, rootVar);
                     }
                 }
             }
         }
     }
 
-    /**
-     * Validates function arguments against preconditions, and applies exit states to the environment.
-     */
     static applyFunctionContracts(callJp: Call, env: NullabilityEnvironment) {
         const callee = callJp.function;
         if (!callee) return;
@@ -65,13 +57,11 @@ export class NullabilityChecker {
             const paramName = params[i].name;
             const paramContract = contracts.find(c => c.target.trim() === paramName.trim());
             
-            // Resolve alias to find what the caller actually passed
             const argCode = args[i].code.replace(/[()]/g, "").trim();
             const rootVar = env.resolveAlias(argCode);
                 
-            // 1. Check Preconditions
             if (paramContract && paramContract.entryState) {
-                const argNullability = env.states.get(rootVar) ?? Nullability.MAYBE_NULL;
+                const argNullability = env.getState(rootVar);
                 const paramNullability = paramContract.entryState;
                 
                 if (paramNullability !== Nullability.MAYBE_NULL && paramNullability !== argNullability) {
@@ -79,9 +69,8 @@ export class NullabilityChecker {
                 }
             }
             
-            // 2. Apply Postconditions
             const finalState = (paramContract && paramContract.exitState) ? paramContract.exitState : Nullability.MAYBE_NULL;
-            env.states.set(rootVar, finalState);
+            env.store.set(rootVar, { kind: "state", value: finalState });
         }
     }
 }

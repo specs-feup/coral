@@ -14,7 +14,6 @@ import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 import { Nullability } from "@specs-feup/coral/symbol/Nullability";
 
-// Import our newly extracted classes
 import { NullabilityEnvironment } from "./NullabilityEnvironment.js";
 import { NullabilityChecker } from "./NullabilityChecker.js";
 
@@ -43,13 +42,11 @@ export default class NullabilityAnalyser {
         let inEnv = new NullabilityEnvironment();
         let finalEnv = new NullabilityEnvironment();
 
-        // 1. Initialize Contracts
         for (const param of fnSymbol.params) {
             const initial = param.initialNullability ?? Nullability.MAYBE_NULL;
-            inEnv.states.set(param.jp.name, initial);
+            inEnv.store.set(param.jp.name, { kind: "state", value: initial });
         }
 
-        // 2. Setup CFG Nodes
         for (const node of this.fn.controlFlowNodes.filterIs(ControlFlowNode)) {
             if (node.is(ControlFlowEndNode)) {
                 node.init(new ClavaControlFlowNode.Builder(this.fn.jp));
@@ -64,7 +61,6 @@ export default class NullabilityAnalyser {
         }
         this.nodes = [...uniqueNodesMap.values()];
 
-        // 3. Traverse CFG
         while (this.nodes.length > 0) {
             const node = this.nodes.shift()!;
             const res = this.#computeUse(node, inEnv, finalEnv);
@@ -74,10 +70,9 @@ export default class NullabilityAnalyser {
 
         finalEnv = NullabilityEnvironment.merge(inEnv, finalEnv);
 
-        // 4. Validate Final Constraints
         for (const param of fnSymbol.params) {
             const finalStateExpected = param.finalNullability ?? Nullability.MAYBE_NULL;
-            const actualState = finalEnv.states.get(param.name) ?? Nullability.MAYBE_NULL;
+            const actualState = finalEnv.getState(param.name);
 
             if (actualState !== finalStateExpected) {
                 throw new ContractViolationError(
@@ -91,15 +86,13 @@ export default class NullabilityAnalyser {
     }
 
     #computeUse(node: CoralCfgNode.Class, inEnv: NullabilityEnvironment, finalEnv: NullabilityEnvironment): DataflowEnvironments {
-        // Deep clone environments to avoid mutating earlier paths
-        let outEnv = new NullabilityEnvironment(inEnv.states, inEnv.aliasMap, inEnv.conditionDefs);
-        let returnEnv = new NullabilityEnvironment(finalEnv.states, finalEnv.aliasMap, finalEnv.conditionDefs);
+        let outEnv = new NullabilityEnvironment(inEnv.store, inEnv.aliasMap);
+        let returnEnv = new NullabilityEnvironment(finalEnv.store, finalEnv.aliasMap);
 
         if (this.processNodes.has(node.jp.astId)) {
             return { inEnv, outEnv, returnEnv };
         }
 
-        // --- CHECKER: Validate Safety ---
         NullabilityChecker.verifyDereferences(node.jp, outEnv);
 
         node.switch(
@@ -107,10 +100,11 @@ export default class NullabilityAnalyser {
                 if (n.jp.hasInit) {
                     node.addDef(n.jp);
                     outEnv.trackDefinition(n.jp, n.jp.name, n.jp.init!);
-                    const state = outEnv.resolveRhsStateFromCode(n.jp.init!, n.jp.init!.code);
-                    outEnv.states.set(n.jp.name, state);
+                    
+                    const val = outEnv.resolveRhsValue(n.jp.init!, n.jp.init!.code);
+                    outEnv.store.set(n.jp.name, val);
                 } else {
-                    outEnv.states.set(n.jp.name, Nullability.NULL);
+                    outEnv.store.set(n.jp.name, { kind: "state", value: Nullability.NULL });
                 }
             }),
 
@@ -119,13 +113,12 @@ export default class NullabilityAnalyser {
                     if (n.jp.isAssignment) {
                         outEnv.trackDefinition(n.jp, n.jp.left.code.trim(), n.jp.right);
                     }
-                    const rightState = outEnv.resolveRhsStateFromCode(n.jp.right, n.jp.right.code);
+                    const rightVal = outEnv.resolveRhsValue(n.jp.right, n.jp.right.code);
                     const cleanLhs = outEnv.resolveAlias(n.jp.left.code.replace(/[()]/g, "").trim());
-                    outEnv.states.set(cleanLhs, rightState);
+                    outEnv.store.set(cleanLhs, rightVal);
                 }
                 
                 if (n.jp instanceof Call) {
-                    // --- CHECKER: Handle Function calls ---
                     NullabilityChecker.applyFunctionContracts(n.jp, outEnv);
                 }
             }),
@@ -147,18 +140,19 @@ export default class NullabilityAnalyser {
     }
 
     #handleConditionBranch(ifJp: If | Loop, inEnv: NullabilityEnvironment, finalEnv: NullabilityEnvironment) {
-        let thenOutEnv = new NullabilityEnvironment(inEnv.states, inEnv.aliasMap, inEnv.conditionDefs);
-        let elseOutEnv = new NullabilityEnvironment(inEnv.states, inEnv.aliasMap, inEnv.conditionDefs);
+        let thenOutEnv = new NullabilityEnvironment(inEnv.store, inEnv.aliasMap);
+        let elseOutEnv = new NullabilityEnvironment(inEnv.store, inEnv.aliasMap);
 
         const condCode = ifJp.cond.code.replace(/[();]/g, "").trim();
 
         let targetVar = "";
         let isEq = false;
 
-        if (inEnv.conditionDefs.has(condCode)) {
-            const def = inEnv.conditionDefs.get(condCode)!;
-            targetVar = def.targetVar;
-            isEq = def.isEq;
+        const condVal = inEnv.store.get(condCode);
+        
+        if (condVal && condVal.kind === "condition") {
+            targetVar = condVal.targetVar;
+            isEq = condVal.isEq;
         } else {
             let varToCheck = condCode;
             if (condCode.startsWith("!")) {
@@ -174,8 +168,16 @@ export default class NullabilityAnalyser {
         }
 
         if (targetVar && targetVar !== "NULL") {
-            thenOutEnv.states.set(targetVar, isEq ? Nullability.NULL : Nullability.NOT_NULL);
-            elseOutEnv.states.set(targetVar, isEq ? Nullability.NOT_NULL : Nullability.NULL);
+            // Find the true root variable if the condition targeted a symbolic pointer (e.g., &val)
+            let rootTarget = targetVar;
+            let val = inEnv.store.get(rootTarget);
+            while (val && val.kind === "pointer") {
+                rootTarget = val.pointsTo;
+                val = inEnv.store.get(rootTarget);
+            }
+
+            thenOutEnv.store.set(rootTarget, { kind: "state", value: isEq ? Nullability.NULL : Nullability.NOT_NULL });
+            elseOutEnv.store.set(rootTarget, { kind: "state", value: isEq ? Nullability.NOT_NULL : Nullability.NULL });
         }
 
         let thenJp;
@@ -196,7 +198,7 @@ export default class NullabilityAnalyser {
         const thenNodes = [...this.fn.controlFlowNodes.filterIs(CoralCfgNode)]
             .filter(cfgNode => thenJp.contains(cfgNode.jp));
 
-        let currentReturnEnv = new NullabilityEnvironment(finalEnv.states, finalEnv.aliasMap, finalEnv.conditionDefs);
+        let currentReturnEnv = new NullabilityEnvironment(finalEnv.store, finalEnv.aliasMap);
         for (const node of thenNodes) {
             const res = this.#computeUse(node, thenOutEnv, currentReturnEnv);
             thenOutEnv = res.outEnv;
