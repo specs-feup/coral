@@ -81,21 +81,23 @@ export class NullabilityEnvironment {
                     // Look for a contract on the "return" value
                     const returnContract = contracts.find(c => c.target === "return");
                     
-                    if (returnContract && returnContract.predicate) {
-                        // Find which argument matches the target parameter
-                        const paramIndex = callee.params.findIndex(p => p.name === returnContract.predicate!.targetParam);
+                    if (returnContract) {
+                        // A. Is it a Predicate? (e.g., is_valid)
+                        if (returnContract.predicate) {
+                            const paramIndex = callee.params.findIndex(p => p.name === returnContract.predicate!.targetParam);
+                            if (paramIndex !== -1 && paramIndex < coreJp.args.length) {
+                                const argCode = coreJp.args[paramIndex].code.replace(/[()]/g, "").trim();
+                                return {
+                                    kind: "condition",
+                                    targetVar: this.resolveAlias(argCode),
+                                    isEq: returnContract.predicate.isEq
+                                };
+                            }
+                        }
                         
-                        if (paramIndex !== -1 && paramIndex < coreJp.args.length) {
-                            // Resolve the actual variable passed into the function!
-                            const argCode = coreJp.args[paramIndex].code.replace(/[()]/g, "").trim();
-                            const rootVar = this.resolveAlias(argCode);
-                            
-                            // Spit out the symbolic condition!
-                            return {
-                                kind: "condition",
-                                targetVar: rootVar,
-                                isEq: returnContract.predicate.isEq
-                            };
+                        // --- NEW: B. Is it a standard State? (e.g., get_safe_pointer) ---
+                        if (returnContract.exitState) {
+                            return { kind: "state", value: returnContract.exitState };
                         }
                     }
                 }

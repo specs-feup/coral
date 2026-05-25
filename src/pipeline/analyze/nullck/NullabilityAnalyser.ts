@@ -18,7 +18,7 @@ import { NullabilityEnvironment } from "./NullabilityEnvironment.js";
 import { NullabilityChecker } from "./NullabilityChecker.js";
 import NullDereferenceError from "@specs-feup/coral/error/null_safety/NullDereferenceError";
 import PotentialNullDereferenceError from "@specs-feup/coral/error/null_safety/PotentialNullDereferenceError";
-
+import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 type DataflowEnvironments = {
     inEnv: NullabilityEnvironment;
     outEnv: NullabilityEnvironment;
@@ -66,6 +66,7 @@ export default class NullabilityAnalyser {
 
         while (this.nodes.length > 0) {
             const node = this.nodes.shift()!;
+            console.log("Node,", node.jp.code)
             const res = this.#computeUse(node, inEnv, finalEnv);
             inEnv = res.outEnv;
             finalEnv = res.returnEnv;
@@ -85,7 +86,7 @@ export default class NullabilityAnalyser {
             const finalStateExpected = param.finalNullability ?? Nullability.MAYBE_NULL;
             const actualState = finalEnv.getState(param.name);
 
-            if (actualState !== finalStateExpected) {
+            if (finalStateExpected !== Nullability.MAYBE_NULL && actualState !== finalStateExpected) {
                 throw new ContractViolationError(
                     param.jp.originNode,
                     param.name,
@@ -190,48 +191,70 @@ export default class NullabilityAnalyser {
             elseOutEnv.store.set(rootTarget, { kind: "state", value: isEq ? Nullability.NOT_NULL : Nullability.NULL });
         }
 
-        let thenJp;
-        let elseJp;
+      // ... (Keep everything above this exactly the same)
+        
+      let thenJp;
+      let elseJp;
 
-        if (ifJp instanceof If) {
-            thenJp = ifJp.then;
-            elseJp = ifJp.else;
-        } else if (ifJp instanceof Loop) {
-            thenJp = ifJp.body;
-        } else {
-            throw Error("Condition must be If or Loop");
+      if (ifJp instanceof If) {
+          thenJp = ifJp.then;
+          elseJp = ifJp.else;
+      } else if (ifJp instanceof Loop) {
+          thenJp = ifJp.body;
+      } else {
+          throw Error("Condition must be If or Loop");
+      }
+
+      // --- NEW: Check if the branches hit a dead end! ---
+      const thenStops = this.#doesBranchStop(thenJp);
+      let elseStops = false;
+
+      const thenNodes = [...this.fn.controlFlowNodes.filterIs(CoralCfgNode)]
+          .filter(cfgNode => thenJp.contains(cfgNode.jp));
+
+      let currentReturnEnv = new NullabilityEnvironment(finalEnv.store, finalEnv.aliasMap);
+      for (const node of thenNodes) {
+          const res = this.#computeUse(node, thenOutEnv, currentReturnEnv);
+          thenOutEnv = res.outEnv;
+          currentReturnEnv = res.returnEnv;
+      }
+
+      if (elseJp) {
+          elseStops = this.#doesBranchStop(elseJp);
+          
+          const elseNodes = [...this.fn.controlFlowNodes.filterIs(CoralCfgNode)]
+              .filter(cfgNode => elseJp.contains(cfgNode.jp));
+
+          for (const node of elseNodes) {
+              const res = this.#computeUse(node, elseOutEnv, currentReturnEnv);
+              elseOutEnv = res.outEnv;
+              currentReturnEnv = res.returnEnv;
+          }
+      }
+
+      // --- NEW: If a branch stops (assert/exit/return), DO NOT merge its state! ---
+      const mergedOut = (thenStops && elseStops) ? new NullabilityEnvironment()
+          : thenStops ? elseOutEnv // Then stopped, so only the Else state survives
+              : elseStops ? thenOutEnv // Else stopped, so only the Then state survives
+                  : NullabilityEnvironment.merge(thenOutEnv, elseOutEnv);
+                  
+      return { mergedOut, mergedReturn: currentReturnEnv };
+  }
+
+    #doesBranchStop(jp: Joinpoint): boolean {
+        // 1. Does it return?
+        if (Query.searchFrom(jp, ReturnStmt).first() !== undefined) {
+            return true;
         }
 
-        const thenHasReturn = Query.searchFrom(thenJp, ReturnStmt).first() !== undefined;
-        let elseHasReturn;
-
-        const thenNodes = [...this.fn.controlFlowNodes.filterIs(CoralCfgNode)]
-            .filter(cfgNode => thenJp.contains(cfgNode.jp));
-
-        let currentReturnEnv = new NullabilityEnvironment(finalEnv.store, finalEnv.aliasMap);
-        for (const node of thenNodes) {
-            const res = this.#computeUse(node, thenOutEnv, currentReturnEnv);
-            thenOutEnv = res.outEnv;
-            currentReturnEnv = res.returnEnv;
-        }
-
-        if (elseJp) {
-            elseHasReturn = Query.searchFrom(elseJp, ReturnStmt).first() !== undefined;
-            const elseNodes = [...this.fn.controlFlowNodes.filterIs(CoralCfgNode)]
-                .filter(cfgNode => elseJp.contains(cfgNode.jp));
-
-            for (const node of elseNodes) {
-                const res = this.#computeUse(node, elseOutEnv, currentReturnEnv);
-                elseOutEnv = res.outEnv;
-                currentReturnEnv = res.returnEnv;
+        // 2. Does it call a known program-killing function?
+        for (const call of Query.searchFrom(jp, Call)) {
+            const name = call.function?.name || call.name;
+            if (name === "__assert_fail" || name === "abort" || name === "exit" || name === "_exit") {
+                return true;
             }
         }
 
-        const mergedOut = (thenHasReturn && elseHasReturn) ? new NullabilityEnvironment()
-            : thenHasReturn ? elseOutEnv
-                : elseHasReturn ? thenOutEnv
-                    : NullabilityEnvironment.merge(thenOutEnv, elseOutEnv);
-                    
-        return { mergedOut, mergedReturn: currentReturnEnv };
+        return false;
     }
 }

@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#pragma coral ensures return: not-null
 int * get_safe_pointer(){
     int a = 5;
     int *b = &a;

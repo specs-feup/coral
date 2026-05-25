@@ -24,6 +24,14 @@ export class ContractFactory {
             };
         }
 
+        const returnStateMatch = rawContent.match(/ensures\s+return\s*:\s*(not-null|null|maybe-null)/);
+        if (returnStateMatch) {
+            return {
+                target: "return",
+                exitState: this.stateMap[returnStateMatch[1]]
+            };
+        }
+
         // 2. Fallback to existing Transition Data (e.g., "p: not-null -> null")
         const data = pragma.transitionData;
         
