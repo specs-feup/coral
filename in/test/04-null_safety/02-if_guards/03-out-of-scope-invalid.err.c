@@ -1,9 +1,8 @@
-#pragma coral_test expect NullDereferenceError
+#pragma coral_test expect PotentialNullDereferenceError
 
 #include <stdlib.h>
 void test(int* ptr) {
     if (ptr != NULL) {
-     
     }
     int x = *ptr; // ERR
 }

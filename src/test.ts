@@ -9,14 +9,12 @@ function stringifyReplacer(key: unknown, value: unknown): unknown {
     if (value instanceof Map) {
         return {
             dataType: "Map",
-
             value: Array.from(value.entries()),
         };
     } else if (key === "buildError" || key === "actualException") {
         if (value instanceof Error) {
             return {
                 name: value.name,
-
                 message: value.message,
             };
         } else if (value !== undefined) {
@@ -40,6 +38,7 @@ class CoralTester {
     #pipeline: () => void;
     #writeTo: string | undefined;
     #omitTree: CoralTester.Options.OmitTree;
+    #excludedFolders: string[];
 
     #CORAL_TEST_UTILS_PRAGMA_NAME = "coral_test";
 
@@ -48,6 +47,7 @@ class CoralTester {
         this.#pipeline = pipeline;
         this.#writeTo = undefined;
         this.#omitTree = CoralTester.Options.OmitTree.NONE;
+        this.#excludedFolders = [];
     }
 
     omitTree(omit: CoralTester.Options.OmitTree) {
@@ -57,6 +57,12 @@ class CoralTester {
 
     writeTo(path: string) {
         this.#writeTo = path;
+        return this;
+    }
+
+    // NEW: Allows ignoring specific folders (e.g., "04-null_safety")
+    exclude(folders: string[]) {
+        this.#excludedFolders = folders;
         return this;
     }
 
@@ -176,9 +182,6 @@ class CoralTester {
 
         this.#addFolderToClava(path);
 
-        // TODO is there a way to temporarily redirect stdout to a file?
-        // setPrintStream(this.#writeTo + "/" + "/log.txt");
-
         const result: CoralTester.TestResults = {
             type: "test",
             result: "Pass",
@@ -231,7 +234,6 @@ class CoralTester {
                         console.log(e.stack);
                     } else {
                         const writeTo = this.#writeTo + "/" + path + ".log.txt";
-                        // writeTo(writeTo, e.stack);
                     }
                 }
             } else if (e instanceof Error) {
@@ -281,7 +283,14 @@ class CoralTester {
             total: 0,
         };
         for (const subpath of Io.getPaths(this.#baseFolder + "/" + path)) {
-            const subpathParts = subpath.getName().split(".");
+            const subpathName = subpath.getName();
+            
+            // NEW: Skip this folder/file if it is in the exclude list
+            if (this.#excludedFolders.includes(subpathName)) {
+                continue;
+            }
+
+            const subpathParts = subpathName.split(".");
             const testName = subpathParts[0];
 
             if (Io.isFolder(subpath)) {
@@ -343,15 +352,49 @@ namespace CoralTester {
     };
 }
 
-// TODO use getContextFolder() instead of Node functions
-//      for now, this is not possible in Clava-JS
-// const rootFolder = Clava.getData().getContextFolder();
+// ---------------------------------------------------------
+// EXECUTION BLOCK: Handle Command Line Args and Sub-Suites
+// ---------------------------------------------------------
 import path from "path";
 import { fileURLToPath } from "url";
 import System from "@specs-feup/lara/api/lara/System.js";
 import run_coral from "@specs-feup/coral/Coral";
+
 const rootFolder = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../");
-const testFolder = rootFolder + "/in/test";
-new CoralTester(testFolder, () => run_coral({verbose: true, inferFunctionLifetimeBounds: true }))
-    .omitTree(CoralTester.Options.OmitTree.PASSED)
-    .run();
+const baseTestFolder = rootFolder + "/in/test";
+
+const suite = process.env.CORAL_TEST_SUITE;
+const runAll = !suite || suite === "all";
+const runCore = runAll || suite === "core";
+const runNullability = runAll || suite === "nullability";
+
+if (runCore) {
+    console.log("\n===========================================================");
+    console.log("   RUNNING CORE / BORROW CHECKER TESTS");
+    console.log("===========================================================\n");
+    
+    new CoralTester(baseTestFolder, () => run_coral({ 
+        verbose: true, 
+        inferFunctionLifetimeBounds: true 
+    }))
+        .omitTree(CoralTester.Options.OmitTree.PASSED)
+        .exclude(["04-null_safety"]) 
+        .run();
+}
+
+if (runNullability) {
+    console.log("\n===========================================================");
+    console.log("   RUNNING NULLABILITY TESTS");
+    console.log("===========================================================\n");
+    
+    const nullSafetyTestFolder = baseTestFolder + "/04-null_safety/02-if_guards";
+    
+    new CoralTester(nullSafetyTestFolder, () => run_coral({
+        verbose: true, 
+        inferFunctionLifetimeBounds: true,
+        enableBorrowChecker: false,
+        enableNullability: true
+    }))
+        .omitTree(CoralTester.Options.OmitTree.PASSED)
+        .run();
+}

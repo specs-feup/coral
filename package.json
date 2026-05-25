@@ -9,7 +9,7 @@
             "./tsconfig.*.json"
         ]
     },
-    "scripts": {
+"scripts": {
         "build": "tsc",
         "build:watch": "tsc --watch",
         "lint": "eslint .",
@@ -17,7 +17,10 @@
         "sandbox": "npx clava classic out/sandbox.js --config sandbox.xml",
         "sandbox:watch": "cross-env DEBUG=\"*\" npx clava classic out/sandbox.js --config sandbox.xml -w out -w in/sandbox",
         "benchmarks": "cross-env DEBUG=\"*\" npx clava classic out/benchmarks.js --config benchmarks.xml",
-        "test": "cross-env DEBUG=\"*\" npx clava classic out/test.js --config test.xml"
+        
+        "test": "cross-env DEBUG=\"*\" npx clava classic out/test.js --config test.xml",
+        "test:core": "cross-env CORAL_TEST_SUITE=core DEBUG=\"*\" npx clava classic out/test.js --config test.xml",
+        "test:nullability": "cross-env CORAL_TEST_SUITE=nullability DEBUG=\"*\" npx clava classic out/test.js --config test.xml"
     },
     "exports": {
         "./*": {

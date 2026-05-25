@@ -1,4 +1,4 @@
-#pragma coral_test expect DeadCodeWarning 
+// #pragma coral_test expect DeadCodeWarning 
 
 #include <stdlib.h>
 

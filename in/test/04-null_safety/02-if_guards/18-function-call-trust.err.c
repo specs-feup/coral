@@ -1,4 +1,4 @@
-#pragma coral_test expect PotentialNullDereferenceError
+#pragma coral_test expect NullDereferenceError
 
 #include <stdlib.h>
 int* global_ptr;

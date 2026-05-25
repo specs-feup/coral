@@ -1,5 +1,5 @@
 import { Nullability } from "@specs-feup/coral/symbol/Nullability";
-import { NullabilityState } from "./NullabilityAnalyser.js";
+import { NullabilityState } from "./NullabilityEnvironment.js";
 import FnSymbol from "@specs-feup/coral/mir/symbol/Fn";
 import CoralFunctionNode from "@specs-feup/coral/graph/CoralFunctionNode";
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
