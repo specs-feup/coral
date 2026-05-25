@@ -24,8 +24,15 @@ class NullabilityAnnotatorApplier extends CoralFunctionWiseTransformationApplier
 
         // 1. Handle Return Contracts
         const returnContract = contracts.find(c => c.target === "return");
-        if (returnContract?.exitState) {
-            fnSymbol.returnNullability = returnContract.exitState;
+        if (returnContract) {
+            if (returnContract.exitState) {
+                fnSymbol.returnNullability = returnContract.exitState;
+            }
+            // --- ADDED THIS BLOCK ---
+            if (returnContract.predicate) {
+                fnSymbol.returnPredicate = returnContract.predicate;
+                console.log(`[NullabilityAnnotator] Found return predicate targeting '${returnContract.predicate.targetParam}'`);
+            }
         }
 
         // 2. Handle Parameter Contracts

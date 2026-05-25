@@ -39,6 +39,7 @@ export default class Fn {
     #params: FnParam[];
     #hasLifetimePragmas: boolean;
     #returnNullability: Nullability | undefined;
+    returnPredicate?: { targetParam: string; isEq: boolean };
 
     constructor(
         $jp: FunctionJp,

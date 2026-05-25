@@ -8,10 +8,26 @@ export class ContractFactory {
         "null": Nullability.NULL
     };
 
-    static fromPragma(pragma: CoralPragma): Contract | undefined {
+    // --- UPDATED: Now accepts the raw string content ---
+    static fromPragma(pragma: CoralPragma, rawContent: string): Contract | undefined {
+        
+        // 1. Try to parse as a Predicate Contract (e.g., "ensures return == (p != NULL)")
+        const predicateMatch = rawContent.match(/ensures\s+return\s*==\s*\(\s*([a-zA-Z0-9_]+)\s*(!=|==)\s*NULL\s*\)/);
+        
+        if (predicateMatch) {
+            return {
+                target: "return",
+                predicate: {
+                    targetParam: predicateMatch[1], // Extracts 'p'
+                    isEq: predicateMatch[2] === "==" // true if "==", false if "!="
+                }
+            };
+        }
+
+        // 2. Fallback to existing Transition Data (e.g., "p: not-null -> null")
         const data = pragma.transitionData;
         
-        // If it doesn't have a ':', it's not a Nullability Contract
+        // If it doesn't have transition data (and wasn't a predicate), it's invalid
         if (!data) return undefined;
 
         const entryState = this.stateMap[data.entryPart];

@@ -8,5 +8,10 @@ export interface Contract {
     target: string;
     entryState?: Nullability; 
     exitState?: Nullability;  
+
+    predicate?: { 
+        targetParam: string; // e.g., "p"
+        isEq: boolean;       // false means "returns true if p != NULL"
+    };
 }
 
