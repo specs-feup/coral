@@ -13,9 +13,11 @@ import ControlFlowEndNode from "@specs-feup/flow/flow/ControlFlowEndNode";
 import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 import { Nullability } from "@specs-feup/coral/symbol/Nullability";
-
+import { DereferenceRecord } from "./NullabilityChecker.js";
 import { NullabilityEnvironment } from "./NullabilityEnvironment.js";
 import { NullabilityChecker } from "./NullabilityChecker.js";
+import NullDereferenceError from "@specs-feup/coral/error/null_safety/NullDereferenceError";
+import PotentialNullDereferenceError from "@specs-feup/coral/error/null_safety/PotentialNullDereferenceError";
 
 type DataflowEnvironments = {
     inEnv: NullabilityEnvironment;
@@ -27,6 +29,7 @@ export default class NullabilityAnalyser {
     private fn: CoralFunctionNode.Class;
     private nodes: CoralCfgNode.Class[] = [];
     private processNodes = new Set<string>();
+    private dereferences = new Map<string, DereferenceRecord>();
 
     constructor(fn: CoralFunctionNode.Class) {
         this.fn = fn;
@@ -70,6 +73,14 @@ export default class NullabilityAnalyser {
 
         finalEnv = NullabilityEnvironment.merge(inEnv, finalEnv);
 
+        for (const record of this.dereferences.values()) {
+            if (record.state === Nullability.NULL) {
+                throw new NullDereferenceError(record.jp, record.varName, record.state);
+            } else if (record.state === Nullability.MAYBE_NULL) {
+                throw new PotentialNullDereferenceError(record.jp, record.varName);
+            }
+        }
+
         for (const param of fnSymbol.params) {
             const finalStateExpected = param.finalNullability ?? Nullability.MAYBE_NULL;
             const actualState = finalEnv.getState(param.name);
@@ -93,7 +104,7 @@ export default class NullabilityAnalyser {
             return { inEnv, outEnv, returnEnv };
         }
 
-        NullabilityChecker.verifyDereferences(node.jp, outEnv);
+        NullabilityChecker.verifyDereferences(node.jp, outEnv, this.dereferences);
 
         node.switch(
             Node.Case(VariableDeclarationNode, n => {
@@ -168,7 +179,6 @@ export default class NullabilityAnalyser {
         }
 
         if (targetVar && targetVar !== "NULL") {
-            // Find the true root variable if the condition targeted a symbolic pointer (e.g., &val)
             let rootTarget = targetVar;
             let val = inEnv.store.get(rootTarget);
             while (val && val.kind === "pointer") {

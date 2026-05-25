@@ -6,9 +6,16 @@ import PreconditionViolationError from "@specs-feup/coral/error/null_safety/Prec
 import { Contract, Nullability } from "@specs-feup/coral/symbol/Nullability";
 import { NullabilityEnvironment } from "./NullabilityEnvironment.js";
 
+
+export type DereferenceRecord = {
+    jp: Joinpoint;
+    varName: string;
+    state: Nullability;
+};
+
 export class NullabilityChecker {
     
-    static verifyDereferences(jp: Joinpoint, env: NullabilityEnvironment) {
+    static verifyDereferences(jp: Joinpoint, env: NullabilityEnvironment, dereferences: Map<string, DereferenceRecord>) {
         if (jp instanceof BinaryOp || jp instanceof Vardecl) {
             for (const ma of Query.searchFrom(jp, MemberAccess)) {
                 if (ma.arrow) {
@@ -16,11 +23,7 @@ export class NullabilityChecker {
                     const rootVar = env.resolveAlias(baseVar); 
                     const pointerState = env.getState(rootVar); 
 
-                    if (pointerState === Nullability.NULL) {
-                        throw new NullDereferenceError(jp, rootVar, pointerState);
-                    } else if (pointerState === Nullability.MAYBE_NULL) {
-                        throw new PotentialNullDereferenceError(jp, rootVar);
-                    }
+                    this.recordDereference(ma, rootVar, pointerState, dereferences);
                 }
             }
             
@@ -30,13 +33,25 @@ export class NullabilityChecker {
                     const rootVar = env.resolveAlias(baseVar); 
                     const pointerState = env.getState(rootVar); 
 
-                    if (pointerState === Nullability.NULL) {
-                        throw new NullDereferenceError(ma, rootVar, pointerState);
-                    } else if (pointerState === Nullability.MAYBE_NULL) {
-                        throw new PotentialNullDereferenceError(ma, rootVar);
-                    }
+                    this.recordDereference(ma, rootVar, pointerState, dereferences);
                 }
             }
+        }
+    }
+
+    private static recordDereference(jp: Joinpoint, varName: string, state: Nullability, dereferences: Map<string, DereferenceRecord>) {
+        // Fallback to astId if originNode isn't available
+        const originId = jp.originNode ? jp.originNode.astId : jp.astId;
+        const key = `${originId}_${varName}`;
+
+        const existing = dereferences.get(key);
+        if (existing) {
+            // If the node was NULL on one path, but NOT_NULL on another, they merge into MAYBE_NULL!
+            if (existing.state !== state) {
+                existing.state = Nullability.MAYBE_NULL;
+            }
+        } else {
+            dereferences.set(key, { jp, varName, state });
         }
     }
 
