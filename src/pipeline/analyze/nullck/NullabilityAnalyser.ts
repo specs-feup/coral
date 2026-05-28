@@ -7,7 +7,7 @@ import Node from "@specs-feup/flow/graph/Node";
 import ExpressionNode from "@specs-feup/clava-flow/cfg/node/ExpressionNode";
 import ConditionNode from "@specs-feup/clava-flow/cfg/node/condition/ConditionNode";
 import ContractViolationError from "@specs-feup/coral/error/null_safety/ContractViolationError";
-import { Call, ReturnStmt, If, Loop, BinaryOp, Break } from "@specs-feup/clava/api/Joinpoints.js";
+import { Call, ReturnStmt, If, Loop, BinaryOp, Break , Varref} from "@specs-feup/clava/api/Joinpoints.js";
 import ControlFlowNode from "@specs-feup/flow/flow/ControlFlowNode";
 import ControlFlowEndNode from "@specs-feup/flow/flow/ControlFlowEndNode";
 import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
@@ -32,6 +32,7 @@ export default class NullabilityAnalyser {
     private processNodes = new Set<string>();
     private dereferences = new Map<string, DereferenceRecord>();
     private breaksStates = new Map<string, NullabilityEnvironment>();
+    private globalVars = new Set<string>();
 
     constructor(fn: CoralFunctionNode.Class) {
         this.fn = fn;
@@ -46,6 +47,13 @@ export default class NullabilityAnalyser {
 
         let inEnv = new NullabilityEnvironment();
         let finalEnv = new NullabilityEnvironment();
+
+        for (const vref of Query.searchFrom(this.fn.jp, Varref).get()) {
+            if (vref.vardecl && vref.vardecl.isGlobal) {
+                this.globalVars.add(vref.name); 
+            }
+        }
+
 
         for (const param of fnSymbol.params) {
             const initial = param.initialNullability ?? Nullability.MAYBE_NULL;
@@ -141,7 +149,7 @@ export default class NullabilityAnalyser {
                 }
 
                 if (n.jp instanceof Call) {
-                    NullabilityChecker.applyFunctionContracts(n.jp, outEnv);
+                    NullabilityChecker.applyFunctionContracts(n.jp, outEnv, this.globalVars);
                 }
             }),
 

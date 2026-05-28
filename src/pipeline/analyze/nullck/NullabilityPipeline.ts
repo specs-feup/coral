@@ -10,7 +10,7 @@ export default class NullabilityPipeline extends CoralFunctionWiseTransformation
 class NullabilityPipelineApplier extends CoralFunctionWiseTransformationApplier {
     apply(): void {
         const analyser = new NullabilityAnalyser(this.fn);
-        analyser.apply(); // This decorates the nodes
+        analyser.apply();
     
         console.log(`\n--- Nullability Analysis Results for ${this.fn.jp.name} ---`);
         for (const node of this.fn.controlFlowNodes.filterIs(CoralCfgNode)) {

@@ -55,7 +55,14 @@ export class NullabilityChecker {
         }
     }
 
-    static applyFunctionContracts(callJp: Call, env: NullabilityEnvironment) {
+    static applyFunctionContracts(callJp: Call, env: NullabilityEnvironment, globalVars: Set<string>) {
+
+        for (const globalVar of globalVars) {
+            if (env.store.has(globalVar)) {
+                env.store.set(globalVar, { kind: "state", value: Nullability.MAYBE_NULL });
+            }
+        }
+
         const callee = callJp.function;
         if (!callee) return;
 
