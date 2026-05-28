@@ -2,7 +2,7 @@
 void test(int* ptr) {
     while (1) {
         if (ptr != NULL) break;
-        return; 
+        return;
     }
     int x = *ptr; // OK
 }

@@ -1,3 +1,4 @@
+#include <stdlib.h>
 int* secure_alloc() {
     int* p = malloc(sizeof(int));
     if (!p) exit(1);

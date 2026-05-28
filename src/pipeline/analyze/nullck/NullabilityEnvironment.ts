@@ -112,8 +112,16 @@ export class NullabilityEnvironment {
             const leftState = this.getState(leftOp);
             const rightState = this.getState(rightOp);
 
-            if (leftState === Nullability.NULL || rightState === Nullability.NULL || rightOp === "NULL" || leftOp === "NULL") {
-                const targetVar = (rightState === Nullability.NULL || rightOp === "NULL") ? leftOp : rightOp;
+            const isNullLiteral = (str: string) => {
+                return str === "NULL" || str === "0" || str.replace(/\s/g, "") === "(void*)0";
+            };
+
+            const isLeftNull = leftState === Nullability.NULL || isNullLiteral(leftOp);
+            const isRightNull = rightState === Nullability.NULL || isNullLiteral(rightOp);
+
+            // If either side is NULL, we successfully captured a nullability condition!
+            if (isLeftNull || isRightNull) {
+                const targetVar = isRightNull ? leftOp : rightOp;
                 return {
                     kind: "condition",
                     targetVar: targetVar,

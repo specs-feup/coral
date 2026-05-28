@@ -14,7 +14,7 @@ int get_data(int** ptr, int simulate_fail) {
 
 int main() {
     int* p = NULL;
-    if (get_data(&p, 0) == 0) {
+    if (get_data(&p, 0) == NULL) {
         int val = *p; // OK
     }
     return 0;
