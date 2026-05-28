@@ -57,11 +57,7 @@ export class NullabilityChecker {
 
     static applyFunctionContracts(callJp: Call, env: NullabilityEnvironment, globalVars: Set<string>) {
 
-        for (const globalVar of globalVars) {
-            if (env.store.has(globalVar)) {
-                env.store.set(globalVar, { kind: "state", value: Nullability.MAYBE_NULL });
-            }
-        }
+
 
         const callee = callJp.function;
         if (!callee) return;
@@ -71,13 +67,28 @@ export class NullabilityChecker {
         if (raw) {
             contracts = JSON.parse(raw) as Contract[];
         }
+
+        for (const globalVar of globalVars) {
+        
+            const contract = contracts.find(c => c.target === globalVar && c.isGlobal);
+
+            if (contract && contract.unchanged) {
+                continue;
+            } else if (contract && contract.exitState !== undefined) {
+                env.store.set(globalVar, { kind: "state", value: contract.exitState });
+            } else {
+                if (env.store.has(globalVar)) {
+                    env.store.set(globalVar, { kind: "state", value: Nullability.MAYBE_NULL });
+                }
+            }
+        }
         
         const args = callJp.args;
         const params = callee.params;
 
         for (let i = 0; i < args.length && i < params.length; i++) {
             const paramName = params[i].name;
-            const paramContract = contracts.find(c => c.target.trim() === paramName.trim());
+            const paramContract = contracts.find(c => c.target.trim() === paramName.trim() && !c.isGlobal);
             
             const argCode = args[i].code.replace(/[()]/g, "").trim();
             const rootVar = env.resolveAlias(argCode);

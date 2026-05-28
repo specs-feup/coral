@@ -32,6 +32,18 @@ export class ContractFactory {
             };
         }
 
+        const globalMatch = rawContent.match(/global\s+([a-zA-Z0-9_]+)\s*:\s*(not-null|null|maybe-null|unchanged)/);
+        if (globalMatch) {
+            const target = globalMatch[1];
+            const stateStr = globalMatch[2];
+            
+            if (stateStr === "unchanged") {
+                return { target: target, unchanged: true, isGlobal: true };
+            } else {
+                return { target: target, exitState: this.stateMap[stateStr], isGlobal: true };
+            }
+        }
+
         // 2. Fallback to existing Transition Data (e.g., "p: not-null -> null")
         const data = pragma.transitionData;
         

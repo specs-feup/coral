@@ -12,13 +12,14 @@ import ControlFlowNode from "@specs-feup/flow/flow/ControlFlowNode";
 import ControlFlowEndNode from "@specs-feup/flow/flow/ControlFlowEndNode";
 import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
-import { Nullability } from "@specs-feup/coral/symbol/Nullability";
+import { Nullability, Contract } from "@specs-feup/coral/symbol/Nullability";
 import { DereferenceRecord } from "./NullabilityChecker.js";
 import { NullabilityEnvironment } from "./NullabilityEnvironment.js";
 import { NullabilityChecker } from "./NullabilityChecker.js";
 import NullDereferenceError from "@specs-feup/coral/error/null_safety/NullDereferenceError";
 import PotentialNullDereferenceError from "@specs-feup/coral/error/null_safety/PotentialNullDereferenceError";
 import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
+
 
 type DataflowEnvironments = {
     inEnv: NullabilityEnvironment;
@@ -33,6 +34,7 @@ export default class NullabilityAnalyser {
     private dereferences = new Map<string, DereferenceRecord>();
     private breaksStates = new Map<string, NullabilityEnvironment>();
     private globalVars = new Set<string>();
+    private hasChanged = new Set<string>();
 
     constructor(fn: CoralFunctionNode.Class) {
         this.fn = fn;
@@ -104,7 +106,37 @@ export default class NullabilityAnalyser {
                 );
             }
         }
-    }
+
+        const rawContracts = this.fn.jp.getUserField("coralContracts") as unknown as string | undefined;
+        if (rawContracts) {
+            const contracts = JSON.parse(rawContracts) as Contract[];
+            for (const contract of contracts) {
+                
+                if (contract.isGlobal) {
+                    const actualState = finalEnv.getState(contract.target);
+                    
+                    if (contract.exitState !== undefined && actualState !== contract.exitState) {
+                        throw new ContractViolationError(
+                            this.fn.jp, 
+                            contract.target, 
+                            contract.exitState, 
+                            actualState
+                        );
+                    }
+                    
+                    if (contract.unchanged) {
+                        if (this.hasChanged.has(contract.target)) {
+                             throw new ContractViolationError(
+                                this.fn.jp, 
+                                contract.target, 
+                                "unchanged" as Nullability
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    } // End of #computeDefsAndUses
 
     #computeUse(node: CoralCfgNode.Class, inEnv: NullabilityEnvironment, finalEnv: NullabilityEnvironment): DataflowEnvironments {
         let outEnv = new NullabilityEnvironment(inEnv.store, inEnv.aliasMap);
@@ -146,6 +178,9 @@ export default class NullabilityAnalyser {
                     const rightVal = outEnv.resolveRhsValue(n.jp.right, n.jp.right.code);
                     const cleanLhs = outEnv.resolveAlias(n.jp.left.code.replace(/[()]/g, "").trim());
                     outEnv.store.set(cleanLhs, rightVal);
+                    if (n.jp.isAssignment) {
+                        this.hasChanged.add(cleanLhs);
+                    }
                 }
 
                 if (n.jp instanceof Call) {
