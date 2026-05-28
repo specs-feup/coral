@@ -7,6 +7,7 @@ import { Nullability } from "@specs-feup/coral/symbol/Nullability";
 export class FnParam {
     #jp: Param;
     #ty: MetaTy;
+    isReadOnly : Boolean = false;
     initialNullability: Nullability = Nullability.MAYBE_NULL; 
     finalNullability?: Nullability; 
 

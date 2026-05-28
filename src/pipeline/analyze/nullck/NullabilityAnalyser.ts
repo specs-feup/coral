@@ -94,6 +94,16 @@ export default class NullabilityAnalyser {
         }
 
         for (const param of fnSymbol.params) {
+
+            if(param.isReadOnly){
+                if(this.hasChanged.has(param.name)){
+                    throw new ContractViolationError(
+                        this.fn.jp, 
+                        param.name, 
+                        "unchanged" as Nullability
+                    );
+                }
+            }
             const finalStateExpected = param.finalNullability ?? Nullability.MAYBE_NULL;
             const actualState = finalEnv.getState(param.name);
 
@@ -134,6 +144,7 @@ export default class NullabilityAnalyser {
                         }
                     }
                 }
+                
             }
         }
     } // End of #computeDefsAndUses

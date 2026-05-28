@@ -45,6 +45,10 @@ class NullabilityAnnotatorApplier extends CoralFunctionWiseTransformationApplier
             
             if (paramContract) {
                 console.log(`[NullabilityAnnotator] MATCH FOUND for ${mirName}! Applying states...`);
+
+                if(paramContract.unchanged){
+                    param.isReadOnly = true
+                }
                 
                 if (paramContract.entryState) {
                     param.initialNullability = paramContract.entryState;
