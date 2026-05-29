@@ -45,7 +45,7 @@ export class ContractFactory {
         }
 
         // --- NEW: 4. Try to parse a Parameter Contract (e.g., "ptr: unchanged") ---
-        const parameterMatch = rawContent.match(/^\s*([a-zA-Z0-9_]+)\s*:\s*(not-null|null|maybe-null|unchanged)/);
+        const parameterMatch = rawContent.match(/^\s*([a-zA-Z0-9_]+)\s*:\s*(unchanged)/);
         if (parameterMatch) {
             const target = parameterMatch[1];
             const stateStr = parameterMatch[2];

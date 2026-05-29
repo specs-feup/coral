@@ -78,6 +78,8 @@ export default class NullabilityAnalyser {
 
         while (this.nodes.length > 0) {
             const node = this.nodes.shift()!;
+            console.log("node, ", node.jp.code)
+            
             const res = this.#computeUse(node, inEnv, finalEnv);
             inEnv = res.outEnv;
             finalEnv = res.returnEnv;
@@ -182,14 +184,17 @@ export default class NullabilityAnalyser {
             }),
 
             Node.Case(ExpressionNode, n => {
-                if (n.jp instanceof BinaryOp) {
-                    if (n.jp.isAssignment) {
-                        outEnv.trackDefinition(n.jp, n.jp.left.code.trim(), n.jp.right);
+                const coreJp = n.jp.joinPointType === "exprStmt" ? (n.jp as any).expr : n.jp;
+                console.log("coreJP,", coreJp.code)
+                console.log(inEnv)
+                if (coreJp instanceof BinaryOp) {
+                    if (coreJp.isAssignment) {
+                        outEnv.trackDefinition(coreJp, coreJp.left.code.trim(), coreJp.right);
                     }
-                    const rightVal = outEnv.resolveRhsValue(n.jp.right, n.jp.right.code);
-                    const cleanLhs = outEnv.resolveAlias(n.jp.left.code.replace(/[()]/g, "").trim());
+                    const rightVal = outEnv.resolveRhsValue(coreJp.right, coreJp.right.code);
+                    const cleanLhs = outEnv.resolveAlias(coreJp.left.code.replace(/[()]/g, "").trim());
                     outEnv.store.set(cleanLhs, rightVal);
-                    if (n.jp.isAssignment) {
+                    if (coreJp.isAssignment) {
                         this.hasChanged.add(cleanLhs);
                     }
                 }
@@ -331,7 +336,10 @@ export default class NullabilityAnalyser {
             : thenStops ? elseOutEnv 
                 : elseStops ? thenOutEnv 
                     : NullabilityEnvironment.merge(thenOutEnv, elseOutEnv);
-                    
+           
+        console.log("then,", thenOutEnv)
+        console.log("else,", elseOutEnv)
+        console.log("merge,", mergedOut)
         return { mergedOut, mergedReturn: currentReturnEnv };
     }
 
@@ -342,23 +350,46 @@ export default class NullabilityAnalyser {
     }
 
 
-    #doesBranchStop(jp: Joinpoint): boolean {
-       
-        if (Query.searchFrom(jp, ReturnStmt).first() !== undefined) {
-            return true;
-        }
-        if (this.#hasBreak(jp)) {
-            return true;
-        }
+// --- UPDATED: Universal Scope-Aware Stop Detection ---
+#doesBranchStop(jp: Joinpoint): boolean {
+    if (!jp) return false;
 
+    const type = jp.joinPointType;
 
-        for (const call of Query.searchFrom(jp, Call)) {
-            const name = call.function?.name || call.name;
-            if (name === "__assert_fail" || name === "abort" || name === "exit" || name === "_exit") {
-                return true;
-            }
-        }
+    // 1. Direct Stop Nodes
+    if (jp instanceof ReturnStmt || type === "returnStmt" || type === "return") {
+        return true;
+    }
+    if (jp instanceof Break || type === "break" || type === "breakStmt") {
+        return true;
+    }
+    if (jp instanceof Call || type === "call" || type === "callExpr") {
+        const callJp = jp as Call;
+        const name = callJp.function?.name || callJp.name;
+        if (["__assert_fail", "abort", "exit", "_exit"].includes(name)) return true;
+    }
 
+    // 2. Branching Nodes (Only stop if ALL paths stop)
+    if (jp instanceof If || type === "if") {
+        const ifJp = jp as If;
+        const thenStops = this.#doesBranchStop(ifJp.then);
+        const elseStops = ifJp.else ? this.#doesBranchStop(ifJp.else) : false;
+        return thenStops && elseStops;
+    }
+    
+    // Loops and Switches contain conditional paths. 
+    // We safely assume they don't unconditionally stop the outer flow.
+    if (jp instanceof Loop || type === "loop" || type === "switch") {
         return false;
     }
+
+    // 3. Linear Nodes (Scopes, Statements, Wrappers, Expressions)
+    // Since we filtered out branching nodes above, this node represents linear execution.
+    // If ANY child unconditionally stops, this entire block stops!
+    for (const child of jp.children) {
+        if (this.#doesBranchStop(child)) return true;
+    }
+
+    return false;
+}
 }

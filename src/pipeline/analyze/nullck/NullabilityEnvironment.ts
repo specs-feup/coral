@@ -1,6 +1,6 @@
 import { Nullability, Contract } from "@specs-feup/coral/symbol/Nullability";
 import { Expression, Joinpoint, BinaryOp, ParenExpr, Call } from "@specs-feup/clava/api/Joinpoints.js";
-
+import Query from "@specs-feup/lara/api/weaver/Query.js";
 export type NullabilityVar = 
     | { kind: "state"; value: Nullability }
     | { kind: "pointer"; pointsTo: string }
@@ -194,6 +194,12 @@ export class NullabilityEnvironment {
     }
 
     trackDefinition($jp: Joinpoint, leftName: string, rightJp: Expression) {
+
+        if (rightJp instanceof Call || Query.searchFrom(rightJp, Call).first()) {
+            this.aliasMap.delete(leftName); // Clear old aliases just in case
+            return; 
+        }
+
         if (!leftName.startsWith("__coral_var_")) return;
 
         let coreJp = rightJp;
