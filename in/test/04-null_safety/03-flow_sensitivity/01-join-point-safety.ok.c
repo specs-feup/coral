@@ -1,4 +1,3 @@
-#pragma coral_test expect PotentialNullDereferenceError
 #include <stdlib.h>
 int * some_global;
 #pragma coral ensures return: not-null
@@ -12,7 +11,7 @@ void test(int cond) {
         ptr = get_safe_ptr();
     } else {
         if(some_global != NULL)
-            ptr = &some_global;
+            ptr = some_global;
         else 
             return;
     }

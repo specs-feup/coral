@@ -101,9 +101,10 @@ export class NullabilityChecker {
                     throw new PreconditionViolationError(callJp, rootVar, callee.name, paramNullability as string, argNullability as string);
                 }
             }
-            
+            console.log(paramName, paramContract, argCode, rootVar  )
             const finalState = (paramContract && paramContract.exitState) ? paramContract.exitState : Nullability.MAYBE_NULL;
             env.store.set(rootVar, { kind: "state", value: finalState });
         }
+        console.log("apply functio ", env)
     }
 }

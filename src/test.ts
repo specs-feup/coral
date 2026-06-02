@@ -387,7 +387,7 @@ if (runNullability) {
     console.log("   RUNNING NULLABILITY TESTS");
     console.log("===========================================================\n");
     
-    const nullSafetyTestFolder = baseTestFolder + "/04-null_safety/01-basic_checks";
+    const nullSafetyTestFolder = baseTestFolder + "/04-null_safety/03-flow_sensitivity";
     
     new CoralTester(nullSafetyTestFolder, () => run_coral({
         verbose: true, 

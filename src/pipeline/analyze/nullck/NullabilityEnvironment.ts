@@ -21,25 +21,47 @@ export class NullabilityEnvironment {
     static merge(env1: NullabilityEnvironment, env2: NullabilityEnvironment): NullabilityEnvironment {
         const mergedStore = new Map<string, NullabilityVar>();
 
-        for (const [key, val1] of env1.store) {
+        // 1. Get ALL unique keys from both environments to prevent data loss!
+        const allKeys = new Set([...env1.store.keys(), ...env2.store.keys()]);
+
+        for (const key of allKeys) {
+            const val1 = env1.store.get(key);
             const val2 = env2.store.get(key);
-            if (val2 !== undefined) {
+
+            if (val1 !== undefined && val2 !== undefined) {
+                // If they are structurally identical, keep them exactly as they are.
                 if (JSON.stringify(val1) === JSON.stringify(val2)) {
                     mergedStore.set(key, val1);
-                } else if (val1.kind === "state" && val2.kind === "state") {
-                    mergedStore.set(key, { 
-                        kind: "state", 
-                        value: val1.value === val2.value ? val1.value : Nullability.MAYBE_NULL 
-                    });
-                } else {
-                    mergedStore.set(key, { kind: "state", value: Nullability.MAYBE_NULL });
+                } 
+                // --- THE FIX: Resolve underlying states on mismatch ---
+                else {
+                    // They point to different things, or one is a state and one is a pointer.
+                    // Ask the environment to resolve the final Nullability of both paths.
+                    const state1 = env1.getState(key);
+                    const state2 = env2.getState(key);
+
+                    if (state1 === state2) {
+                        // They resolved to the same safe state (e.g., both NOT_NULL)!
+                        mergedStore.set(key, { kind: "state", value: state1 });
+                    } else {
+                        // They truly conflict (e.g., one is NULL, one is NOT_NULL)
+                        mergedStore.set(key, { kind: "state", value: Nullability.MAYBE_NULL });
+                    }
                 }
-            } else {
+            } 
+            // If the variable only existed in one branch, pass it through
+            else if (val1 !== undefined) {
                 mergedStore.set(key, val1);
+            } 
+            else if (val2 !== undefined) {
+                mergedStore.set(key, val2);
             }
         }
 
-        return new NullabilityEnvironment(mergedStore, env1.aliasMap);
+        // Safely merge the alias maps as well
+        const mergedAliasMap = new Map([...env2.aliasMap, ...env1.aliasMap]);
+
+        return new NullabilityEnvironment(mergedStore, mergedAliasMap);
     }
 
     getState(name: string): Nullability {
