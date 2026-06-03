@@ -4,15 +4,21 @@ export enum Nullability {
     NULL = "NULL"
 }
 
+// Add this interface to represent a field's state
+export interface FieldContract {
+    entryState?: Nullability;
+    exitState?: Nullability;
+    unchanged?: boolean;
+}
+
+// Update your main Contract interface
 export interface Contract {
     target: string;
-    entryState?: Nullability; 
-    exitState?: Nullability;  
-    unchanged?: boolean;
     isGlobal?: boolean;
-    predicate?: { 
-        targetParam: string; // e.g., "p"
-        isEq: boolean;       // false means "returns true if p != NULL"
-    };
+    unchanged?: boolean;
+    entryState?: Nullability;
+    exitState?: Nullability;
+    predicate?: any; // Assuming you have this defined
+    fields?: Record<string, FieldContract>; // <-- NEW: Dictionary of fields
 }
 

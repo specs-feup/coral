@@ -12,7 +12,6 @@ export interface PointerNode {
 export interface ObjectNode {
     kind: "object";
     fields: Set<string>; // Tracks known fields (e.g., Set("data", "next"))
-    isStackAllocated: boolean; // True for `struct Box b;`, False for `malloc`
     isGlobal: boolean;
     state: Nullability;
 }

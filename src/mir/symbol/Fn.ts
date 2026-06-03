@@ -4,12 +4,18 @@ import MetaRegionBound from "@specs-feup/coral/mir/symbol/region/meta/MetaRegion
 import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
 import { Nullability } from "@specs-feup/coral/symbol/Nullability";
 
+export interface FieldNullabilityState {
+    initialNullability?: Nullability;
+    finalNullability?: Nullability;
+}
 export class FnParam {
     #jp: Param;
     #ty: MetaTy;
     isReadOnly : Boolean = false;
     initialNullability: Nullability = Nullability.MAYBE_NULL; 
     finalNullability?: Nullability; 
+    fieldsNullability?: Record<string, FieldNullabilityState>;
+    indirectionNullability?: Record<number, FieldNullabilityState>;
 
     constructor($jp: Param, ty: MetaTy) {
         this.#jp = $jp;

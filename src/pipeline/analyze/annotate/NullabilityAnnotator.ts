@@ -57,6 +57,36 @@ class NullabilityAnnotatorApplier extends CoralFunctionWiseTransformationApplier
                 if (paramContract.exitState) {
                     param.finalNullability = paramContract.exitState;
                 }
+// Inside NullabilityAnnotatorApplier.apply() -> Parameter handling loop:
+
+                if (paramContract.fields) {
+                    for (const [key, fieldStates] of Object.entries(paramContract.fields)) {
+                        console.log(key, fieldStates)
+                        const cleanKey = key.trim();
+
+                        // Check if the key consists entirely of asterisks (e.g., "*", "**")
+                        if (/^\*+$/.test(cleanKey)) {
+                            const level = cleanKey.length; // '*' = 1, '**' = 2
+                            console.log(level)
+                            
+                            param.indirectionNullability = param.indirectionNullability || {};
+                            param.indirectionNullability[level] = {
+                                initialNullability: fieldStates.entryState,
+                                finalNullability: fieldStates.exitState
+                            };
+                            console.log(`[NullabilityAnnotator] Applied states for pointer level ${level} on ${mirName}`);
+                        } else {
+                            // It's a standard struct field (e.g., "data")
+                            console.log("level")
+                            param.fieldsNullability = param.fieldsNullability || {};
+                            param.fieldsNullability[cleanKey] = {
+                                initialNullability: fieldStates.entryState,
+                                finalNullability: fieldStates.exitState
+                            };
+                            console.log(`[NullabilityAnnotator] Applied states for struct field: ${mirName}.${cleanKey}`);
+                        }
+                    }
+                }
             } else {
                 console.log(`[NullabilityAnnotator] No contract found for "${mirName}" in:`, contracts.map(c => c.target));
             }
