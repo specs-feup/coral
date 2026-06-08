@@ -75,10 +75,10 @@ export class NullabilityChecker {
             if (contract && contract.unchanged) {
                 continue;
             } else if (contract && contract.exitState !== undefined) {
-                env.store.set(globalVar, { kind: "state", value: contract.exitState });
+                //env.store.set(globalVar, { kind: "state", value: contract.exitState });
             } else {
                 if (env.store.has(globalVar)) {
-                    env.store.set(globalVar, { kind: "state", value: Nullability.MAYBE_NULL });
+                   // env.store.set(globalVar, { kind: "state", value: Nullability.MAYBE_NULL });
                 }
             }
         }
@@ -103,7 +103,7 @@ export class NullabilityChecker {
             }
             console.log(paramName, paramContract, argCode, rootVar  )
             const finalState = (paramContract && paramContract.exitState) ? paramContract.exitState : Nullability.MAYBE_NULL;
-            env.store.set(rootVar, { kind: "state", value: finalState });
+           // env.store.set(rootVar, { kind: "state", value: finalState });
         }
         console.log("apply functio ", env)
     }

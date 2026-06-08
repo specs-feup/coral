@@ -14,7 +14,7 @@ import ClavaControlFlowNode from "@specs-feup/clava-flow/ClavaControlFlowNode";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 import { Nullability, Contract } from "@specs-feup/coral/symbol/Nullability";
 import { DereferenceRecord } from "./NullabilityChecker.js";
-import { NullabilityEnvironment, NullabilityVar } from "./NullabilityEnvironment.js";
+import { NullabilityEnvironment } from "./NullabilityEnvironment.js";
 import { NullabilityChecker } from "./NullabilityChecker.js";
 import NullDereferenceError from "@specs-feup/coral/error/null_safety/NullDereferenceError";
 import PotentialNullDereferenceError from "@specs-feup/coral/error/null_safety/PotentialNullDereferenceError";
