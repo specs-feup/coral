@@ -1,4 +1,4 @@
-#pragma coral_test expect UseAfterFreeError
+#pragma coral_test expect PotentialNullDereferenceError
 
 #include <stdlib.h>
 void test() {
