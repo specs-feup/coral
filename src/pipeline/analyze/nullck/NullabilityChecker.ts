@@ -18,7 +18,7 @@ export class NullabilityChecker {
     static verifyDereferences(jp: Joinpoint, env: NullabilityEnvironment, dereferences: Map<string, DereferenceRecord>) {
         
         if (jp instanceof BinaryOp || jp instanceof Vardecl) {
-            //console.log("hahahah?")
+            //// console.log("hahahah?")
             for (const ma of Query.searchFrom(jp, MemberAccess)) {
                 if (ma.arrow) {
                     const baseVar = ma.base.code.replace(/[()]/g, "").trim();
@@ -30,13 +30,13 @@ export class NullabilityChecker {
             }
             
             for (const ma of Query.searchFrom(jp, UnaryOp)) {
-                //console.log(ma.operator, ma.code)
+                //// console.log(ma.operator, ma.code)
                 if (ma.operator === "*") {
-                    //console.log("??")
+                    //// console.log("??")
                     const baseVar = ma.operand.code.replace(/[()]/g, "").trim();
                     const rootVar = env.resolveAlias(baseVar); 
                     const pointerState = env.getState(rootVar); 
-                    //console.log(pointerState)
+                    //// console.log(pointerState)
                     this.recordDereference(ma, rootVar, pointerState, dereferences);
                 }
             }
@@ -67,78 +67,117 @@ export class NullabilityChecker {
         }
     }
 
-    static applyFunctionContracts(callJp: Call, env: NullabilityEnvironment, globalVars: Set<string>) {
-
-
-
+    static applyFunctionContracts(callJp: Call, env: NullabilityEnvironment, globalVars: Set<string>, fnSymbol: any) {
         const callee = callJp.function;
-        if (!callee) return;
-
-        const raw = callee.getUserField("coralContracts") as unknown as string | undefined;
-        let contracts: Contract[] = [];
-        if (raw) {
-            contracts = JSON.parse(raw) as Contract[];
-        }
-
+        if (!callee || !fnSymbol) return;
+    
+        // ==========================================
+        // 1. HANDLE GLOBAL VARIABLES (Side-Effects)
+        // ==========================================
         for (const globalVar of globalVars) {
-        
-            const contract = contracts.find(c => c.target === globalVar && c.isGlobal);
-
-            if (contract && contract.unchanged) {
-                continue;
-            } else if (contract && contract.exitState !== undefined) {
-                env.setNullability(globalVar, contract.exitState );
+            const globalContract = fnSymbol.globalContracts?.[globalVar];
+    
+            if (globalContract?.unchanged) {
+                // Guarantee: The function does not touch this global.
+                continue; 
+            } else if (globalContract?.exitState) {
+                // Guarantee: The function sets the global to a specific state.
+                env.setNullability(globalVar, globalContract.exitState);
             } else {
+                // Side-Effect Invalidation: No guarantee exists! 
+                // Downgrade to MAYBE_NULL to prevent false-negatives.
                 if (env.store.has(globalVar)) {
-                   env.setNullability(globalVar, Nullability.MAYBE_NULL );
+                    env.setNullability(globalVar, Nullability.MAYBE_NULL);
                 }
             }
         }
-        
+    
+        // ==========================================
+        // 2. HANDLE PARAMETERS & VARIADIC ARGS
+        // ==========================================
         const args = callJp.args;
-        const params = callee.params;
-
-        for (let i = 0; i < args.length && i < params.length; i++) {
-            const paramName = params[i].name;
-            const paramContract = contracts.find(c => c.target.trim() === paramName.trim() && !c.isGlobal);
-            
+        const params = fnSymbol.params; 
+        const compiledContracts = fnSymbol.compiledParamContracts || [];
+    
+        // Notice we loop over ARGS, not params. This captures variadic arguments!
+        for (let i = 0; i < args.length; i++) {
             const argCode = args[i].code.replace(/[()]/g, "").trim();
             const rootVar = env.resolveAlias(argCode);
-                
-            if (paramContract && paramContract.entryState) {
-               const argNullability = env.getState(rootVar);
-                const paramNullability = paramContract.entryState;
-                
-                if (paramNullability !== Nullability.MAYBE_NULL && paramNullability !== argNullability) {
-                    throw new PreconditionViolationError(callJp, rootVar, callee.name, paramNullability as string, argNullability as string);
+            
+            // Variables to hold the rules for this specific argument
+            let expectedNullability: Nullability | undefined = undefined;
+            let finalNullability: Nullability | undefined = undefined;
+            let isReadOnly = false;
+            let fieldRules: any = undefined;
+    
+            // --- LANE 1: Standard Parameter ---
+            // Fast, O(1) lookup using the states we saved in the Annotator pass
+            if (i < params.length) {
+                const paramSymbol = params[i];
+                expectedNullability = paramSymbol.initialNullability;
+                finalNullability = paramSymbol.finalNullability;
+                isReadOnly = paramSymbol.isReadOnly;
+                fieldRules = paramSymbol.fieldsNullability;
+            } 
+            // --- LANE 2: Variadic Argument ---
+            // Fallback: Test the argument's code against our pre-compiled regex rules
+            else {
+                const matchedRule = compiledContracts.find((c: any) => 
+                    c.compiledRegex && c.compiledRegex.test(argCode)
+                );
+    
+                if (matchedRule) {
+                    expectedNullability = matchedRule.entryState;
+                    finalNullability = matchedRule.exitState;
+                    isReadOnly = matchedRule.unchanged;
+                    fieldRules = matchedRule.fields;
                 }
-                if(paramContract.fields) {
-                    //console.log("Estes fiels, ", paramContract.fields)
-                    for (const [key, value] of Object.entries(paramContract.fields)) {
-                        const $field = rootVar + '.' + key;
+            }
+    
+            // ==========================================
+            // 3. APPLY PRE-CONDITIONS (Entry State)
+            // ==========================================
+            if (expectedNullability) {
+                const argNullability = env.getState(rootVar);
+                
+                if (expectedNullability !== Nullability.MAYBE_NULL && expectedNullability !== argNullability) {
+                    throw new PreconditionViolationError(callJp, rootVar, callee.name, expectedNullability, argNullability as string);
+                }
+                
+                // A. Struct Field Pre-Conditions
+                if (fieldRules) {
+                    for (const [fieldKey, fieldStates] of Object.entries(fieldRules)) {
+                        const $field = `${rootVar}.${fieldKey}`;
                         const $fieldNullability = env.getState($field);
-                        const $expectedFieldNullability = value.entryState;
-                        if ($expectedFieldNullability !== Nullability.MAYBE_NULL && $fieldNullability !== $expectedFieldNullability) {
-                            throw new PreconditionViolationError(callJp, $field, callee.name, $expectedFieldNullability as string, $fieldNullability as string);
+                        // Handle both standard params and regex matched fields
+                        const $expectedFieldNullability = (fieldStates as any).initialNullability || (fieldStates as any).entryState;
+    
+                        if ($expectedFieldNullability && $expectedFieldNullability !== Nullability.MAYBE_NULL && $fieldNullability !== $expectedFieldNullability) {
+                            throw new PreconditionViolationError(callJp, $field, callee.name, $expectedFieldNullability, $fieldNullability as string);
                         }
                     }
                 }
-               
             }
-
-            //console.log(paramName, paramContract, argCode, rootVar  )
-            const finalState = (paramContract && paramContract.exitState) ? paramContract.exitState : Nullability.MAYBE_NULL;
-            env.setNullability(rootVar,  finalState );
-            let aux =env.store.get(rootVar)!;
-            if(aux.kind==="object" ){
-                for ( let field of aux.fields){
-                    const finalState = (paramContract && paramContract.fields && field in paramContract.fields && paramContract.fields[field].exitState) ? paramContract.exitState! : Nullability.MAYBE_NULL;
-                    env.setNullability(rootVar + '.' + field,  finalState );
+    
+            // ==========================================
+            // 4. APPLY POST-CONDITIONS (Exit State)
+            // ==========================================
+            if (!isReadOnly && env.store.has(rootVar)) {
+                
+                // If the parameter is mutated but has no exit contract, safely downgrade.
+                const finalState = finalNullability || Nullability.MAYBE_NULL;
+                env.setNullability(rootVar, finalState);
+    
+                // B. Struct Field Post-Conditions
+                const storeVar = env.store.get(rootVar)!;
+                if (storeVar.kind === "object") {
+                    for (const field of storeVar.fields) {
+                        const fieldStates = fieldRules?.[field];
+                        const fieldFinalState = fieldStates?.finalNullability || fieldStates?.exitState || Nullability.MAYBE_NULL;
+                        env.setNullability(`${rootVar}.${field}`, fieldFinalState);
+                    }
                 }
             }
-            
-
         }
-        //console.log("apply functio ", env)
     }
 }

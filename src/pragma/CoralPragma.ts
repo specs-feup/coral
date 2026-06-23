@@ -6,11 +6,13 @@ export default class CoralPragma {
     readonly name: string;
     readonly tokens: string[];
     readonly $jp: Pragma;
+    readonly rawContent: string; // Expose this for complex parsers
 
     constructor($jp: Pragma) {
         this.$jp = $jp;
+        this.rawContent = $jp.content;
 
-        const allTokens = $jp.content
+        const allTokens = this.rawContent
             .split(/(\s|\.|=|\*|->|\(|\)|:)/)
             .map(t => t.trim())
             .filter(t => t.length > 0);
@@ -21,25 +23,6 @@ export default class CoralPragma {
 
     isFlag(flag: string): boolean {
         return this.name === flag && this.tokens.length === 0;
-    }
-    
-    get isTransitionSyntax(): boolean {
-        return this.tokens.includes(":");
-    }
-
-    get transitionData() {
-        if (!this.isTransitionSyntax) return null;
-
-        const content = this.$jp.content;
-        const parts = content.split(':');
-        const target = parts[0].trim();
-        const flow = parts[1].split("->");
-
-        return {
-            target,
-            entryPart: flow[0]?.trim() || "",
-            exitPart: flow[1]?.trim() || ""
-        };
     }
 
     static parse(pragmas: Pragma[]): CoralPragma[] {

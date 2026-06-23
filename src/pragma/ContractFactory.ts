@@ -1,5 +1,5 @@
-import CoralPragma from "./CoralPragma.js";
 import { Contract, Nullability, FieldContract } from "../symbol/Nullability.js";
+import CoralPragma from "./CoralPragma.js";
 
 export class ContractFactory {
     private static stateMap: Record<string, Nullability> = {
@@ -8,7 +8,6 @@ export class ContractFactory {
         "null": Nullability.NULL
     };
 
-    // Helper method to parse strings like "not-null -> null" or "unchanged"
     private static parseTransition(flowStr: string): FieldContract {
         const flow = flowStr.split('->').map(s => s.trim());
         if (flow.length === 1) {
@@ -21,11 +20,18 @@ export class ContractFactory {
         };
     }
 
-    static fromPragma(pragma: CoralPragma, rawContent: string): Contract | undefined {
-        // Strip the "coral" keyword to standardize the string
-        const contentToParse = rawContent.trim().replace(/^coral\s+/, '');
+    static fromPragma(pragma: CoralPragma): Contract | undefined {
+        const rawContent = pragma.rawContent;
+        console.log("here", rawContent)
+        // 1. Enforce the "null" namespace constraint
+        if (pragma.name !== "null") {
+            return undefined; // Not a nullability pragma, ignore it.
+        }
 
-        // 1. Try to parse as a Predicate Contract
+        // Strip "coral null" to standardise the string for parsing
+        const contentToParse = rawContent.replace(/^null\s+/, '').trim();
+
+        // 2. Predicate Contract
         const predicateMatch = contentToParse.match(/ensures\s+return\s*==\s*\(\s*([a-zA-Z0-9_]+)\s*(!=|==)\s*NULL\s*\)/);
         if (predicateMatch) {
             return {
@@ -34,38 +40,49 @@ export class ContractFactory {
             };
         }
 
-        // 2. Try to parse a Return State Contract
+        // 3. Return State Contract
         const returnStateMatch = contentToParse.match(/ensures\s+return\s*:\s*(not-null|null|maybe-null)/);
         if (returnStateMatch) {
             return { target: "return", exitState: this.stateMap[returnStateMatch[1]] };
         }
 
-        // 3. Try to parse a Global Variable Contract
+        // 4. Global Variable Contract
         const globalMatch = contentToParse.match(/global\s+([a-zA-Z0-9_]+)\s*:\s*(not-null|null|maybe-null|unchanged)/);
         if (globalMatch) {
             const target = globalMatch[1];
             const stateStr = globalMatch[2];
-            return stateStr === "unchanged" 
+            return stateStr === "unchanged"
                 ? { target, unchanged: true, isGlobal: true }
                 : { target, exitState: this.stateMap[stateStr], isGlobal: true };
         }
 
-        // --- NEW: 4. Unified Parameter & Struct Contract Parser ---
-        // Matches combinations of: target {fields} : transition
-        // e.g., "b {data: not-null -> null} : not-null -> not-null"
-        const paramMatch = contentToParse.match(/^([a-zA-Z0-9_]+)(?:\s*\{([^}]+)\})?(?:\s*:\s*(.+))?$/);
-        
-        if (paramMatch && paramMatch[1] !== "ensures" && paramMatch[1] !== "global") {
-            const target = paramMatch[1];
-            const fieldsStr = paramMatch[2];         // e.g., "data: not-null -> null"
-            const mainTransitionStr = paramMatch[3]; // e.g., "not-null -> not-null"
+        // 5. Unified Parameter & Struct Contract Parser
+        // Notice the capture group 1: ([a-zA-Z0-9_]+|%\([^)]+\))
+        // This explicitly allows standard variable names OR %(regex_pattern)
+        // 7. Unified Parameter & Struct Contract Parser
+        const paramMatch = contentToParse.match(/^([a-zA-Z0-9_]+|%\([^)]+\))(?:\s*\{([^}]+)\})?(?:\s*:\s*(.+))?$/);
 
-            const contract: Contract = { target };
+        if (paramMatch && !contentToParse.startsWith("ensures") && !contentToParse.startsWith("global")) {
+            
+            let target = paramMatch[1];
+            let isRegex = false;
 
-            // Parse struct fields if they exist
+            // --- NEW: Detect and unwrap the regex ---
+            const regexExtract = target.match(/^%\((.*)\)$/);
+            if (regexExtract) {
+                target = regexExtract[1]; // Save just the inner pattern (e.g., ".*ptr.*")
+                isRegex = true;           // Flag it!
+            }
+
+            // Create the base contract with the flag
+            const contract: Contract = { target, isRegex };
+
+            const fieldsStr = paramMatch[2];
+            const mainTransitionStr = paramMatch[3];
+
+            // ... (The rest of the field parsing remains exactly the same)
             if (fieldsStr) {
                 contract.fields = {};
-                // Split by comma to support multiple fields: {data: null, size: not-null}
                 const fieldDeclarations = fieldsStr.split(',');
                 for (const decl of fieldDeclarations) {
                     const fieldParts = decl.split(':');
@@ -76,11 +93,9 @@ export class ContractFactory {
                 }
             }
 
-            // Parse main variable transition if it exists
             if (mainTransitionStr) {
                 Object.assign(contract, this.parseTransition(mainTransitionStr));
             } else if (!fieldsStr) {
-                // If there's neither a field block nor a transition, it's invalid
                 return undefined;
             }
 

@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#pragma coral ensures return == (p != NULL)
+#pragma coral null ensures return == (p != NULL)
 int is_valid(int* p) { 
     return p != NULL; 
 }

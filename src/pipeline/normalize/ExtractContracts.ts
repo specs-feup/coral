@@ -17,8 +17,8 @@ export default class ExtractContracts implements NormalizationPass<typeof Pragma
         if ($target instanceof FunctionJp) {
             const coralPragma = new CoralPragma($pragma);
             
-            // --- UPDATED: Pass the raw pragma content to the factory ---
-            const contract = ContractFactory.fromPragma(coralPragma, $pragma.content);
+            // Pass the raw content to the factory
+            const contract = ContractFactory.fromPragma(coralPragma);
     
             if (contract) {
                 const raw = $target.getUserField("coralContracts") as unknown as string | undefined;
@@ -28,7 +28,7 @@ export default class ExtractContracts implements NormalizationPass<typeof Pragma
                 
                 $target.setUserField("coralContracts", JSON.stringify(existingContracts) as unknown as object);
             
-                console.log(`[Extract] Saved contract for variable '${contract.target}'`);
+                console.log(`[Extract] Saved contract for target '${contract.target}'`);
             }
         }
     }

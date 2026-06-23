@@ -20,5 +20,7 @@ export interface Contract {
     exitState?: Nullability;
     predicate?: any; // Assuming you have this defined
     fields?: Record<string, FieldContract>; // <-- NEW: Dictionary of fields
+    isRegex? : boolean
+    compiledRegex?: RegExp;
 }
 

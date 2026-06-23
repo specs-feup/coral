@@ -57,7 +57,7 @@ export class NullabilityEnvironment {
     }
 
     static merge(env1: NullabilityEnvironment, env2: NullabilityEnvironment): NullabilityEnvironment {
-        //console.log("Merging", env1.store, env2.store)
+        //// console.log("Merging", env1.store, env2.store)
         const mergedStore = new Map<string, MemoryNode>();
 
         const allKeys = new Set([...env1.store.keys(), ...env2.store.keys()]);
@@ -76,7 +76,7 @@ export class NullabilityEnvironment {
                     mergedStore.set(key, { kind: "pointer", pointsTo: mergedPoints, state: mergedPoints.size > 1? mergeState: undefined });
                 }
                 else if( val1.kind === "var" && val2.kind==="var"){
-                    //console.log("ola? 3")
+                    //// console.log("ola? 3")
                     mergedStore.set(key, { kind: "var", contains: val1.contains=== val2.contains? val1.contains : undefined,  exists: val1.exists === val2.exists?val1.exists: undefined  });
                 }
                 else if( val1.kind === "function" && val2.kind === "function"){
@@ -114,12 +114,12 @@ export class NullabilityEnvironment {
         
         if(isNullLiteral(name)) return Nullability.NULL;
         const val = this.store.get(name);
-        //console.log(val);
+        //// console.log(val);
         if (!val){ 
 
             const pos = name.indexOf(".");
             if(pos !== -1){
-                //console.log("por favor")
+                //// console.log("por favor")
                 
                 const objectName = name.slice(0, pos);
                 let object = this.store.get(objectName);
@@ -131,7 +131,7 @@ export class NullabilityEnvironment {
                     }
                 }
                 const fieldName = name.slice(pos +1)
-                //console.log(this.aliasMap, objectName, cleanObjectName, fieldName)
+                //// console.log(this.aliasMap, objectName, cleanObjectName, fieldName)
                 if(this.store.has(cleanObjectName + '.' + fieldName)){
                     return this.getState(cleanObjectName + '.' + fieldName)
                 }
@@ -146,16 +146,16 @@ export class NullabilityEnvironment {
             if(val.state) return val.state;
             if(val.pointsTo.size === 0) return Nullability.NULL;
             let $state;
-            //console.log(val.state)
+            //// console.log(val.state)
             
-            //console.log(val.pointsTo)
+            //// console.log(val.pointsTo)
             for (let $var of val.pointsTo){
-                //console.log($var);
+                //// console.log($var);
                 let $varState = this.getState($var);
                 if(!$state) $state = $varState;
                 else if($state !== $varState ) $state = Nullability.MAYBE_NULL;
             }
-            //console.log($state)
+            //// console.log($state)
             return $state!;
         }
         if(val.kind==="var" && val.contains && isNullLiteral(val.contains)){
@@ -188,14 +188,14 @@ export class NullabilityEnvironment {
     }
 
     resolveRhsValue(lhsState: MemoryNode, coreJp: Joinpoint, code: string): MemoryNode {
-        //console.log("---------------------------")
+        //// console.log("---------------------------")
        
         while (coreJp instanceof ParenExpr) {
             coreJp = coreJp.subExpr;
         }
 
         if (coreJp instanceof UnaryOp){
-            console.log("unary", coreJp.code)
+            // console.log("unary", coreJp.code)
             if(coreJp.operator === "!"){
 
                 const cleanVar = coreJp.code.substring(1).trim();
@@ -260,15 +260,15 @@ export class NullabilityEnvironment {
         
         if (coreJp instanceof BinaryOp && (coreJp.operator === "==" || coreJp.operator === "!=")) {
 
-            //console.log("Binaryop",coreJp.code )
+            //// console.log("Binaryop",coreJp.code )
             const leftOp = coreJp.left.code.replace(/[()]/g, "").trim();
             const rightOp = coreJp.right.code.replace(/[()]/g, "").trim();
 
 
-            console.log("conditions,", leftOp, rightOp)
+            // console.log("conditions,", leftOp, rightOp)
             const leftState = this.getState(leftOp);
             const rightState = this.getState(rightOp);
-            console.log(leftState, rightState)
+            // console.log(leftState, rightState)
 
             const isNullLiteral = (str: string) => {
                 return str === "NULL" || str === "0" || str.replace(/\s/g, "") === "(void*)0" ;
@@ -277,7 +277,7 @@ export class NullabilityEnvironment {
             const isLeftNull = leftState === Nullability.NULL || isNullLiteral(leftOp);
             const isRightNull = rightState === Nullability.NULL || isNullLiteral(rightOp);
 
-            //console.log(isLeftNull,isRightNull)
+            //// console.log(isLeftNull,isRightNull)
 
             // If either side is NULL, we successfully captured a nullability condition!
             if (isLeftNull || isRightNull) {
@@ -316,13 +316,13 @@ export class NullabilityEnvironment {
             return existingVar;
            
         }
-        //console.log("otherwise, ", code)
+        //// console.log("otherwise, ", code)
         if(code.split(".").length > 1|| code.split("->").length >1 ){
-            //console.log("this is an object")
+            //// console.log("this is an object")
         }
 
         
-        console.log("why?")
+        // console.log("why?")
         return lhsState;
     }
 
@@ -375,7 +375,7 @@ export class NullabilityEnvironment {
             }
             this.store.set("*".repeat(nStars) + varName, state)
 
-            //console.log(this.store)
+            //// console.log(this.store)
 
         }else if(isStructer){
             this.store.set(varName, {kind:"object", fields: new Set(), exists:true})
@@ -383,21 +383,21 @@ export class NullabilityEnvironment {
         else{
             
             this.store.set(varName, {kind:"var", contains:undefined, exists: true})
-            //console.log("dan dos dand, ", this.store)
+            //// console.log("dan dos dand, ", this.store)
         }
     }
 
     setNullability($var:string, nullability: Nullability){
-        //console.log("What is this var, ", $var)
+        //// console.log("What is this var, ", $var)
         if(this.store.has($var)){
             const state = this.store.get($var);
             if(state?.kind==="pointer"){
                 if(state.pointsTo.size===1){
                     state.pointsTo.forEach( n=> {
                         const $var = this.store.get(n)!;
-                        //console.log("exist pelase", nullability)
+                        //// console.log("exist pelase", nullability)
                         let exist = (nullability === Nullability.NOT_NULL)? true: (nullability===Nullability.NULL? false:undefined)
-                        //console.log("exist pelase", exist)
+                        //// console.log("exist pelase", exist)
                         if($var.kind==="pointer")
                             this.store.set(n, {kind: "pointer", exist: exist, pointsTo: $var.pointsTo});
                         if( $var?.kind === "var"){
@@ -427,7 +427,7 @@ export class NullabilityEnvironment {
             }
 
         }
-        //console.log(this)
+        //// console.log(this)
         throw new Error("SetNullability var is not store "+ $var );
     }
 

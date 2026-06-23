@@ -9,18 +9,43 @@ export default class NullabilityAnnotator extends CoralFunctionWiseTransformatio
 
 class NullabilityAnnotatorApplier extends CoralFunctionWiseTransformationApplier {
     apply(): void {
-        console.log("ola")
         const fnSymbol = this.fn.getSymbol(this.fn.jp);
-        console.log(fnSymbol)
-
         let contracts: Contract[] = [];
         const raw = this.fn.jp.getUserField("coralContracts") as unknown as string | undefined;
         
         if (raw) {
             contracts = JSON.parse(raw) as Contract[];
         }
-        
-        console.log("[NullabilityAnnotator] Contracts found:", contracts);
+
+        fnSymbol.globalContracts = {};
+        fnSymbol.compiledParamContracts = [];
+
+        // 1. Handle Global Contracts
+        for (const contract of contracts) {
+
+            if (!contract.isGlobal && contract.target !== "return") {
+                // If it's a regex, compile it NOW so we don't do it at the call site
+                if (contract.isRegex) {
+                    fnSymbol.compiledParamContracts.push({
+                        ...contract,
+                        compiledRegex: new RegExp(contract.target) 
+                    });
+                } else {
+                    fnSymbol.compiledParamContracts.push(contract);
+                }
+            }
+            else if (contract.isGlobal) {
+                fnSymbol.globalContracts[contract.target] = {
+                    unchanged: contract.unchanged,
+                    exitState: contract.exitState,
+                    target: contract.target
+                };
+                console.log(`[NullabilityAnnotator] Applied global contract to: ${contract.target}`);
+            }
+        }
+
+       
+
 
         // 1. Handle Return Contracts
         const returnContract = contracts.find(c => c.target === "return");
@@ -28,70 +53,67 @@ class NullabilityAnnotatorApplier extends CoralFunctionWiseTransformationApplier
             if (returnContract.exitState) {
                 fnSymbol.returnNullability = returnContract.exitState;
             }
-            // --- ADDED THIS BLOCK ---
             if (returnContract.predicate) {
                 fnSymbol.returnPredicate = returnContract.predicate;
-                console.log(`[NullabilityAnnotator] Found return predicate targeting '${returnContract.predicate.targetParam}'`);
             }
         }
 
         // 2. Handle Parameter Contracts
         for (const param of fnSymbol.params) {
-            const mirName = param.jp.name; 
+            const mirName = param.jp.name.trim(); 
             
-            console.log(`[NullabilityAnnotator] Checking MIR parameter: "${mirName}"`);
-
-            const paramContract = contracts.find(c => c.target.trim() === mirName.trim());
-            
-            if (paramContract) {
-                console.log(`[NullabilityAnnotator] MATCH FOUND for ${mirName}! Applying states...`);
-
-                if(paramContract.unchanged){
-                    param.isReadOnly = true
+            // Search for a matching contract
+            const paramContract = contracts.find(c => {
+                const target = c.target.trim();
+                
+                // --- NEW: Simply check the boolean flag! ---
+                if (c.isRegex) {
+                    // It is already stripped, just compile and test
+                    const regex = new RegExp(target);
+                    return regex.test(mirName);
                 }
                 
+                // Otherwise, perform an exact string match
+                return target === mirName;
+            });
+
+            console.log(paramContract)
+            
+            if (paramContract) {
+            
+                console.log(`[NullabilityAnnotator] Applied contract to parameter: ${mirName}`);
+
+                if(paramContract.unchanged){
+                    param.isReadOnly = true;
+                }
                 if (paramContract.entryState) {
                     param.initialNullability = paramContract.entryState;
                 }
-                
                 if (paramContract.exitState) {
                     param.finalNullability = paramContract.exitState;
                 }
-// Inside NullabilityAnnotatorApplier.apply() -> Parameter handling loop:
 
                 if (paramContract.fields) {
                     for (const [key, fieldStates] of Object.entries(paramContract.fields)) {
-                        console.log(key, fieldStates)
                         const cleanKey = key.trim();
 
-                        // Check if the key consists entirely of asterisks (e.g., "*", "**")
                         if (/^\*+$/.test(cleanKey)) {
-                            const level = cleanKey.length; // '*' = 1, '**' = 2
-                            console.log(level)
-                            
+                            const level = cleanKey.length; 
                             param.indirectionNullability = param.indirectionNullability || {};
                             param.indirectionNullability[level] = {
                                 initialNullability: fieldStates.entryState,
                                 finalNullability: fieldStates.exitState
                             };
-                            console.log(`[NullabilityAnnotator] Applied states for pointer level ${level} on ${mirName}`);
                         } else {
-                            // It's a standard struct field (e.g., "data")
-                            console.log("level")
                             param.fieldsNullability = param.fieldsNullability || {};
                             param.fieldsNullability[cleanKey] = {
                                 initialNullability: fieldStates.entryState,
                                 finalNullability: fieldStates.exitState
                             };
-                            console.log(`[NullabilityAnnotator] Applied states for struct field: ${mirName}.${cleanKey}`);
                         }
                     }
                 }
-            } else {
-                console.log(`[NullabilityAnnotator] No contract found for "${mirName}" in:`, contracts.map(c => c.target));
             }
-
-            console.log(`[NullabilityAnnotator] Result for ${mirName}: Initial=${param.initialNullability}, Final=${param.finalNullability}`);
         }
     }
 }
