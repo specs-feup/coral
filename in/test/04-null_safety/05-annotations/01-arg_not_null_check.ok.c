@@ -1,8 +1,9 @@
-#pragma coral not-null p
+#include <stdlib.h>
+#pragma coral null p : not-null -> not-null
 void process(int* p);
 
 void test(int* ptr) {
-    if (ptr != 0) {
+    if (ptr != NULL) {
         process(ptr); // OK
     }
 }

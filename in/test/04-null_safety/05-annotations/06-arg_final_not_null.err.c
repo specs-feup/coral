@@ -1,5 +1,6 @@
+#include <stdlib.h>
 #pragma coral_test expect NullDereferenceError
-#pragma coral not-null final p
+#pragma coral null p {*p: not-null -> not-null} : not-null -> not-null
 void reset_ptr(int** p) {
-    *p = 0; // ERR
+    *p = NULL; // ERR
 }

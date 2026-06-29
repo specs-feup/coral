@@ -38,6 +38,7 @@ export default class NullabilityAnalyser {
     private isLabel = new Set<string>();
     private processedNodes = new Set<string>();
     private initialEnv : NullabilityEnvironment = new NullabilityEnvironment();
+   
 
     constructor(fn: CoralFunctionNode.Class) {
         this.fn = fn;
@@ -78,22 +79,70 @@ export default class NullabilityAnalyser {
    
         
         for (const param of fnSymbol.params) {
+            console.log(param.fieldsNullability)
             const initial = param.initialNullability ?? Nullability.MAYBE_NULL;
             this.initialEnv.storeVar(param.jp);
             this.initialEnv.setNullability(param.jp.name, initial);
+            if(param.fieldsNullability !== undefined){
+                for ( const [field, fieldNullabilityState] of Object.entries( param.fieldsNullability)){
+                    console.log(field, fieldNullabilityState)
+                    if( this.initialEnv.store.has(field)){
+                        this.initialEnv.setNullability(field, fieldNullabilityState.initialNullability?? Nullability.MAYBE_NULL)
+                    }else{
+                       // TODO : objects
+                    }
+                }
+            }
         }
 
         // //// console.log(initialEnv)
 
        let nodes = [...this.nodes];
-        while(nodes.length>0){
+       for (const node of nodes){
+        console.log(node.jp.code)
+       }
+     /*   while(nodes.length>0){
             const entryNode = nodes.shift()!;
             if(this.processedNodes.has(entryNode.id)) continue;
             this.store.set(entryNode.id, { inEnv: this.initialEnv, outEnv: this.initialEnv });
 
-
+            console.log(entryNode.jp.code)
             this.#computeFlow(entryNode);
-        }
+        }*/
+
+          /*  // 1. Find the true root nodes of the CFG (nodes with no incoming edges)
+            let rootNodes = this.nodes.filter(n => n.incomers.filterIs(ControlFlowEdge).length === 0);
+            if( rootNodes.length === 0 ) rootNodes = [nodes[0]]
+            console.log(rootNodes)
+            // 2. ONLY inject the initial environment into the root nodes!
+            for (const entryNode of rootNodes) {
+                // Set the starting state
+                this.store.set(entryNode.id, { inEnv: this.initialEnv, outEnv: this.initialEnv });
+                
+                // Let the graph traverse itself naturally
+                this.#computeFlow(entryNode);
+            }*/
+
+                const entryNode = this.nodes.find(n => 
+                    n.jp.joinPointType !== "body" && 
+                    n.jp.joinPointType !== "function"
+                );
+                
+                if (!entryNode) return; // Safety check
+                console.log(entryNode.jp.joinPointType)
+                // 2. Inject the initial environment ONLY into the first real instruction
+                this.store.set(entryNode.id, { inEnv: this.initialEnv, outEnv: this.initialEnv });
+                
+                // 3. Start the traversal from the first instruction!
+                this.#computeFlow(entryNode);
+
+        /*const entryNode = this.nodes.find(n => n.incomers.filterIs(ControlFlowEdge).length === 0) || this.nodes[0];
+
+        // Initialize ONLY the true entry point with the initial environment
+        this.store.set(entryNode.id, { inEnv: this.initialEnv, outEnv: this.initialEnv });
+
+        // Start the traversal. The fixed-point logic in #computeFlow will handle the rest!
+        this.#computeFlow(entryNode);*/
 
     
         this.#validateResults();
@@ -101,7 +150,7 @@ export default class NullabilityAnalyser {
 
 
     #computeFlow(node: CoralCfgNode.Class) {
-        // console.log(node.jp.code)
+        console.log("Node, ", node.jp.code)
         
         if(this.store.has(node.id)){
             // //// console.log("exists initial")
@@ -148,8 +197,9 @@ export default class NullabilityAnalyser {
 
  
         this.processedNodes.add(node.id);
-        // console.log(outEnv.store);
+         console.log("out,", outEnv.store);
         this.store.set(node.id, { inEnv: inEnv, outEnv: outEnv });
+        
         
         const outgoers = node.outgoers.filterIs(ControlFlowEdge).targets.filterIs(CoralCfgNode);
         // //// console.log(outgoers.length)
@@ -215,22 +265,22 @@ export default class NullabilityAnalyser {
                     if (rawLhs.startsWith("*")) {
                         
                         const ptrName = rawLhs.substring(1).trim();
-                        cleanLhs = env.resolveAlias(ptrName);
+                        cleanLhs = "*"+env.resolveAlias(ptrName);
                     } else {
                    
                         cleanLhs = rawLhs;
                     }
                     const rightVal = env.resolveRhsValue(env.store.get(cleanLhs)! , coreJp.right, coreJp.right.code);
-               
+                    console.log(rightVal)
                     env.store.set(cleanLhs, rightVal);
-                    
+                    console.log(env.store)
                     if (coreJp.isAssignment) {
                         this.hasChanged.add(cleanLhs);
                     }
                 }
             
                 if (n.jp instanceof Call) {
-                    NullabilityChecker.applyFunctionContracts(n.jp, env, this.globalVars, this.fn);
+                    NullabilityChecker.applyFunctionContracts(n.jp, env, this.globalVars);
                 }
             }),
 
@@ -319,10 +369,12 @@ export default class NullabilityAnalyser {
     #validateResults() {
        
         const exitNodes = this.nodes.filter(n => n.outgoers.length === 0);
+        console.log(exitNodes.length)
         let finalEnv = new NullabilityEnvironment();
         // //// console.log("E,", exitNodes)
         for (const exit of exitNodes) {
             const state = this.store.get(exit.id);
+            console.log(state?.outEnv.store)
             if (state) {
                 finalEnv = NullabilityEnvironment.merge(finalEnv, state.outEnv);
                 // //// console.log(finalEnv)
@@ -347,15 +399,37 @@ export default class NullabilityAnalyser {
             for (const contract of contracts) {
                 if (contract.target === "return" || contract.predicate) continue;
                 const solve = finalEnv.resolveAlias(contract.target)
-                // //// console.log(solve);
+                console.log(solve);
                 const actualState = finalEnv.getState(solve);
-                
+                console.log(finalEnv.store)
+                console.log(actualState)
                 if (contract.exitState !== undefined && actualState !== undefined && actualState !== contract.exitState) {
                     throw new ContractViolationError(this.fn.jp, contract.target, contract.exitState, actualState);
                 }
                 
                 if (contract.unchanged && this.hasChanged.has(contract.target)) {
                     throw new ContractViolationError(this.fn.jp, contract.target, "unchanged" as Nullability, actualState);
+                }
+
+                if( contract.fields !== undefined){
+                    for ( const [field, fieldContract] of Object.entries( contract.fields)){
+                        
+                        console.log(field, fieldContract)
+                        if( finalEnv.store.has(field)){
+                            const fieldActualState = finalEnv.getState(field);
+                            console.log(finalEnv.store)
+                            console.log(fieldActualState)
+                            if (fieldContract.exitState !== undefined && fieldActualState !== undefined && fieldActualState !== contract.exitState) {
+                                throw new ContractViolationError(this.fn.jp, field, fieldContract.exitState, fieldActualState);
+                            }
+                            
+                            if (fieldContract.unchanged && this.hasChanged.has(field)) {
+                                throw new ContractViolationError(this.fn.jp, field, "unchanged" as Nullability, actualState);
+                            }
+                        }else{
+                           // TODO : objects
+                        }
+                    }
                 }
             }
         }

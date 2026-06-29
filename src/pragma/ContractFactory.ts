@@ -82,6 +82,7 @@ export class ContractFactory {
 
             // ... (The rest of the field parsing remains exactly the same)
             if (fieldsStr) {
+                console.log("here")
                 contract.fields = {};
                 const fieldDeclarations = fieldsStr.split(',');
                 for (const decl of fieldDeclarations) {

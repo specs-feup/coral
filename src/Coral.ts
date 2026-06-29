@@ -43,6 +43,7 @@ export interface CoralConfig {
     inferFunctionLifetimeBoundsIterationLimit?: number;
     enableBorrowChecker?: boolean,
     enableNullability?: boolean
+
 }
 
 export const defaultCoralConfig: CoralConfig = {

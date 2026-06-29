@@ -15,7 +15,7 @@ export interface PointerNode {
     kind: "pointer";
     state?: Nullability;
     pointsTo: Set<string>;
-    exist?: boolean
+    exists?: boolean
 }
 
 export interface ObjectNode {
@@ -151,6 +151,15 @@ export class NullabilityEnvironment {
             //// console.log(val.pointsTo)
             for (let $var of val.pointsTo){
                 //// console.log($var);
+                if(this.store.has($var)){
+                    const $point = this.store.get($var)!;
+                    if($point.kind !== "condition" && $point.kind != "function"){
+                        if($point.exists){
+                            return Nullability.NOT_NULL;
+                        }else if ($point.exists === false)  {return Nullability.NULL;}
+                        else {return Nullability.MAYBE_NULL;}
+                    }
+                }
                 let $varState = this.getState($var);
                 if(!$state) $state = $varState;
                 else if($state !== $varState ) $state = Nullability.MAYBE_NULL;
@@ -189,6 +198,10 @@ export class NullabilityEnvironment {
 
     resolveRhsValue(lhsState: MemoryNode, coreJp: Joinpoint, code: string): MemoryNode {
         //// console.log("---------------------------")
+
+        const isNullLiteral = (str: string) => {
+            return str === "NULL" || str === "0" || str.replace(/\s/g, "") === "(void*)0" ;
+        };
        
         while (coreJp instanceof ParenExpr) {
             coreJp = coreJp.subExpr;
@@ -270,9 +283,7 @@ export class NullabilityEnvironment {
             const rightState = this.getState(rightOp);
             // console.log(leftState, rightState)
 
-            const isNullLiteral = (str: string) => {
-                return str === "NULL" || str === "0" || str.replace(/\s/g, "") === "(void*)0" ;
-            };
+
 
             const isLeftNull = leftState === Nullability.NULL || isNullLiteral(leftOp);
             const isRightNull = rightState === Nullability.NULL || isNullLiteral(rightOp);
@@ -292,7 +303,11 @@ export class NullabilityEnvironment {
 
         // 2. Literal Nulls
         if (code.match(/\bNULL\b/) || code.includes("= 0") || code.includes("(void *) 0")) {
-            return { kind: "var", exists:true, contains :"NULL" };
+            if(lhsState.kind==="var")
+                return { kind: "var", exists:true, contains :"NULL" };
+            else if (lhsState.kind=== "pointer"){
+                return {kind : "pointer", pointsTo: new Set(["NULL"]), exists: true }
+            }
         }
         
         code = code.replace(/[()]/g, "");
@@ -399,7 +414,7 @@ export class NullabilityEnvironment {
                         let exist = (nullability === Nullability.NOT_NULL)? true: (nullability===Nullability.NULL? false:undefined)
                         //// console.log("exist pelase", exist)
                         if($var.kind==="pointer")
-                            this.store.set(n, {kind: "pointer", exist: exist, pointsTo: $var.pointsTo});
+                            this.store.set(n, {kind: "pointer", exists: exist, pointsTo: $var.pointsTo});
                         if( $var?.kind === "var"){
                             this.store.set(n, {kind: "var", contains: $var.contains, exists:exist});
                         }

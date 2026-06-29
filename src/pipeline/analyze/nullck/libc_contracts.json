@@ -1,0 +1,44 @@
+{
+    "malloc": [
+      {
+        "target": "return",
+        "exitState": "MAYBE_NULL",
+        "isRegex": false
+      }
+    ],
+    "calloc": [
+      {
+        "target": "return",
+        "exitState": "MAYBE_NULL",
+        "isRegex": false
+      }
+    ],
+    "realloc": [
+      {
+        "target": "return",
+        "exitState": "MAYBE_NULL",
+        "isRegex": false
+      }
+    ],
+    "free": [
+      {
+        "target": "(.*)",
+        "entryState": "NOT_NULL",
+        "isRegex": true
+      }
+    ],
+    "fopen": [
+      {
+        "target": "return",
+        "exitState": "MAYBE_NULL",
+        "isRegex": false
+      }
+    ],
+    "fclose": [
+      {
+        "target": "(.*)",
+        "entryState": "NOT_NULL",
+        "isRegex": true
+      }
+    ]
+  }

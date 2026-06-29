@@ -3,11 +3,13 @@ import CoralFunctionWiseTransformation, {
 } from "@specs-feup/coral/graph/CoralFunctionWiseTransformation";
 import NullabilityAnalyser from "./NullabilityAnalyser.js";
 import CoralCfgNode from "@specs-feup/coral/graph/CoralCfgNode";
+
 export default class NullabilityPipeline extends CoralFunctionWiseTransformation {
     fnApplier = NullabilityPipelineApplier;
 }
 
 class NullabilityPipelineApplier extends CoralFunctionWiseTransformationApplier {
+ 
     apply(): void {
         const analyser = new NullabilityAnalyser(this.fn);
         analyser.apply();
