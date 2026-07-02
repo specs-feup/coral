@@ -10,7 +10,7 @@
         ]
     },
 "scripts": {
-        "build": "tsc",
+        "build": "tsc && cp src/pipeline/analyze/nullck/libc_contracts.json out/pipeline/analyze/nullck/",
         "build:watch": "tsc --watch",
         "lint": "eslint .",
         "format": "prettier --write .",

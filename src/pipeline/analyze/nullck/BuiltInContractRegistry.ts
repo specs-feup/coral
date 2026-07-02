@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 // Import YOUR existing interface from wherever it is defined
 import { Contract } from '@specs-feup/coral/symbol/Nullability';
-
+import { fileURLToPath } from 'url';
 export class BuiltInContractRegistry {
     private static instance: BuiltInContractRegistry | null = null;
     private contractsMap = new Map<string, Contract[]>();
@@ -20,9 +20,13 @@ export class BuiltInContractRegistry {
 
     private loadContracts(): void {
         try {
+
+            const __filename = fileURLToPath(import.meta.url);
+            const __dirname = path.dirname(__filename);
             const jsonPath = path.join(__dirname, 'libc_contracts.json');
-            
+            console.log(jsonPath)
             if (fs.existsSync(jsonPath)) {
+                console.log("file exist")
                 const rawData = fs.readFileSync(jsonPath, 'utf-8');
                 const parsed = JSON.parse(rawData);
                 

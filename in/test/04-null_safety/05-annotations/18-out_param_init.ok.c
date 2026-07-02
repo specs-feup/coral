@@ -1,6 +1,6 @@
-#pragma coral not-null final *out
+#pragma coral null out {*out : maybe-null -> not-null}: not-null -> not-null
 void get_ptr(int** out) {
-    static int global_val = 42;
-    *out = &global_val; 
+    int val = 42;
+    *out = &val; 
     // Ok
 }

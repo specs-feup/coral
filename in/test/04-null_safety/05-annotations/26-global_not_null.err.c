@@ -1,7 +1,10 @@
-#pragma coral not-null global_ptr
+
+#pragma coral_test expect PotentialNullDereferenceError
+
 int* global_ptr = 0; 
 
-#pragma coral_test expect NullDereferenceError
+
+#pragma coral null global global_ptr : null
 void test_global() {
     int x = *global_ptr; // ERR
 }

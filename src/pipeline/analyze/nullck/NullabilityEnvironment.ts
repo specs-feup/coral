@@ -218,7 +218,7 @@ export class NullabilityEnvironment {
                 }
             }
             if( coreJp.code.startsWith("&")){
-                return {kind: "pointer", pointsTo: new Set([ coreJp.code.substring(1).trim()])}
+                return {kind: "pointer", pointsTo: new Set([ coreJp.code.substring(1).trim()]), exists: true}
             }
         }
 
@@ -412,10 +412,12 @@ export class NullabilityEnvironment {
                         const $var = this.store.get(n)!;
                         //// console.log("exist pelase", nullability)
                         let exist = (nullability === Nullability.NOT_NULL)? true: (nullability===Nullability.NULL? false:undefined)
-                        //// console.log("exist pelase", exist)
-                        if($var.kind==="pointer")
+                        console.log("exist pelase", exist)
+                        if($var.kind==="pointer"){
                             this.store.set(n, {kind: "pointer", exists: exist, pointsTo: $var.pointsTo});
+                        }
                         if( $var?.kind === "var"){
+                            console.log("var?", n)
                             this.store.set(n, {kind: "var", contains: $var.contains, exists:exist});
                         }
                         if( $var?.kind === "object"){

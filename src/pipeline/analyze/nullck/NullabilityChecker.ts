@@ -68,8 +68,6 @@ export class NullabilityChecker {
     }
 
     static applyFunctionContracts(callJp: Call, env: NullabilityEnvironment, globalVars: Set<string>) {
-        // Some unresolved C functions might not have a full callee object, 
-        // so it's safer to get the name directly from the call node if callee is missing.
         const callee = callJp.function;
         const funcName = callee?.name || callJp.name; 
         
@@ -80,17 +78,17 @@ export class NullabilityChecker {
         const registry = BuiltInContractRegistry.getInstance();
     
         if (registry.hasContract(funcName)) {
-            // 1A. It's a standard library function, use our fast JSON map!
+            console.log(funcName)
             contracts = registry.getContracts(funcName);
+            console.log(contracts)
         } else if (callee) {
-            // 1B. It's user code, check the AST for #pragma annotations
             const raw = callee.getUserField("coralContracts") as unknown as string | undefined;
             if (raw) {
                 contracts = JSON.parse(raw) as Contract[];
             }
         }
-        console.log("Contracts,", contracts)
-        // if (contracts.length === 0) return; // Fast exit if no contracts exist
+    
+        //if (contracts.length === 0) return; // Fast exit if no contracts exist
     
         // ==========================================
         // 2. HANDLE GLOBAL VARIABLES
@@ -113,39 +111,49 @@ export class NullabilityChecker {
         // 3. HANDLE PARAMETERS & VARIADIC ARGS
         // ==========================================
         const args = callJp.args;
-        const params = callee?.params || []; // safe fallback if callee is undefined
+        const params = callee?.params || [];
     
         for (let i = 0; i < args.length; i++) {
             const argCode = args[i].code.replace(/[()]/g, "").trim();
             const rootVar = env.resolveAlias(argCode);
+            const paramName = i < params.length ? params[i].name.trim() : undefined;
     
             // Find the contract for this specific argument
             let paramContract: Contract | undefined = undefined;
-    
-            if (i < params.length) {
-                // Standard Parameter: Match by exact AST name or Regex
-                const paramName = params[i].name.trim();
+            console.log("param Name", paramName)
+            if (paramName) {
                 paramContract = contracts.find(c => {
                     if (c.isGlobal || c.target === "return") return false;
                     if (c.isRegex) {
-                        // OPTIMIZATION: Use the pre-compiled regex if it exists!
                         const regex = c.compiledRegex || new RegExp(c.target);
                         return regex.test(paramName);
                     }
                     return c.target === paramName;
                 });
             } else {
-                // Variadic Argument (e.g., printf, free): Match argument code against Regex
                 paramContract = contracts.find(c => {
                     if (c.isGlobal || c.target === "return") return false;
                     if (c.isRegex) {
-                        // OPTIMIZATION: Use the pre-compiled regex if it exists!
                         const regex = c.compiledRegex || new RegExp(c.target);
                         return regex.test(argCode);
                     }
                     return false;
                 });
             }
+
+            console.log("Param contracts", paramContract)
+
+            // HELPER: Maps callee contract keys (*a or val) to caller variables (*b or b.val)
+            const mapFieldToCaller = (key: string): string => {
+                if (key.startsWith("*")) {
+                    // It is an indirection. Replace the target param name with the caller's root variable.
+                    const target = paramName || paramContract!.target;
+                    return key.replace(target, rootVar);
+                } else {
+                    // It is a struct field.
+                    return `${rootVar}.${key}`;
+                }
+            };
     
             // --- A. PRE-CONDITIONS (Entry State) ---
             if (paramContract && paramContract.entryState) {
@@ -156,10 +164,10 @@ export class NullabilityChecker {
                     throw new PreconditionViolationError(callJp, rootVar, funcName, expectedNullability as string, argNullability as string);
                 }
                 
-                // Apply Struct Field Pre-Conditions
+                // Apply Nested Pre-Conditions (Structs AND Pointers)
                 if (paramContract.fields) {
                     for (const [key, fieldContract] of Object.entries(paramContract.fields)) {
-                        const $field = rootVar + '.' + key;
+                        const $field = mapFieldToCaller(key);
                         const $fieldNullability = env.getState($field);
                         const $expectedFieldNullability = fieldContract.entryState;
                         
@@ -170,21 +178,48 @@ export class NullabilityChecker {
                 }
             }
     
-            // --- B. POST-CONDITIONS (Exit State) ---
-            if (!paramContract?.unchanged && env.store.has(rootVar)) {
-                // If the parameter is mutated but has no exit contract, safely downgrade to MAYBE_NULL
-                const finalState = paramContract?.exitState || Nullability.MAYBE_NULL;
-                env.setNullability(rootVar, finalState);
-    
-                // Apply Struct Field Post-Conditions
-                const storeVar = env.store.get(rootVar)!;
-                if (storeVar.kind === "object") {
-                    for (const field of storeVar.fields) {
-                        const fieldFinalState = paramContract?.fields?.[field]?.exitState || Nullability.MAYBE_NULL;
-                        env.setNullability(`${rootVar}.${field}`, fieldFinalState);
+           // --- B. POST-CONDITIONS (Exit State) ---
+           console.log("post,", rootVar)
+           if (!paramContract?.unchanged && env.store.has(rootVar)) {
+            // 1. Root variable state
+            const finalState = paramContract?.exitState || Nullability.MAYBE_NULL;
+            console.log("final state", finalState)
+            env.setNullability(rootVar, finalState);
+
+            // Track what we explicitly handled so we can easily check pointers below
+            const handledFields = new Set<string>();
+
+            // 2. Apply Explicit Nested Post-Conditions (Structs AND Pointers)
+            if (paramContract?.fields) {
+                for (const [key, fieldContract] of Object.entries(paramContract.fields)) {
+                    const $field = mapFieldToCaller(key);
+                    handledFields.add($field);
+                    
+                    const fieldFinalState = fieldContract.exitState || Nullability.MAYBE_NULL;
+                    env.setNullability($field, fieldFinalState);
+                }
+            }
+
+            // 3. Implicit downgrade for unannotated struct fields OR pointer targets
+            const storeVar = env.store.get(rootVar)!;
+            console.log("stored var,", storeVar)
+            if (storeVar.kind === "object") {
+                for (const field of storeVar.fields) {
+                    // Downgrade if the struct field wasn't explicitly covered
+                    if (!paramContract?.fields?.[field]) {
+                        env.setNullability(`${rootVar}.${field}`, Nullability.MAYBE_NULL);
+                    }
+                }
+            } else if (storeVar.kind === "pointer" && storeVar.pointsTo) {
+                for (const target of storeVar.pointsTo) {
+                    // Downgrade if the pointer indirection (e.g., '*b') wasn't explicitly covered
+                    const targetState = env.store.get(target);
+                    if (targetState?.kind === "pointer" && !handledFields.has(target)) {
+                        env.setNullability(target, Nullability.MAYBE_NULL);
                     }
                 }
             }
+        }
         }
     }
 }

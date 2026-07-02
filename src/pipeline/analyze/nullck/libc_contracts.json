@@ -23,7 +23,8 @@
     "free": [
       {
         "target": "(.*)",
-        "entryState": "NOT_NULL",
+        "entryState": "MAYBE_NULL",
+        "exitState": "NULL",
         "isRegex": true
       }
     ],
@@ -40,5 +41,16 @@
         "entryState": "NOT_NULL",
         "isRegex": true
       }
-    ]
+    ],
+    "strtol": [
+    { 
+      "target": "endptr", 
+      "entryState": "NOT_NULL", 
+      "exitState": "NOT_NULL",
+      "fields": {
+        "*endptr": { "entryState": "MAYBE_NULL", "exitState": "NOT_NULL" }
+      },
+      "isRegex": false 
+    }
+  ]
   }

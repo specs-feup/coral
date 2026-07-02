@@ -1,5 +1,6 @@
-#pragma coral_test expect PotentialNullDereferenceError
-#pragma coral not-null p
+#pragma coral_test expect PreconditionViolationError
+#include <stdlib.h>
+#pragma coral null p :  not-null -> not-null
 void consume(int* p);
 
 void test() {

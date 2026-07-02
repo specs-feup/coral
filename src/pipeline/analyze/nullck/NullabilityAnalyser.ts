@@ -20,7 +20,7 @@ import NullDereferenceError from "@specs-feup/coral/error/null_safety/NullDerefe
 import PotentialNullDereferenceError from "@specs-feup/coral/error/null_safety/PotentialNullDereferenceError";
 import GotoLabelNode from "@specs-feup/clava-flow/cfg/node/GotoLabelNode";
 import GotoNode from "@specs-feup/clava-flow/cfg/node/GotoNode";
-import { PointerNode } from "@specs-feup/coral/symbol/MemoryModel";
+
 import ScopeNode from "@specs-feup/clava-flow/cfg/node/ScopeNode";
 
 type NodeState = {
@@ -79,13 +79,13 @@ export default class NullabilityAnalyser {
    
         
         for (const param of fnSymbol.params) {
-            console.log(param.fieldsNullability)
+           
             const initial = param.initialNullability ?? Nullability.MAYBE_NULL;
             this.initialEnv.storeVar(param.jp);
             this.initialEnv.setNullability(param.jp.name, initial);
             if(param.fieldsNullability !== undefined){
                 for ( const [field, fieldNullabilityState] of Object.entries( param.fieldsNullability)){
-                    console.log(field, fieldNullabilityState)
+                    //console.log(field, fieldNullabilityState)
                     if( this.initialEnv.store.has(field)){
                         this.initialEnv.setNullability(field, fieldNullabilityState.initialNullability?? Nullability.MAYBE_NULL)
                     }else{
@@ -95,33 +95,13 @@ export default class NullabilityAnalyser {
             }
         }
 
-        // //// console.log(initialEnv)
+        
 
        let nodes = [...this.nodes];
        for (const node of nodes){
-        console.log(node.jp.code)
+        //console.log(node.jp.code)
        }
-     /*   while(nodes.length>0){
-            const entryNode = nodes.shift()!;
-            if(this.processedNodes.has(entryNode.id)) continue;
-            this.store.set(entryNode.id, { inEnv: this.initialEnv, outEnv: this.initialEnv });
-
-            console.log(entryNode.jp.code)
-            this.#computeFlow(entryNode);
-        }*/
-
-          /*  // 1. Find the true root nodes of the CFG (nodes with no incoming edges)
-            let rootNodes = this.nodes.filter(n => n.incomers.filterIs(ControlFlowEdge).length === 0);
-            if( rootNodes.length === 0 ) rootNodes = [nodes[0]]
-            console.log(rootNodes)
-            // 2. ONLY inject the initial environment into the root nodes!
-            for (const entryNode of rootNodes) {
-                // Set the starting state
-                this.store.set(entryNode.id, { inEnv: this.initialEnv, outEnv: this.initialEnv });
-                
-                // Let the graph traverse itself naturally
-                this.#computeFlow(entryNode);
-            }*/
+  
 
                 const entryNode = this.nodes.find(n => 
                     n.jp.joinPointType !== "body" && 
@@ -129,7 +109,7 @@ export default class NullabilityAnalyser {
                 );
                 
                 if (!entryNode) return; // Safety check
-                console.log(entryNode.jp.joinPointType)
+                //console.log(entryNode.jp.joinPointType)
                 // 2. Inject the initial environment ONLY into the first real instruction
                 this.store.set(entryNode.id, { inEnv: this.initialEnv, outEnv: this.initialEnv });
                 
@@ -153,22 +133,22 @@ export default class NullabilityAnalyser {
         console.log("Node, ", node.jp.code)
         
         if(this.store.has(node.id)){
-            // //// console.log("exists initial")
+            // //// //console.log("exists initial")
         }
         let inEnv= this.store.has(node.id)? this.store.get(node.id)!.inEnv: new NullabilityEnvironment();
-        // console.log(inEnv);
+        // //console.log(inEnv);
      
         const incomers = node.incomers.filterIs(ControlFlowEdge).sources.filterIs(CoralCfgNode);
         //if(!this.store.has(node.id) && inEnv.store.size ===0 ) inEnv = new NullabilityEnvironment(this.initialEnv.store, this.initialEnv.aliasMap);
-        // console.log("incomers,", incomers.length)
+        // //console.log("incomers,", incomers.length)
         for (const n of incomers) {
-                // //// console.log(n.jp.code)
+                // //// //console.log(n.jp.code)
                 if(n.jp instanceof If || n.jp instanceof Loop ){
                 
                     continue;
                 }
                 const predState = this.store.get(n.id);
-                //if(incomers.length>1)//// console.log("pred state, ", predState?.outEnv.store)
+                //if(incomers.length>1)//// //console.log("pred state, ", predState?.outEnv.store)
                 if (predState) {
                     inEnv = NullabilityEnvironment.merge(inEnv, predState.outEnv);
                     
@@ -176,20 +156,20 @@ export default class NullabilityAnalyser {
             
         }
 
-       // console.log("inEnv,", inEnv.store)
+       // //console.log("inEnv,", inEnv.store)
         if (incomers.length === 0 && this.store.has(node.id)) {
             inEnv = this.store.get(node.id)!.inEnv;
         }
     
  
         let outEnv = this.#computeNode(node, new NullabilityEnvironment(inEnv.store, inEnv.aliasMap));
-        //// console.log( "outenv,", outEnv.storeVar);
+        //// //console.log( "outenv,", outEnv.storeVar);
 
 
         const existingState = this.store.get(node.id);
         const hasBeenProcessed = this.processedNodes.has(node.id);
         if (hasBeenProcessed && existingState && this.#environmentsEqual(existingState.outEnv, outEnv)) {
-            // //// console.log("returning early")
+            // //// //console.log("returning early")
             return; 
         }
 
@@ -197,18 +177,19 @@ export default class NullabilityAnalyser {
 
  
         this.processedNodes.add(node.id);
-         console.log("out,", outEnv.store);
+         //console.log("out,", outEnv.store);
         this.store.set(node.id, { inEnv: inEnv, outEnv: outEnv });
         
         
         const outgoers = node.outgoers.filterIs(ControlFlowEdge).targets.filterIs(CoralCfgNode);
-        // //// console.log(outgoers.length)
+        // //// //console.log(outgoers.length)
         for (const out of outgoers) {
             this.#computeFlow(out);
         }
     }
 
     #computeNode(node: CoralCfgNode.Class, env: NullabilityEnvironment): NullabilityEnvironment {
+        console.log("env in,", env.store)
         NullabilityChecker.verifyDereferences(node.jp, env, this.dereferences);
 
         node.switch(
@@ -242,10 +223,10 @@ export default class NullabilityAnalyser {
                 if (coreJp instanceof BinaryOp) {
                     if (coreJp.isAssignment) {
                         const lhs =coreJp.left.code.trim();
-                        //// console.log("Opa, ", lhs)
+                        //// //console.log("Opa, ", lhs)
                         if(coreJp.left instanceof MemberAccess){
                             if(coreJp.left.arrow){
-                                // console.log(coreJp.left.base.code, coreJp.left.name)
+                                // //console.log(coreJp.left.base.code, coreJp.left.name)
                                 const object = env.store.get("*"+coreJp.left.base.code);
                                 if(object?.kind === "object") object.fields.add(coreJp.left.name)
                             }else{
@@ -271,9 +252,9 @@ export default class NullabilityAnalyser {
                         cleanLhs = rawLhs;
                     }
                     const rightVal = env.resolveRhsValue(env.store.get(cleanLhs)! , coreJp.right, coreJp.right.code);
-                    console.log(rightVal)
+                    //console.log(rightVal)
                     env.store.set(cleanLhs, rightVal);
-                    console.log(env.store)
+                    //console.log(env.store)
                     if (coreJp.isAssignment) {
                         this.hasChanged.add(cleanLhs);
                     }
@@ -281,18 +262,19 @@ export default class NullabilityAnalyser {
             
                 if (n.jp instanceof Call) {
                     NullabilityChecker.applyFunctionContracts(n.jp, env, this.globalVars);
+                    console.log(env.store)
                 }
             }),
 
             Node.Case(ConditionNode, n => {
 
                 const outgoers = node.outgoers.filterIs(ControlFlowEdge).targets.filterIs(CoralCfgNode);
-                // //// console.log(env)
+                // //// //console.log(env)
         
                 const jp = n.jp;
                 if (jp instanceof If || jp instanceof Loop){
                     const cond = jp.cond.code.replace(";", "").trim();
-                    // //// console.log("condition,", cond)
+                    // //// //console.log("condition,", cond)
                     if(env.store.has(cond) ){
                         let condVal =  env.store.get(cond)!;
                         let targetVar;
@@ -319,7 +301,7 @@ export default class NullabilityAnalyser {
                             const ifNullanility = isEq ? Nullability.NULL : Nullability.NOT_NULL;
                             let thenEnv = new NullabilityEnvironment(env.store, env.aliasMap);
                             thenEnv.setNullability(targetVar, ifNullanility)
-                            //// console.log(thenEnv)
+                            //// //console.log(thenEnv)
                             const outgoers = node.outgoers.filterIs(ControlFlowEdge).targets.filterIs(CoralCfgNode);
                             this.store.set(outgoers[0].id, {inEnv: thenEnv, outEnv: thenEnv} );
                             const elseNullanility = isEq ? Nullability.NOT_NULL : Nullability.NULL;
@@ -329,7 +311,7 @@ export default class NullabilityAnalyser {
                         }
                     }
                     else{
-                        //// console.log("condition")
+                        //// //console.log("condition")
                         
                         let thenEnv = new NullabilityEnvironment(env.store, env.aliasMap);
                         
@@ -369,21 +351,21 @@ export default class NullabilityAnalyser {
     #validateResults() {
        
         const exitNodes = this.nodes.filter(n => n.outgoers.length === 0);
-        console.log(exitNodes.length)
+        //console.log(exitNodes.length)
         let finalEnv = new NullabilityEnvironment();
-        // //// console.log("E,", exitNodes)
+        // //// //console.log("E,", exitNodes)
         for (const exit of exitNodes) {
             const state = this.store.get(exit.id);
-            console.log(state?.outEnv.store)
+            //console.log(state?.outEnv.store)
             if (state) {
                 finalEnv = NullabilityEnvironment.merge(finalEnv, state.outEnv);
-                // //// console.log(finalEnv)
+                // //// //console.log(finalEnv)
                
             }
         }
 
       
-        // //// console.log(this.dereferences.values())
+        // //// //console.log(this.dereferences.values())
         for (const record of this.dereferences.values()) {
             if (record.state === Nullability.NULL) {
                 throw new NullDereferenceError(record.jp, record.varName, record.state);
@@ -398,11 +380,12 @@ export default class NullabilityAnalyser {
             const contracts = JSON.parse(rawContracts) as Contract[];
             for (const contract of contracts) {
                 if (contract.target === "return" || contract.predicate) continue;
+                //console.log("contract target,", contract.target)
                 const solve = finalEnv.resolveAlias(contract.target)
-                console.log(solve);
+                //console.log(solve);
                 const actualState = finalEnv.getState(solve);
-                console.log(finalEnv.store)
-                console.log(actualState)
+                //console.log(finalEnv.store)
+                //console.log(actualState)
                 if (contract.exitState !== undefined && actualState !== undefined && actualState !== contract.exitState) {
                     throw new ContractViolationError(this.fn.jp, contract.target, contract.exitState, actualState);
                 }
@@ -414,11 +397,11 @@ export default class NullabilityAnalyser {
                 if( contract.fields !== undefined){
                     for ( const [field, fieldContract] of Object.entries( contract.fields)){
                         
-                        console.log(field, fieldContract)
+                        //console.log(field, fieldContract)
                         if( finalEnv.store.has(field)){
                             const fieldActualState = finalEnv.getState(field);
-                            console.log(finalEnv.store)
-                            console.log(fieldActualState)
+                            //console.log(finalEnv.store)
+                            //console.log(fieldActualState)
                             if (fieldContract.exitState !== undefined && fieldActualState !== undefined && fieldActualState !== contract.exitState) {
                                 throw new ContractViolationError(this.fn.jp, field, fieldContract.exitState, fieldActualState);
                             }

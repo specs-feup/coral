@@ -4,6 +4,6 @@ int* get_data(int condition) {
     if (condition) {
         return 0; // ERR
     }
-    static int x = 10;
+    int x = 10;
     return &x;
 }

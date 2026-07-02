@@ -1,5 +1,6 @@
-#pragma coral_test expect NullDereferenceError
-#pragma coral not-null final *out
+#pragma coral_test expect ContractViolationError
+#include <stdlib.h>
+#pragma coral null out {*out : not-null -> not-null}: not-null -> not-null
 void fail_to_init(int** out) {
-    *out = 0; // ERR
+    *out = NULL; // ERR
 }

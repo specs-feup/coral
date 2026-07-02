@@ -1,8 +1,11 @@
 #pragma coral_test expect PotentialNullDereferenceError
-#pragma coral not-null p
+
+void costume_fn (int * q);
+
+#pragma coral null p : not-null -> not-null
 void test_invalidation(int* p) {
     int* q = p;
-    #pragma coral maybe-null q
+    costume_fn(q);
     *p = 10; // OK
     *q = 20; // ERR
 }

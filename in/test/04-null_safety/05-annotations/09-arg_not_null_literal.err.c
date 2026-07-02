@@ -1,8 +1,9 @@
+#pragma coral_test expect PreconditionViolationError
 #include <stdlib.h>
-#pragma coral not-null p
+#pragma coral null p : not-null -> maybe-null
 void process(int* p);
 
-#pragma coral_test expect NullDereferenceError
+
 void test() {
     process(NULL); // ERR
 }
