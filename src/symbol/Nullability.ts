@@ -4,9 +4,24 @@ export enum Nullability {
     NULL = "NULL"
 }
 
+
+export interface FieldContract {
+    entryState?: Nullability;
+    exitState?: Nullability;
+    unchanged?: boolean;
+}
+
+
 export interface Contract {
+    index?: number;
     target: string;
-    entryState?: Nullability; 
-    exitState?: Nullability;  
+    isGlobal?: boolean;
+    unchanged?: boolean;
+    entryState?: Nullability;
+    exitState?: Nullability;
+    predicate?: any;
+    fields?: Record<string, FieldContract>; 
+    isRegex? : boolean
+    compiledRegex?: RegExp;
 }
 

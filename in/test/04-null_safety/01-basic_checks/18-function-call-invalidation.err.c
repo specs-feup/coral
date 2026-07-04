@@ -1,4 +1,4 @@
-#pragma coral_test expect NullDereferenceError
+#pragma coral_test expect PotentialNullDereferenceError
 
 #include <stdlib.h>
 void modify(int** p) { *p = 0; }

@@ -8,6 +8,8 @@ import AddAssignmentsToCallsAndBorrows from "@specs-feup/coral/pipeline/normaliz
 import SplitExpressions from "@specs-feup/coral/pipeline/normalize/SplitExpressions";
 import Instrumentation from "@specs-feup/coral/instrumentation/Instrumentation";
 import ExtractContracts from "./normalize/ExtractContracts.js";
+import TransformSwitchToIf from "@specs-feup/clava/api/clava/pass/TransformSwitchToIf.js";
+import ConvertSwitchToIf from "./normalize/ConvertSwitchToIf.js";
 
 export class NormalizationContext {
     #varCounter: number;
@@ -49,6 +51,7 @@ export default class CoralNormalizer {
 
         for (const $fn of $fns) {
             new NormalizationApplier(new NormalizationContext(), $fn)
+                .apply(new ConvertSwitchToIf())
                 .apply(new ConvertForLoopToWhile())
                 .apply(new SplitVarDecls())
                 .apply(new SimplifyAssignments())

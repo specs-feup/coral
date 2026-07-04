@@ -2,13 +2,21 @@ import { FunctionJp, Param } from "@specs-feup/clava/api/Joinpoints.js";
 import MetaRegion from "@specs-feup/coral/mir/symbol/region/meta/MetaRegion";
 import MetaRegionBound from "@specs-feup/coral/mir/symbol/region/meta/MetaRegionBound";
 import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
-import { Nullability } from "@specs-feup/coral/symbol/Nullability";
+import { Contract, Nullability } from "@specs-feup/coral/symbol/Nullability";
 
+export interface FieldNullabilityState {
+    initialNullability?: Nullability;
+    finalNullability?: Nullability;
+}
 export class FnParam {
     #jp: Param;
     #ty: MetaTy;
+    isReadOnly : Boolean = false;
     initialNullability: Nullability = Nullability.MAYBE_NULL; 
     finalNullability?: Nullability; 
+    fieldsNullability?: Record<string, FieldNullabilityState>;
+    indirectionNullability?: Record<number, FieldNullabilityState>;
+    
 
     constructor($jp: Param, ty: MetaTy) {
         this.#jp = $jp;
@@ -39,6 +47,9 @@ export default class Fn {
     #params: FnParam[];
     #hasLifetimePragmas: boolean;
     #returnNullability: Nullability | undefined;
+    returnPredicate?: { targetParam: string; isEq: boolean };
+    globalContracts?: Record<string, Contract>;
+    compiledParamContracts?: Array< Contract>;
 
     constructor(
         $jp: FunctionJp,

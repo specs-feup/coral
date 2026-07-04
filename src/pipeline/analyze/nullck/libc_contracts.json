@@ -1,0 +1,56 @@
+{
+  "malloc": [
+    {
+      "target": "return",
+      "exitState": "MAYBE_NULL"
+    }
+  ],
+  "calloc": [
+    {
+      "target": "return",
+      "exitState": "MAYBE_NULL"
+    }
+  ],
+  "realloc": [
+    {
+      "target": "return",
+      "exitState": "MAYBE_NULL"
+    }
+  ],
+  "free": [
+    {
+      "index": 0,
+      "target": "ptr",
+      "entryState": "MAYBE_NULL",
+      "exitState": "NULL"
+    }
+  ],
+  "fopen": [
+    {
+      "target": "return",
+      "exitState": "MAYBE_NULL"
+    }
+  ],
+  "fclose": [
+    {
+      "index": 0,
+      "target": "stream",
+      "entryState": "NOT_NULL"
+    }
+  ],
+
+  "fread": [
+    {
+      "index": 0,
+      "target": "ptr",
+      "entryState": "NOT_NULL",
+      "exitState": "NOT_NULL"
+    },
+    {
+      "index": 3,
+      "target": "stream",
+      "entryState": "NOT_NULL",
+      "exitState": "NOT_NULL"
+    }
+  ]
+}

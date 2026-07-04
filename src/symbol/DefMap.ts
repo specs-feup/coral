@@ -16,23 +16,35 @@ import MetaRegion from "@specs-feup/coral/mir/symbol/region/meta/MetaRegion";
 import MetaRegionBound from "@specs-feup/coral/mir/symbol/region/meta/MetaRegionBound";
 import Ty from "@specs-feup/coral/mir/symbol/Ty";
 import MetaTy from "@specs-feup/coral/mir/symbol/ty/meta/MetaTy";
-import { errorMetaRegionGenerator, MetaRegionMapper } from "@specs-feup/coral/mir/symbol/ty/meta/MetaTyParser";
+import { errorMetaRegionGenerator, MetaRegionMapper, numericMetaRegionGenerator } from "@specs-feup/coral/mir/symbol/ty/meta/MetaTyParser";
 import CoralPragma from "@specs-feup/coral/pragma/CoralPragma";
 import LifetimeAssignmentPragma from "@specs-feup/coral/pragma/lifetime/LifetimeAssignmentPragma";
 import LifetimeBoundPragma from "@specs-feup/coral/pragma/lifetime/LifetimeBoundPragma";
 import Query from "@specs-feup/lara/api/weaver/Query.js";
 
+
 export default class DefMap {
     #defTable: Map<string, Def>;
 
+    #currentlyParsing: Set<string>;
+
+    static ENFORCE_STRICT_LIFETIMES: boolean = true;
+
     constructor() {
         this.#defTable = new Map();
+        this.#currentlyParsing = new Set();
     }
 
     get($struct: RecordJp): Def {
         const def = this.#defTable.get($struct.name);
         if (def !== undefined) {
             return def;
+        }
+
+        // 3. Break the infinite recursion for Linked Lists / Self-Referential Structs!
+        if (this.#currentlyParsing.has($struct.name)) {
+            // Return a temporary dummy Def just to satisfy the pointer parser
+            return new Def($struct, false, Ty.Semantics.MOVE, new Map(), [], [], undefined);
         }
 
         const $structs = Query.searchFrom(
@@ -51,9 +63,11 @@ export default class DefMap {
             );
         }
 
-        // TODO doesnt this crash for incomplete structs?
-
+        // 4. Wrap the parse function to track our state
+        this.#currentlyParsing.add($struct.name);
         const newDef = this.#parseStruct($canonicalStruct);
+        this.#currentlyParsing.delete($struct.name);
+
         this.#defTable.set($struct.name, newDef);
         return newDef;
     }
@@ -227,9 +241,13 @@ export default class DefMap {
                 }
             }
 
+            const generator = DefMap.ENFORCE_STRICT_LIFETIMES 
+            ? errorMetaRegionGenerator($field) 
+            : numericMetaRegionGenerator();
+
             const metaRegionMapper = new MetaRegionMapper(
                 metaRegionVarAssignments,
-                errorMetaRegionGenerator($field),
+                generator,
             );
             const fieldTy = MetaTy.parse($field.type, metaRegionMapper, this);
             fields.set($field.name, fieldTy);

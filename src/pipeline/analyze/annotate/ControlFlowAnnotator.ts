@@ -97,26 +97,17 @@ class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier
     }
 
     #annotateVarDecl(node: CoralCfgNode.Class, $vardecl: Vardecl) {
-        const name = $vardecl.name;
-        const fnAsAny = this.fn as any;
-    
         if ($vardecl.init instanceof Call) {
+            // For function calls, the vardecl will be annotated when the call is annotated
+            // so we will just skip the annotation here and go straight to the call
             this.#annotateExpr(node, $vardecl.init);
-            fnAsAny.debugNullabilityStates.set(name, "MAYBE_NULL");
             return;
         }
-    
+
         if ($vardecl.hasInit) {
             this.#annotateExpr(node, $vardecl.init);
-            const initialState = this.#getExpressionState($vardecl.init);
-            fnAsAny.debugNullabilityStates.set(name, initialState);
-            console.log(`[Flow] Declaração: ${name} = ${$vardecl.init.code} (Estado: ${initialState})`);
-    
             const ty = this.fn.getSymbol($vardecl);
             node.addAccess(new PathVarRef($vardecl, ty), Access.Kind.WRITE);
-        } else {
-            fnAsAny.debugNullabilityStates.set(name, "MAYBE_NULL");
-            console.log(`[Flow] Declaração: ${name} sem init (Assumido: MAYBE_NULL)`);
         }
     }
 
@@ -147,14 +138,11 @@ class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier
                 $expr.subExpr.type.isArray
             ) {
                 // TODO
-               /* throw new Error(
+                /*throw new Error(
                     "Casts to pointers or arrays are not supported\n" + $expr.code,
                 );*/
             }
-            console.log($expr.subExpr)
-            console.log("o")
             this.#annotateExpr(node, $expr.subExpr);
-            console.log("a")
         } else if ($expr instanceof UnaryExprOrType) {
             // This is the sizeof operator
             // Nothing is done (due to normalizations, inside is a varref without side effects)
@@ -332,35 +320,5 @@ class ControlFlowAnnotatorApplier extends CoralFunctionWiseTransformationApplier
         } else {
             throw new Error("Unhandled parseLvalue: " + $expr.code);
         }
-    }
-
-    #getExpressionState($expr: Expression): any {
-        const fnAsAny = this.fn as any;
-
-        if (!fnAsAny.debugNullabilityStates) {
-            fnAsAny.debugNullabilityStates = new Map<string, any>();
-        }
-    
-        if ($expr instanceof Varref) {
-            return fnAsAny.debugNullabilityStates.get($expr.name) ?? "MAYBE_NULL";
-        } 
-        
-        if ($expr instanceof UnaryOp && $expr.operator === "&") {
-            return "NOT_NULL";
-        }
-    
-        if ($expr instanceof Literal) {
-            if ($expr.code === "0" || $expr.code === "NULL") return "NULL";
-            return "NOT_NULL"; 
-        }
-    
-        if ($expr instanceof Cast) {
-            return this.#getExpressionState($expr.subExpr);
-        }
-    
-        if ($expr instanceof ParenExpr) {
-            return this.#getExpressionState($expr.subExpr);
-        }
-        return "MAYBE_NULL";
     }
 }

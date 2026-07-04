@@ -2,18 +2,16 @@ import CoralError from "@specs-feup/coral/error/CoralError";
 import ErrorMessageBuilder from "@specs-feup/coral/error/ErrorMessageBuilder";
 import { Joinpoint } from "@specs-feup/clava/api/Joinpoints.js";
 
-import { Nullability } from "@specs-feup/coral/symbol/Nullability";
-
-export default class NullDereferenceError extends CoralError {
-    constructor($invalidUse: Joinpoint, varName: string, state:Nullability) {
+export default class ContractViolationError extends CoralError {
+    constructor($jp: Joinpoint, varName: string, expected: string, actual?: string) {
         super(
             new ErrorMessageBuilder(
-                `Dereference of a null pointer '${varName}'`,
-                $invalidUse,
+                `Contract violation `,
+                $jp,
             )
                 .code(
-                    $invalidUse,
-                    `pointer '${varName}' is ${state} here`,
+                    $jp,
+                    `'${varName}' promised to be ${expected} on exit` + (actual?`, but is actually ${actual}`: ``),
                 )
                 .toString(),
         );

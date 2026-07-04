@@ -154,16 +154,7 @@
       <string>customClangAstDumperExe</string>
       <file></file>
     </entry>
-    <entry>
-      <string>Compiler Flags</string>
-      <string></string>
-    </entry>
-    <entry>
-      <string>Compiler Flags in list format</string>
-      <StringList>
-        <stringList/>
-      </StringList>
-    </entry>
+    
     <entry>
       <string>Check C/CXX Syntax</string>
       <boolean>false</boolean>

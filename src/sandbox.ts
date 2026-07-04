@@ -11,6 +11,8 @@ try {
         verbose: true,
         instrumentation: true,
         inferFunctionLifetimeBounds: true,
+        enableBorrowChecker: false,
+        enableNullability: true
         //     .writeMirToDotFile("out/woven_code/sandbox/mir.dot")
         //     .writeLivenessToDotFile("out/woven_code/sandbox/liveness.dot");
     }); 

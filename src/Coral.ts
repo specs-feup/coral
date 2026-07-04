@@ -41,6 +41,9 @@ export interface CoralConfig {
     safeByDefault: boolean;
     inferFunctionLifetimeBounds: boolean;
     inferFunctionLifetimeBoundsIterationLimit?: number;
+    enableBorrowChecker?: boolean,
+    enableNullability?: boolean
+
 }
 
 export const defaultCoralConfig: CoralConfig = {
@@ -51,6 +54,7 @@ export const defaultCoralConfig: CoralConfig = {
     safeByDefault: true,
     inferFunctionLifetimeBounds: false,
     inferFunctionLifetimeBoundsIterationLimit: 10,
+    
 };
 
 export default function run_coral(config: Partial<CoralConfig> = {}) {

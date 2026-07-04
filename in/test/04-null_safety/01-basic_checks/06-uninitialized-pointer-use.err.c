@@ -1,4 +1,4 @@
-#pragma coral_test expect UninitializedPointerError
+#pragma coral_test expect NullDereferenceError
 void test() {
     int* ptr; 
     int val = *ptr; 

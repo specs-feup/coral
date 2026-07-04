@@ -11,6 +11,7 @@ import RefTy from "@specs-feup/coral/mir/symbol/ty/RefTy";
 import MoveTable from "@specs-feup/coral/symbol/MoveTable";
 import ControlFlowEdge from "@specs-feup/flow/flow/ControlFlowEdge";
 import Node from "@specs-feup/flow/graph/Node";
+import { Nullability } from "@specs-feup/coral/symbol/Nullability";
 
 namespace CoralCfgNode {
     export const TAG = "__coral__coral_cfg_node";
@@ -70,6 +71,14 @@ namespace CoralCfgNode {
 
         set varsLeavingScope(vars: Vardecl[]) {
             this.scratchData[TAG].varsLeavingScope = vars;
+        }
+
+        get nullabilityStates(): Map<string, Nullability> {
+            return this.scratchData[TAG].nullabilityStates;
+        }
+    
+        set nullabilityStates(states: Map<string, Nullability>) {
+            this.scratchData[TAG].nullabilityStates = states;
         }
 
         addDef(def: Vardecl) {
@@ -175,6 +184,7 @@ namespace CoralCfgNode {
                         liveOut: new Map(),
                     },
                     inScopeLoans: new Set(),
+                    nullabilityStates: new Map(),
                 },
             };
         }
@@ -211,6 +221,7 @@ namespace CoralCfgNode {
                 liveOut: Map<string, Vardecl>;
             };
             inScopeLoans: Set<Loan>;
+            nullabilityStates: Map<string, Nullability>;
         };
     }
 }
