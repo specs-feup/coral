@@ -34,8 +34,7 @@ export default class CoralAnalyzer {
         this.#instrumentation.pushCheckpoint("Analysis");
         DefMap.ENFORCE_STRICT_LIFETIMES = this.#config.enableBorrowChecker === true;
 
-        // 1. Base Pipeline (Always runs)
-        // Builds the initial AST -> CFG -> MIR mapping
+     
         let graph = Graph.create()
             .setNodeIdGenerator(new IncrementingIdGenerator("node_"))
             .setEdgeIdGenerator(new IncrementingIdGenerator("edge_"))
@@ -47,10 +46,9 @@ export default class CoralAnalyzer {
             .apply(new RemoveDeadCode())
             
 
-        // 2. Ownership & Borrow Checker Pipeline
-        // Defaults to true if not explicitly set to false
+    
         if (this.#config.enableBorrowChecker === true) {
-            console.log("Borrow checker")
+           
             graph = graph
                 .apply(new SignatureAnnotator())
                 .apply(new ControlFlowAnnotator()) 
@@ -60,14 +58,11 @@ export default class CoralAnalyzer {
                 .apply(new RegionckPipeline());
         }
 
-        // 3. Nullability Pipeline
-        // Defaults to true if not explicitly set to false
+   
         if (this.#config.enableNullability === true) {
-            console.log("Nullabili checker")
+           
             graph = graph
-                //.apply(new SignatureAnnotator())
                 .apply(new NullabilityAnnotator())
-                //.apply(new ControlFlowAnnotator()) 
                 .apply(new NullabilityPipeline());
         }
 

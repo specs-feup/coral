@@ -24,7 +24,7 @@ class NullabilityAnnotatorApplier extends CoralFunctionWiseTransformationApplier
         for (const contract of contracts) {
 
             if (!contract.isGlobal && contract.target !== "return") {
-                // If it's a regex, compile it NOW so we don't do it at the call site
+                
                 if (contract.isRegex) {
                     fnSymbol.compiledParamContracts.push({
                         ...contract,
@@ -62,26 +62,21 @@ class NullabilityAnnotatorApplier extends CoralFunctionWiseTransformationApplier
         for (const param of fnSymbol.params) {
             const mirName = param.jp.name.trim(); 
             
-            // Search for a matching contract
+           
             const paramContract = contracts.find(c => {
                 const target = c.target.trim();
                 
-                // --- NEW: Simply check the boolean flag! ---
                 if (c.isRegex) {
-                    // It is already stripped, just compile and test
                     const regex = new RegExp(target);
                     return regex.test(mirName);
                 }
                 
-                // Otherwise, perform an exact string match
                 return target === mirName;
             });
 
-            console.log(paramContract)
             
             if (paramContract) {
             
-                console.log(`[NullabilityAnnotator] Applied contract to parameter: ${mirName}`);
 
                 if(paramContract.unchanged){
                     param.isReadOnly = true;

@@ -6,7 +6,7 @@ export default class CoralPragma {
     readonly name: string;
     readonly tokens: string[];
     readonly $jp: Pragma;
-    readonly rawContent: string; // Expose this for complex parsers
+    readonly rawContent: string; 
 
     constructor($jp: Pragma) {
         this.$jp = $jp;

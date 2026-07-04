@@ -22,16 +22,16 @@ export class ContractFactory {
 
     static fromPragma(pragma: CoralPragma): Contract | undefined {
         const rawContent = pragma.rawContent;
-        console.log("here", rawContent)
-        // 1. Enforce the "null" namespace constraint
+
+
         if (pragma.name !== "null") {
-            return undefined; // Not a nullability pragma, ignore it.
+            return undefined;
         }
 
-        // Strip "coral null" to standardise the string for parsing
+
         const contentToParse = rawContent.replace(/^null\s+/, '').trim();
 
-        // 2. Predicate Contract
+
         const predicateMatch = contentToParse.match(/ensures\s+return\s*==\s*\(\s*([a-zA-Z0-9_]+)\s*(!=|==)\s*NULL\s*\)/);
         if (predicateMatch) {
             return {
@@ -40,13 +40,13 @@ export class ContractFactory {
             };
         }
 
-        // 3. Return State Contract
+
         const returnStateMatch = contentToParse.match(/ensures\s+return\s*:\s*(not-null|null|maybe-null)/);
         if (returnStateMatch) {
             return { target: "return", exitState: this.stateMap[returnStateMatch[1]] };
         }
 
-        // 4. Global Variable Contract
+
         const globalMatch = contentToParse.match(/global\s+([a-zA-Z0-9_]+)\s*:\s*(not-null|null|maybe-null|unchanged)/);
         if (globalMatch) {
             const target = globalMatch[1];
@@ -56,33 +56,30 @@ export class ContractFactory {
                 : { target, exitState: this.stateMap[stateStr], isGlobal: true };
         }
 
-        // 5. Unified Parameter & Struct Contract Parser
-        // Notice the capture group 1: ([a-zA-Z0-9_]+|%\([^)]+\))
-        // This explicitly allows standard variable names OR %(regex_pattern)
-        // 7. Unified Parameter & Struct Contract Parser
+
         const paramMatch = contentToParse.match(/^([a-zA-Z0-9_]+|%\([^)]+\))(?:\s*\{([^}]+)\})?(?:\s*:\s*(.+))?$/);
 
         if (paramMatch && !contentToParse.startsWith("ensures") && !contentToParse.startsWith("global")) {
-            
+
             let target = paramMatch[1];
             let isRegex = false;
 
-            // --- NEW: Detect and unwrap the regex ---
+
             const regexExtract = target.match(/^%\((.*)\)$/);
             if (regexExtract) {
-                target = regexExtract[1]; // Save just the inner pattern (e.g., ".*ptr.*")
-                isRegex = true;           // Flag it!
+                target = regexExtract[1];
+                isRegex = true;
             }
 
-            // Create the base contract with the flag
+
             const contract: Contract = { target, isRegex };
 
             const fieldsStr = paramMatch[2];
             const mainTransitionStr = paramMatch[3];
 
-            // ... (The rest of the field parsing remains exactly the same)
+
             if (fieldsStr) {
-                console.log("here")
+              
                 contract.fields = {};
                 const fieldDeclarations = fieldsStr.split(',');
                 for (const decl of fieldDeclarations) {

@@ -24,9 +24,9 @@ export class BuiltInContractRegistry {
             const __filename = fileURLToPath(import.meta.url);
             const __dirname = path.dirname(__filename);
             const jsonPath = path.join(__dirname, 'libc_contracts.json');
-            console.log(jsonPath)
+     
             if (fs.existsSync(jsonPath)) {
-                console.log("file exist")
+          
                 const rawData = fs.readFileSync(jsonPath, 'utf-8');
                 const parsed = JSON.parse(rawData);
                 

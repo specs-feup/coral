@@ -17,7 +17,7 @@ export default class ExtractContracts implements NormalizationPass<typeof Pragma
         if ($target instanceof FunctionJp) {
             const coralPragma = new CoralPragma($pragma);
             
-            // Pass the raw content to the factory
+          
             const contract = ContractFactory.fromPragma(coralPragma);
     
             if (contract) {
